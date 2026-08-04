@@ -46,7 +46,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Fetch current logged-in user
-  const currentUser = localStorage.getItem('username') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+  const currentUser = localStorage.getItem('retro_session');
+ || localStorage.getItem('user') || localStorage.getItem('currentUser');
 
   // Redirect to login if unauthenticated
   if (!currentUser) {
@@ -112,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Logout Handler
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('username');
+      localStorage.removeItem('retro_session');
       localStorage.removeItem('sb-access-token'); // Clear session token if stored
       window.location.href = 'auth.html';
     });
