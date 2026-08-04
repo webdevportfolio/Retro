@@ -45,9 +45,10 @@
   </main>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Fetch current logged-in user
-  const currentUser = localStorage.getItem('retro_session');
- || localStorage.getItem('user') || localStorage.getItem('currentUser');
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Fetch current logged-in user using your correct session key
+  const currentUser = localStorage.getItem('retro_session') || localStorage.getItem('username');
 
   // Redirect to login if unauthenticated
   if (!currentUser) {
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 2. DOM Element Selectors (Updated for your exact HTML IDs)
+  // 2. DOM Element Selectors
   const avatarLetter = document.getElementById('avatar-initial');
   const usernameDisplay = document.getElementById('display-username');
   const linkInput = document.getElementById('user-link-input');
@@ -72,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 4. Construct Direct Chat URL
-  // Hardcoded to index.html with query param to prevent GitHub Pages 404 errors
   const directLink = `https://webdevportfolio.github.io/Retro/index.html?u=${encodeURIComponent(currentUser)}`;
 
   if (linkInput) {
@@ -86,7 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(directLink);
         } else {
-          // Fallback for mobile webviews / non-HTTPS testing
           if (linkInput) {
             linkInput.select();
             linkInput.setSelectionRange(0, 99999);
@@ -94,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        // Button Feedback
         const originalText = copyBtn.innerText;
         copyBtn.innerText = 'Copied!';
         copyBtn.style.opacity = '0.8';
@@ -114,11 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('retro_session');
-      localStorage.removeItem('sb-access-token'); // Clear session token if stored
+      localStorage.removeItem('username');
       window.location.href = 'auth.html';
     });
   }
 });
 </script>
+
 </body>
 </html>
