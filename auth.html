@@ -48,7 +48,7 @@
     </div>
   </div>
 
-<script>
+        <script>
   const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
   let isLogin = true;
 
@@ -80,7 +80,7 @@
     }
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(isRetry = false) {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorBox = document.getElementById('error-box');
@@ -95,17 +95,15 @@
       return;
     }
 
-    // Set loading state
     submitBtn.disabled = true;
     const originalText = submitBtn.innerText;
     submitBtn.innerText = 'Connecting...';
     
-    // Alert user if response is taking longer than usual (Render spin-up)
     const wakeUpTimer = setTimeout(() => {
-      errorBox.innerText = 'Server is waking up from sleep mode, please wait a few seconds...';
-      errorBox.style.color = '#eab308'; // Warning yellow
+      errorBox.innerText = 'Server is waking up from sleep mode, please wait...';
+      errorBox.style.color = '#eab308';
       errorBox.style.display = 'block';
-    }, 3000);
+    }, 2500);
 
     const endpoint = isLogin 
       ? `${API_BASE_URL}/api/login` 
@@ -122,27 +120,30 @@
       const data = await response.json();
 
       if (!response.ok) {
-        errorBox.style.color = '#ef4444'; // Error red
+        errorBox.style.color = '#ef4444';
         errorBox.innerText = data.error || 'Something went wrong.';
         errorBox.style.display = 'block';
         resetButton();
         return;
       }
 
-      if (isLogin) {
-        localStorage.setItem('retro_session', data.user.username);
-        window.location.href = 'index.html';
-      } else {
-        alert('Account created! Logging you in...');
-        localStorage.setItem('retro_session', username);
-        window.location.href = 'index.html';
-      }
+      localStorage.setItem('retro_session', username);
+      window.location.href = 'index.html';
+
     } catch (err) {
       clearTimeout(wakeUpTimer);
-      errorBox.style.color = '#ef4444';
-      errorBox.innerText = 'Connection error. Tap Sign Up again to retry.';
-      errorBox.style.display = 'block';
-      resetButton();
+      
+      if (!isRetry) {
+        errorBox.style.color = '#eab308';
+        errorBox.innerText = 'Server warming up. Retrying in 3 seconds...';
+        errorBox.style.display = 'block';
+        setTimeout(() => handleSubmit(true), 3000);
+      } else {
+        errorBox.style.color = '#ef4444';
+        errorBox.innerText = 'Server unreachable. Please check connection and try again.';
+        errorBox.style.display = 'block';
+        resetButton();
+      }
     }
 
     function resetButton() {
