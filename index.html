@@ -130,6 +130,35 @@
         }
       });
     }, 1000);
+window.addEventListener('DOMContentLoaded', () => {
+  // 1. Grab target recipient from URL parameter ?u=
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetUser = urlParams.get('u');
+
+  // If a target user exists in URL, remember it
+  if (targetUser) {
+    localStorage.setItem('pendingChatUser', targetUser);
+  }
+
+  // 2. Check if active user is authenticated
+  const loggedInUser = localStorage.getItem('username'); // or check Supabase session
+
+  if (!loggedInUser) {
+    // User is NOT logged in -> Show Sign Up / Login Screen
+    showAuthModal(); 
+  } else {
+    // User IS logged in -> Check if there's a stored target user to open chat with
+    const pendingUser = localStorage.getItem('pendingChatUser');
+    
+    if (pendingUser) {
+      // Clear pending state after loading
+      localStorage.removeItem('pendingChatUser');
+      
+      // Open active chat session with target user
+      startChatWith(pendingUser);
+    }
+  }
+});
 
     // Refresh inbox feed every 4 seconds
     setInterval(loadInboxMessages, 4000);
