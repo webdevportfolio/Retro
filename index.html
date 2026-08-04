@@ -31,26 +31,57 @@
       <div class="empty-sub">Share your profile link to receive ephemeral chats.</div>
     </div>
   </main>
-
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    const activeUser = localStorage.getItem('retro_session');
-    if (!activeUser) {
-      window.location.href = 'auth.html';
-    } else {
-      document.getElementById('profile-btn').textContent = `${activeUser}`;
+    // 1. Core initialization on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      // Grab target recipient from URL parameter ?u=
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetUser = urlParams.get('u');
+
+      if (targetUser) {
+        localStorage.setItem('pendingChatUser', targetUser);
+      }
+
+      // Check if active user is authenticated using 'username'
+      const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
+
+      if (!activeUser) {
+        // Not logged in -> Redirect to auth page
+        window.location.href = 'auth.html';
+        return;
+      }
+
+      // User IS logged in -> Update navbar button to show username
+      const profileBtn = document.getElementById('profile-btn');
+      if (profileBtn) {
+        profileBtn.textContent = activeUser;
+      }
+
+      // Check if someone clicked a share link to chat with this user
+      const pendingUser = localStorage.getItem('pendingChatUser');
+      if (pendingUser && pendingUser !== activeUser) {
+        localStorage.removeItem('pendingChatUser');
+        window.location.href = `chat.html?user=${pendingUser}`;
+        return;
+      }
+
+      // Otherwise, load normal inbox messages
       loadInboxMessages();
-    }
+      setInterval(loadInboxMessages, 4000);
+    });
 
     function logout() {
-      localStorage.removeItem('retro_session');
       localStorage.removeItem('username');
+      localStorage.removeItem('retro_session');
       window.location.href = 'auth.html';
     }
 
     async function loadInboxMessages() {
+      const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
       const chatList = document.getElementById('chat-list');
+      if (!chatList || !activeUser) return;
       
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
@@ -62,7 +93,6 @@
           return;
         }
 
-        // Group messages by sender to build individual chat preview cards
         const chatMap = {};
         messages.forEach(msg => {
           if (!chatMap[msg.sender_username]) {
@@ -105,6 +135,8 @@
     function checkEmptyState() {
       const chatList = document.getElementById('chat-list');
       const emptyState = document.getElementById('empty-state');
+      if (!chatList || !emptyState) return;
+      
       if (chatList.querySelectorAll('.chat-card').length === 0) {
         emptyState.style.display = 'block';
       } else {
@@ -112,7 +144,7 @@
       }
     }
 
-    // Countdown timer
+    // Countdown timer ticks every second
     setInterval(() => {
       const clocks = document.querySelectorAll('.timer-clock');
       clocks.forEach(clock => {
@@ -132,55 +164,6 @@
         }
       });
     }, 1000);
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const targetUser = urlParams.get('u');
-
-  if (targetUser) {
-    localStorage.setItem('pendingChatUser', targetUser);
-  }
-
-  const loggedInUser = localStorage.getItem('username');
-
-  if (!loggedInUser) {
-    // If not logged in, show auth or keep them on auth screen
-    window.location.href = 'auth.html'; 
-  } else {
-    // If logged in and someone clicked a link, redirect straight to chat.html!
-    const pendingUser = localStorage.getItem('pendingChatUser');
-    
-    if (pendingUser) {
-      localStorage.removeItem('pendingChatUser');
-      window.location.href = `chat.html?user=${pendingUser}`;
-    }
-  }
-});
-
-
-  // 2. Check if active user is authenticated
-    const loggedInUser = localStorage.getItem('username');
-
- // or check Supabase session
-
-  if (!loggedInUser) {
-    // User is NOT logged in -> Show Sign Up / Login Screen
-    showAuthModal(); 
-  } else {
-    // User IS logged in -> Check if there's a stored target user to open chat with
-    const pendingUser = localStorage.getItem('pendingChatUser');
-    
-    if (pendingUser) {
-      // Clear pending state after loading
-      localStorage.removeItem('pendingChatUser');
-      
-      // Open active chat session with target user
-      startChatWith(pendingUser);
-    }
-  }
-});
-
-    // Refresh inbox feed every 4 seconds
-    setInterval(loadInboxMessages, 4000);
   </script>
 
 </body>
