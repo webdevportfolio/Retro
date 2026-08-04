@@ -3,29 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RETRO|Inbox</title>
+  <title>RETRO | Inbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header>
-    <h1>RETRO</h1>
+  <!-- Top Navigation Bar -->
+  <header class="nav-bar">
+    <a href="index.html" class="logo-glow">RETRO</a>
     <div>
-      <span class="user-badge" id="profile-btn">User</span>
-      <button class="logout-btn" onclick="logout()">Logout</button>
+      <a href="profile.html" id="profile-btn" class="nav-btn">@User</a>
+      <button class="nav-btn" onclick="logout()" style="margin-left: 6px;">Logout</button>
     </div>
   </header>
 
-  <div id="chat-list"></div>
-  <div id="empty-state" class="empty-state" style="display: none;">
-    No active messages right now.
-  </div>
+  <!-- Main Feed -->
+  <main class="main-container">
+    <div class="inbox-header">
+      <h2>Inbox</h2>
+    </div>
+
+    <div id="chat-list" class="chat-list"></div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="empty-title">No Active Messages</div>
+      <div class="empty-sub">Share your profile link to receive ephemeral chats.</div>
+    </div>
+  </main>
 
   <script>
-    // Live Render Server Base URL
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com'; 
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    // Verify Session
     const activeUser = localStorage.getItem('retro_session');
     if (!activeUser) {
       window.location.href = 'auth.html';
@@ -52,8 +60,15 @@
           return;
         }
 
-        // Render messages retrieved from server
-        chatList.innerHTML = messages.map(msg => {
+        // Group messages by sender to build individual chat preview cards
+        const chatMap = {};
+        messages.forEach(msg => {
+          if (!chatMap[msg.sender_username]) {
+            chatMap[msg.sender_username] = msg;
+          }
+        });
+
+        chatList.innerHTML = Object.values(chatMap).map(msg => {
           const expiresAt = new Date(msg.expires_at).getTime();
           const now = new Date().getTime();
           const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -65,7 +80,7 @@
             <div class="chat-card" onclick="openChat('${msg.sender_username}')">
               <div class="chat-info">
                 <div class="chat-meta">
-                  <div class="chat-username">@${msg.sender_username}</div>
+                  <span class="chat-username">@${msg.sender_username}</span>
                 </div>
                 <div class="chat-preview">${msg.content}</div>
               </div>
@@ -76,7 +91,7 @@
 
         checkEmptyState();
       } catch (err) {
-        console.error('Failed to load messages:', err);
+        console.error('Failed to load inbox:', err);
         checkEmptyState();
       }
     }
@@ -88,16 +103,14 @@
     function checkEmptyState() {
       const chatList = document.getElementById('chat-list');
       const emptyState = document.getElementById('empty-state');
-      const activeCards = chatList.querySelectorAll('.chat-card');
-
-      if (activeCards.length === 0) {
+      if (chatList.querySelectorAll('.chat-card').length === 0) {
         emptyState.style.display = 'block';
       } else {
         emptyState.style.display = 'none';
       }
     }
 
-    // Live Countdown Timer
+    // Countdown timer
     setInterval(() => {
       const clocks = document.querySelectorAll('.timer-clock');
       clocks.forEach(clock => {
@@ -105,7 +118,6 @@
         if (seconds > 0) {
           seconds--;
           clock.setAttribute('data-seconds', seconds);
-          
           const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
           const secs = (seconds % 60).toString().padStart(2, '0');
           clock.textContent = `${mins}:${secs}`;
@@ -119,9 +131,9 @@
       });
     }, 1000);
 
-    // Refresh inbox feed every 5 seconds
-    setInterval(loadInboxMessages, 5000);
+    // Refresh inbox feed every 4 seconds
+    setInterval(loadInboxMessages, 4000);
   </script>
+
 </body>
 </html>
-
