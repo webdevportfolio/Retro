@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RETRO|Join</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="auth-card">
+    <div class="logo">RETRO</div>
+    <div id="subtitle" class="auth-subtitle">Welcome back. Enter your details.</div>
+    <div id="error-box" class="error-msg"></div>
+
+    <form id="auth-form" action="#" method="POST">
+      <div class="form-group">
+        <input 
+          type="text" 
+          id="username" 
+          name="username"
+          class="input-field" 
+          placeholder="Username" 
+          required 
+          autocomplete="username"
+        >
+      </div>
+
+      <div class="form-group">
+        <input 
+          type="password" 
+          id="password" 
+          name="password"
+          class="input-field" 
+          placeholder="Password" 
+          required
+          autocomplete="current-password"
+        >
+        <span class="toggle-password" id="eye-btn">SHOW</span>
+      </div>
+
+      <button type="submit" id="submit-btn" class="auth-btn">Log In</button>
+    </form>
+
+    <div class="switch-mode">
+      <span id="switch-text">Need an account?</span>
+      <span id="switch-btn" class="switch-link">Sign Up</span>
+    </div>
+  </div>
+
+  <script>
+  
+    let isLogin = true;
+
+    const authForm = document.getElementById('auth-form');
+    const subtitle = document.getElementById('subtitle');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submit-btn');
+    const switchBtn = document.getElementById('switch-btn');
+    const switchText = document.getElementById('switch-text');
+    const eyeBtn = document.getElementById('eye-btn');
+    const errorBox = document.getElementById('error-box');
+
+    // Auto Check Existing Session
+    window.addEventListener('DOMContentLoaded', () => {
+      const activeSession = localStorage.getItem('retro_session');
+      if (activeSession) {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Password Eye Toggle
+    eyeBtn.addEventListener('click', () => {
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeBtn.textContent = 'HIDE';
+      } else {
+        passwordInput.type = 'password';
+        eyeBtn.textContent = 'SHOW';
+      }
+    });
+
+    // Toggle Between Login & Sign Up
+    switchBtn.addEventListener('click', () => {
+      isLogin = !isLogin;
+      errorBox.style.display = 'none';
+
+      if (isLogin) {
+        subtitle.textContent = 'Welcome back. Enter your details.';
+        submitBtn.textContent = 'Log In';
+        switchText.textContent = 'Need an account?';
+        switchBtn.textContent = 'Sign Up';
+        passwordInput.setAttribute('autocomplete', 'current-password');
+      } else {
+        subtitle.textContent = 'Choose a username & password.';
+        submitBtn.textContent = 'Create Account';
+        switchText.textContent = 'Already have an account?';
+        switchBtn.textContent = 'Log In';
+        passwordInput.setAttribute('autocomplete', 'new-password');
+      }
+    });
+
+    // Handle Auth Submission
+    authForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const username = usernameInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
+
+      if (!username || !password) return;
+
+      let users = JSON.parse(localStorage.getItem('retro_users')) || {};
+
+      if (isLogin) {
+        if (!users[username]) {
+          showError('User does not exist.');
+          return;
+        }
+        if (users[username].password !== password) {
+          showError('Incorrect password.');
+          return;
+        }
+
+        localStorage.setItem('retro_session', username);
+        window.location.href = 'inbox.html';
+
+      } else {
+        if (users[username]) {
+          showError('Username is already taken.');
+          return;
+        }
+
+        users[username] = {
+          password: password,
+          friendsCount: 0
+        };
+
+        localStorage.setItem('retro_users', JSON.stringify(users));
+        localStorage.setItem('retro_session', username);
+        window.location.href = 'inbox.html';
+      }
+    });
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

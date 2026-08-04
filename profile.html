@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RETRO - Profile</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="nav-bar">
+    <a href="index.html" class="nav-btn">← Back</a>
+    <div class="chat-header-title">Profile</div>
+    <div style="width: 50px;"></div>
+  </header>
+
+  <main class="main-container">
+    <div class="auth-card glass-panel" style="max-width: 100%;">
+      <div class="profile-avatar">
+        <span id="avatar-initial">M</span>
+      </div>
+      
+      <h2 id="display-username" class="profile-name">username</h2>
+      <p class="profile-status">Status: Active</p>
+
+      <!-- Personal Chat Link Box -->
+      <div class="link-box">
+        <label class="link-label">Your Direct Chat Link</label>
+        <div class="link-input-group">
+          <input type="text" id="user-link-input" readonly class="input-field link-field">
+          <button id="copy-btn" class="copy-btn">Copy</button>
+        </div>
+      </div>
+
+      <div class="profile-meta-box">
+        <div class="meta-item">
+          <span class="meta-label">Total Messages</span>
+          <span class="meta-value" id="msg-count">2</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Password</span>
+          <span class="meta-value">••••••••</span>
+        </div>
+      </div>
+
+      <button id="logout-btn" class="logout-btn">Log Out</button>
+    </div>
+  </main>
+
+  <script>
+    // Verify Session
+    const activeUser = localStorage.getItem('retro_session');
+    if (!activeUser) {
+      window.location.href = 'auth.html';
+    } else {
+      document.getElementById('display-username').textContent = activeUser;
+      document.getElementById('avatar-initial').textContent = activeUser.charAt(0).toUpperCase();
+
+      // Generate dynamic profile link
+      const profileLink = `${window.location.origin}/chat.html?user=${activeUser}`;
+      document.getElementById('user-link-input').value = profileLink;
+    }
+
+    // Copy Link Handler
+    const copyBtn = document.getElementById('copy-btn');
+    copyBtn.addEventListener('click', () => {
+      const linkInput = document.getElementById('user-link-input');
+      linkInput.select();
+      linkInput.setSelectionRange(0, 99999); // Mobile compatibility
+
+      navigator.clipboard.writeText(linkInput.value).then(() => {
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = 'var(--accent-purple)';
+        copyBtn.style.color = '#000';
+        
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+          copyBtn.style.background = 'rgba(255, 255, 255, 0.08)';
+          copyBtn.style.color = '#fff';
+        }, 2000);
+      });
+    });
+
+    // Log Out Handler
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem('retro_session');
+      window.location.href = 'auth.html';
+    });
+  </script>
+</body>
+</html>
