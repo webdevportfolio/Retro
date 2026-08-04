@@ -149,6 +149,22 @@
           resetButton();
         }
       }
+// Inside successful Auth submission (Sign Up or Login)
+async function handleAuthSuccess(username) {
+  localStorage.setItem('username', username);
+  
+  // Close auth screen
+  hideAuthModal();
+
+  // Check if they came from someone's shared link
+  const pendingUser = localStorage.getItem('pendingChatUser');
+  if (pendingUser) {
+    localStorage.removeItem('pendingChatUser');
+    startChatWith(pendingUser);
+  } else {
+    loadInbox(); // Normal dashboard view
+  }
+}
 
       function resetButton() {
         submitBtn.disabled = false;
