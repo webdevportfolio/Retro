@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RETRO|Join</title>
+  <title>RETRO | Join</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     <div id="subtitle" class="auth-subtitle">Welcome back. Enter your details.</div>
     <div id="error-box" class="error-msg"></div>
 
-    <form id="auth-form" action="#" method="POST">
+    <form id="auth-form" onsubmit="event.preventDefault(); handleSubmit();">
       <div class="form-group">
         <input 
           type="text" 
@@ -36,7 +36,7 @@
           required
           autocomplete="current-password"
         >
-        <span class="toggle-password" id="eye-btn">SHOW</span>
+        <span class="toggle-password" id="eye-btn" onclick="togglePassword()">SHOW</span>
       </div>
 
       <button type="submit" id="submit-btn" class="auth-btn">Log In</button>
@@ -44,39 +44,56 @@
 
     <div class="switch-mode">
       <span id="switch-text">Need an account?</span>
-      <span id="switch-btn" class="switch-link">Sign Up</span>
+      <span id="switch-btn" class="switch-link" onclick="toggleMode()">Sign Up</span>
     </div>
   </div>
 
 <script>
-  // Your Live Render Server Base URL
   const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-
   let isLogin = true;
+
+  function togglePassword() {
+    const pwdInput = document.getElementById('password');
+    const eyeBtn = document.getElementById('eye-btn');
+    if (pwdInput.type === 'password') {
+      pwdInput.type = 'text';
+      eyeBtn.innerText = 'HIDE';
+    } else {
+      pwdInput.type = 'password';
+      eyeBtn.innerText = 'SHOW';
+    }
+  }
 
   function toggleMode() {
     isLogin = !isLogin;
-    document.getElementById('form-title').innerText = isLogin ? 'Login to Retro' : 'Register for Retro';
-    document.getElementById('submit-btn').innerText = isLogin ? 'Login' : 'Register';
-    document.getElementById('toggle-btn').innerText = isLogin ? 'Need an account? Register' : 'Already have an account? Login';
-    document.getElementById('error-msg').innerText = '';
+    document.getElementById('subtitle').innerText = isLogin ? 'Welcome back. Enter your details.' : 'Create an account to get started.';
+    document.getElementById('submit-btn').innerText = isLogin ? 'Log In' : 'Sign Up';
+    document.getElementById('switch-text').innerText = isLogin ? 'Need an account?' : 'Already have an account?';
+    document.getElementById('switch-btn').innerText = isLogin ? 'Sign Up' : 'Log In';
+    
+    const errorBox = document.getElementById('error-box');
+    errorBox.innerText = '';
+    errorBox.style.display = 'none';
   }
 
   async function handleSubmit() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
-    const errorMsg = document.getElementById('error-msg');
-    errorMsg.innerText = '';
+    const errorBox = document.getElementById('error-box');
+    
+    errorBox.innerText = '';
+    errorBox.style.display = 'none';
 
     if (!username || !password) {
-      errorMsg.innerText = 'Please enter both username and password.';
+      errorBox.innerText = 'Please fill out all fields.';
+      errorBox.style.display = 'block';
       return;
     }
 
     const endpoint = isLogin 
       ? `${API_BASE_URL}/api/login` 
       : `${API_BASE_URL}/api/register`;
-    
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -87,20 +104,22 @@
       const data = await response.json();
 
       if (!response.ok) {
-        errorMsg.innerText = data.error || 'Something went wrong.';
+        errorBox.innerText = data.error || 'Something went wrong.';
+        errorBox.style.display = 'block';
         return;
       }
 
       if (isLogin) {
-        // Save user session and go to inbox (index.html)
         localStorage.setItem('retro_session', data.user.username);
         window.location.href = 'index.html';
       } else {
-        alert('Registration successful! You can now log in.');
-        toggleMode();
+        alert('Account created! Logging you in...');
+        localStorage.setItem('retro_session', username);
+        window.location.href = 'index.html';
       }
     } catch (err) {
-      errorMsg.innerText = 'Network error. Server might still be waking up.';
+      errorBox.innerText = 'Network error. Backend might be waking up.';
+      errorBox.style.display = 'block';
     }
   }
 </script>
