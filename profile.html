@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Logout Handler
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('retro_session');
+      localStorage.removeItem('username');
       localStorage.removeItem('username');
       window.location.href = 'auth.html';
     });
