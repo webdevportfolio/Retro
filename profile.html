@@ -43,11 +43,10 @@
       <button id="logout-btn" class="logout-btn">Log Out</button>
     </div>
   </main>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Fetch current logged-in user using your correct session key
+  // 1. Fetch current logged-in user supporting both keys
   const currentUser = localStorage.getItem('retro_session') || localStorage.getItem('username');
 
   // Redirect to login if unauthenticated
@@ -108,10 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 6. Logout Handler
+  // 6. Complete Logout Handler (Clears all variations)
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('username');
+      localStorage.removeItem('retro_session');
       localStorage.removeItem('username');
       window.location.href = 'auth.html';
     });
