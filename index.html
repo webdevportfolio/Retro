@@ -37,7 +37,7 @@
 
     const activeUser = localStorage.getItem('retro_session');
     if (!activeUser) {
-      window.location.href = 'profile.html';
+      window.location.href = 'auth.html';
     } else {
       document.getElementById('profile-btn').textContent = `${activeUser}`;
       loadInboxMessages();
