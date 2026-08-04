@@ -46,7 +46,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Fetch current logged-in user
-  const currentUser = localStorage.getItem('username');
+  const currentUser = localStorage.getItem('username') || localStorage.getItem('user') || localStorage.getItem('currentUser');
 
   // Redirect to login if unauthenticated
   if (!currentUser) {
