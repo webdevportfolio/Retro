@@ -142,7 +142,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // 2. Check if active user is authenticated
-  const loggedInUser = localStorage.getItem('username'); // or check Supabase session
+  const loggedInUser = localStorage.removeItem('retro_session');
+ // or check Supabase session
 
   if (!loggedInUser) {
     // User is NOT logged in -> Show Sign Up / Login Screen
