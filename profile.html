@@ -43,46 +43,81 @@
       <button id="logout-btn" class="logout-btn">Log Out</button>
     </div>
   </main>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Fetch current logged-in user
+  const currentUser = localStorage.getItem('username');
 
-  <script>
-    // Verify Session
-    const activeUser = localStorage.getItem('retro_session');
-    if (!activeUser) {
-      window.location.href = 'auth.html';
-    } else {
-      document.getElementById('display-username').textContent = activeUser;
-      document.getElementById('avatar-initial').textContent = activeUser.charAt(0).toUpperCase();
+  // Redirect to login if unauthenticated
+  if (!currentUser) {
+    window.location.href = 'index.html';
+    return;
+  }
 
-      // Generate dynamic profile link
-      const profileLink = `${window.location.origin}/chat.html?user=${activeUser}`;
-      document.getElementById('user-link-input').value = profileLink;
-    }
+  // 2. DOM Element Selectors
+  const avatarLetter = document.querySelector('.profile-card .avatar, #avatar-letter');
+  const usernameDisplay = document.querySelector('.profile-card h2, #profile-username');
+  const linkInput = document.getElementById('chat-link-input') || document.querySelector('input[readonly]');
+  const copyBtn = document.getElementById('copy-btn') || document.querySelector('.profile-card button');
+  const logoutBtn = document.getElementById('logout-btn') || document.querySelector('button.log-out');
 
-    // Copy Link Handler
-    const copyBtn = document.getElementById('copy-btn');
-    copyBtn.addEventListener('click', () => {
-      const linkInput = document.getElementById('user-link-input');
-      linkInput.select();
-      linkInput.setSelectionRange(0, 99999); // Mobile compatibility
+  // 3. Update Profile UI Info
+  if (usernameDisplay) {
+    usernameDisplay.textContent = currentUser;
+  }
 
-      navigator.clipboard.writeText(linkInput.value).then(() => {
-        copyBtn.textContent = 'Copied!';
-        copyBtn.style.background = 'var(--accent-purple)';
-        copyBtn.style.color = '#000';
-        
+  if (avatarLetter) {
+    avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
+  }
+
+  // 4. Construct Direct Chat URL
+  // Hardcoded to index.html with query param to prevent GitHub Pages 404 errors
+  const directLink = `https://webdevportfolio.github.io/Retro/index.html?u=${encodeURIComponent(currentUser)}`;
+
+  if (linkInput) {
+    linkInput.value = directLink;
+  }
+
+  // 5. Copy Button Logic with Fallbacks
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(directLink);
+        } else {
+          // Fallback for mobile webviews / non-HTTPS testing
+          if (linkInput) {
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+          }
+        }
+
+        // Button Feedback
+        const originalText = copyBtn.innerText;
+        copyBtn.innerText = 'Copied!';
+        copyBtn.style.opacity = '0.8';
+
         setTimeout(() => {
-          copyBtn.textContent = 'Copy';
-          copyBtn.style.background = 'rgba(255, 255, 255, 0.08)';
-          copyBtn.style.color = '#fff';
+          copyBtn.innerText = originalText;
+          copyBtn.style.opacity = '1';
         }, 2000);
-      });
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+        alert('Could not copy link automatically. Please select and copy manually.');
+      }
     });
+  }
 
-    // Log Out Handler
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      localStorage.removeItem('retro_session');
-      window.location.href = 'auth.html';
+  // 6. Logout Handler
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('username');
+      localStorage.removeItem('sb-access-token'); // Clear session token if stored
+      window.location.href = 'index.html';
     });
-  </script>
+  }
+});
+</script>
 </body>
 </html>
