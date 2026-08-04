@@ -66,21 +66,26 @@
 
   function toggleMode() {
     isLogin = !isLogin;
-    document.getElementById('subtitle').innerText = isLogin ? 'Welcome back. Enter your details.' : 'Create an account to get started.';
+    document.getElementById('subtitle').innerText = isLogin 
+      ? 'Welcome back. Enter your details.' 
+      : 'Create an account to get started.';
     document.getElementById('submit-btn').innerText = isLogin ? 'Log In' : 'Sign Up';
     document.getElementById('switch-text').innerText = isLogin ? 'Need an account?' : 'Already have an account?';
     document.getElementById('switch-btn').innerText = isLogin ? 'Sign Up' : 'Log In';
     
     const errorBox = document.getElementById('error-box');
-    errorBox.innerText = '';
-    errorBox.style.display = 'none';
+    if (errorBox) {
+      errorBox.innerText = '';
+      errorBox.style.display = 'none';
+    }
   }
 
   async function handleSubmit() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorBox = document.getElementById('error-box');
-    
+    const submitBtn = document.getElementById('submit-btn');
+
     errorBox.innerText = '';
     errorBox.style.display = 'none';
 
@@ -89,6 +94,18 @@
       errorBox.style.display = 'block';
       return;
     }
+
+    // Set loading state
+    submitBtn.disabled = true;
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = 'Connecting...';
+    
+    // Alert user if response is taking longer than usual (Render spin-up)
+    const wakeUpTimer = setTimeout(() => {
+      errorBox.innerText = 'Server is waking up from sleep mode, please wait a few seconds...';
+      errorBox.style.color = '#eab308'; // Warning yellow
+      errorBox.style.display = 'block';
+    }, 3000);
 
     const endpoint = isLogin 
       ? `${API_BASE_URL}/api/login` 
@@ -101,11 +118,14 @@
         body: JSON.stringify({ username, password })
       });
 
+      clearTimeout(wakeUpTimer);
       const data = await response.json();
 
       if (!response.ok) {
+        errorBox.style.color = '#ef4444'; // Error red
         errorBox.innerText = data.error || 'Something went wrong.';
         errorBox.style.display = 'block';
+        resetButton();
         return;
       }
 
@@ -118,11 +138,20 @@
         window.location.href = 'index.html';
       }
     } catch (err) {
-      errorBox.innerText = 'Network error. Backend might be waking up.';
+      clearTimeout(wakeUpTimer);
+      errorBox.style.color = '#ef4444';
+      errorBox.innerText = 'Connection error. Tap Sign Up again to retry.';
       errorBox.style.display = 'block';
+      resetButton();
+    }
+
+    function resetButton() {
+      submitBtn.disabled = false;
+      submitBtn.innerText = originalText;
     }
   }
 </script>
+
 
 </body>
 </html>
