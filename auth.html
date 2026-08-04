@@ -48,111 +48,114 @@
     </div>
   </div>
 
-        <script>
-  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-  let isLogin = true;
+  <script>
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    let isLogin = true;
 
-  function togglePassword() {
-    const pwdInput = document.getElementById('password');
-    const eyeBtn = document.getElementById('eye-btn');
-    if (pwdInput.type === 'password') {
-      pwdInput.type = 'text';
-      eyeBtn.innerText = 'HIDE';
-    } else {
-      pwdInput.type = 'password';
-      eyeBtn.innerText = 'SHOW';
+    function togglePassword() {
+      const pwdInput = document.getElementById('password');
+      const eyeBtn = document.getElementById('eye-btn');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        eyeBtn.innerText = 'HIDE';
+      } else {
+        pwdInput.type = 'password';
+        eyeBtn.innerText = 'SHOW';
+      }
     }
-  }
 
-  function toggleMode() {
-    isLogin = !isLogin;
-    document.getElementById('subtitle').innerText = isLogin 
-      ? 'Welcome back. Enter your details.' 
-      : 'Create an account to get started.';
-    document.getElementById('submit-btn').innerText = isLogin ? 'Log In' : 'Sign Up';
-    document.getElementById('switch-text').innerText = isLogin ? 'Need an account?' : 'Already have an account?';
-    document.getElementById('switch-btn').innerText = isLogin ? 'Sign Up' : 'Log In';
-    
-    const errorBox = document.getElementById('error-box');
-    if (errorBox) {
+    function toggleMode() {
+      isLogin = !isLogin;
+      document.getElementById('subtitle').innerText = isLogin 
+        ? 'Welcome back. Enter your details.' 
+        : 'Create an account to get started.';
+      document.getElementById('submit-btn').innerText = isLogin ? 'Log In' : 'Sign Up';
+      document.getElementById('switch-text').innerText = isLogin ? 'Need an account?' : 'Already have an account?';
+      document.getElementById('switch-btn').innerText = isLogin ? 'Sign Up' : 'Log In';
+      
+      const errorBox = document.getElementById('error-box');
+      if (errorBox) {
+        errorBox.innerText = '';
+        errorBox.style.display = 'none';
+      }
+    }
+
+    async function handleSubmit(isRetry = false) {
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      const errorBox = document.getElementById('error-box');
+      const submitBtn = document.getElementById('submit-btn');
+
       errorBox.innerText = '';
       errorBox.style.display = 'none';
-    }
-  }
 
-  async function handleSubmit(isRetry = false) {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const errorBox = document.getElementById('error-box');
-    const submitBtn = document.getElementById('submit-btn');
-
-    errorBox.innerText = '';
-    errorBox.style.display = 'none';
-
-    if (!username || !password) {
-      errorBox.innerText = 'Please fill out all fields.';
-      errorBox.style.display = 'block';
-      return;
-    }
-
-    submitBtn.disabled = true;
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Connecting...';
-    
-    const wakeUpTimer = setTimeout(() => {
-      errorBox.innerText = 'Server is waking up from sleep mode, please wait...';
-      errorBox.style.color = '#eab308';
-      errorBox.style.display = 'block';
-    }, 2500);
-
-    const endpoint = isLogin 
-      ? `${API_BASE_URL}/api/login` 
-      : `${API_BASE_URL}/api/register`;
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      clearTimeout(wakeUpTimer);
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!username || !password) {
         errorBox.style.color = '#ef4444';
-        errorBox.innerText = data.error || 'Something went wrong.';
+        errorBox.innerText = 'Please fill out all fields.';
         errorBox.style.display = 'block';
-        resetButton();
         return;
       }
 
-      localStorage.setItem('retro_session', username);
-      window.location.href = 'index.html';
-
-    } catch (err) {
-      clearTimeout(wakeUpTimer);
+      submitBtn.disabled = true;
+      const originalText = isLogin ? 'Log In' : 'Sign Up';
+      submitBtn.innerText = 'Connecting...';
       
-      if (!isRetry) {
+      const wakeUpTimer = setTimeout(() => {
+        errorBox.innerText = 'Server waking up from sleep mode, please wait...';
         errorBox.style.color = '#eab308';
-        errorBox.innerText = 'Server warming up. Retrying in 3 seconds...';
         errorBox.style.display = 'block';
-        setTimeout(() => handleSubmit(true), 3000);
-      } else {
-        errorBox.style.color = '#ef4444';
-        errorBox.innerText = 'Server unreachable. Please check connection and try again.';
-        errorBox.style.display = 'block';
-        resetButton();
+      }, 2500);
+
+      const endpoint = isLogin 
+        ? `${API_BASE_URL}/api/login` 
+        : `${API_BASE_URL}/api/register`;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        clearTimeout(wakeUpTimer);
+        const data = await response.json();
+
+        if (!response.ok) {
+          errorBox.style.color = '#ef4444';
+          errorBox.innerText = data.error || 'Authentication failed.';
+          errorBox.style.display = 'block';
+          resetButton();
+          return;
+        }
+
+        // Save session locally and redirect
+        localStorage.setItem('retro_session', username);
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        clearTimeout(wakeUpTimer);
+        
+        if (!isRetry) {
+          errorBox.style.color = '#eab308';
+          errorBox.innerText = 'Server waking up. Retrying connection...';
+          errorBox.style.display = 'block';
+          setTimeout(() => handleSubmit(true), 3000);
+        } else {
+          errorBox.style.color = '#ef4444';
+          errorBox.innerText = 'Server unreachable. Please check connection and try again.';
+          errorBox.style.display = 'block';
+          resetButton();
+        }
+      }
+
+      function resetButton() {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
       }
     }
-
-    function resetButton() {
-      submitBtn.disabled = false;
-      submitBtn.innerText = originalText;
-    }
-  }
-</script>
-
+  </script>
 
 </body>
 </html>
