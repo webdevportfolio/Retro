@@ -1,1 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RETRO|Inbox</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>RETRO</h1>
+    <div>
+      <span class="user-badge" id="profile-btn">User</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <div id="chat-list"></div>
+  <div id="empty-state" class="empty-state" style="display: none;">
+    No active messages right now.
+  </div>
+
+  <script>
+    // Live Render Server Base URL
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com'; 
+
+    // Verify Session
+    const activeUser = localStorage.getItem('retro_session');
+    if (!activeUser) {
+      window.location.href = 'auth.html';
+    } else {
+      document.getElementById('profile-btn').textContent = `@${activeUser}`;
+      loadInboxMessages();
+    }
+
+    function logout() {
+      localStorage.removeItem('retro_session');
+      window.location.href = 'auth.html';
+    }
+
+    async function loadInboxMessages() {
+      const chatList = document.getElementById('chat-list');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
+        const messages = await response.json();
+
+        if (!response.ok || !messages.length) {
+          chatList.innerHTML = '';
+          checkEmptyState();
+          return;
+        }
+
+        // Render messages retrieved from server
+        chatList.innerHTML = messages.map(msg => {
+          const expiresAt = new Date(msg.expires_at).getTime();
+          const now = new Date().getTime();
+          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
+          
+          const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+          const secs = (secondsLeft % 60).toString().padStart(2, '0');
+
+          return `
+            <div class="chat-card" onclick="openChat('${msg.sender_username}')">
+              <div class="chat-info">
+                <div class="chat-meta">
+                  <div class="chat-username">@${msg.sender_username}</div>
+                </div>
+                <div class="chat-preview">${msg.content}</div>
+              </div>
+              <div class="timer-clock" data-seconds="${secondsLeft}">${mins}:${secs}</div>
+            </div>
+          `;
+        }).join('');
+
+        checkEmptyState();
+      } catch (err) {
+        console.error('Failed to load messages:', err);
+        checkEmptyState();
+      }
+    }
+
+    function openChat(username) {
+      window.location.href = `chat.html?user=${username}`;
+    }
+
+    function checkEmptyState() {
+      const chatList = document.getElementById('chat-list');
+      const emptyState = document.getElementById('empty-state');
+      const activeCards = chatList.querySelectorAll('.chat-card');
+
+      if (activeCards.length === 0) {
+        emptyState.style.display = 'block';
+      } else {
+        emptyState.style.display = 'none';
+      }
+    }
+
+    // Live Countdown Timer
+    setInterval(() => {
+      const clocks = document.querySelectorAll('.timer-clock');
+      clocks.forEach(clock => {
+        let seconds = parseInt(clock.getAttribute('data-seconds'));
+        if (seconds > 0) {
+          seconds--;
+          clock.setAttribute('data-seconds', seconds);
+          
+          const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+          const secs = (seconds % 60).toString().padStart(2, '0');
+          clock.textContent = `${mins}:${secs}`;
+        } else {
+          const card = clock.closest('.chat-card');
+          if (card) {
+            card.remove();
+            checkEmptyState();
+          }
+        }
+      });
+    }, 1000);
+
+    // Refresh inbox feed every 5 seconds
+    setInterval(loadInboxMessages, 5000);
+  </script>
+</body>
+</html>
 
