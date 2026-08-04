@@ -54,12 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 2. DOM Element Selectors
-  const avatarLetter = document.querySelector('.profile-card .avatar, #avatar-letter');
-  const usernameDisplay = document.querySelector('.profile-card h2, #profile-username');
-  const linkInput = document.getElementById('chat-link-input') || document.querySelector('input[readonly]');
-  const copyBtn = document.getElementById('copy-btn') || document.querySelector('.profile-card button');
-  const logoutBtn = document.getElementById('logout-btn') || document.querySelector('button.log-out');
+  // 2. DOM Element Selectors (Updated for your exact HTML IDs)
+  const avatarLetter = document.getElementById('avatar-initial');
+  const usernameDisplay = document.getElementById('display-username');
+  const linkInput = document.getElementById('user-link-input');
+  const copyBtn = document.getElementById('copy-btn');
+  const logoutBtn = document.getElementById('logout-btn');
 
   // 3. Update Profile UI Info
   if (usernameDisplay) {
