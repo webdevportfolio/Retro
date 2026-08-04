@@ -38,7 +38,7 @@
     if (!activeUser) {
       window.location.href = 'auth.html';
     } else {
-      document.getElementById('profile-btn').textContent = `@${activeUser}`;
+      document.getElementById('profile-btn').textContent = `${activeUser}`;
       loadInboxMessages();
     }
 
