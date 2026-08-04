@@ -44,7 +44,7 @@
     }
 
     function logout() {
-      localStorage.removeItem('retro_session');
+      localStorage.removeItem('username');
       window.location.href = 'auth.html';
     }
 
@@ -142,7 +142,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // 2. Check if active user is authenticated
-    const loggedInUser = localStorage.getItem('retro_session');
+    const loggedInUser = localStorage.getItem('username');
 
  // or check Supabase session
 
