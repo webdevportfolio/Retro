@@ -11,7 +11,7 @@
   <!-- Top Navigation Header -->
   <header class="nav-bar">
     <a href="index.html" class="nav-btn">← Back</a>
-    <div id="chat-with-user" class="chat-header-title">@user</div>
+    <div id="chat-with-user" class="chat-header-title">user</div>
     <a href="profile.html" id="profile-btn" class="nav-btn">profile</a>
   </header>
 
@@ -38,7 +38,8 @@
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    const activeUser = localStorage.getItem('retro_session');
+    // Fixed to read 'username' consistently across your app
+    const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
     const urlParams = new URLSearchParams(window.location.search);
     const targetUser = urlParams.get('user');
 
@@ -47,11 +48,11 @@
     }
 
     if (targetUser) {
-      document.getElementById('chat-with-user').textContent = `@${targetUser}`;
+      document.getElementById('chat-with-user').textContent = targetUser;
     }
 
     async function loadChat() {
-      if (!targetUser) return;
+      if (!targetUser || !activeUser) return;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
@@ -102,7 +103,7 @@
       const input = document.getElementById('message-input');
       const content = input.value.trim();
 
-      if (!content || !targetUser) return;
+      if (!content || !targetUser || !activeUser) return;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
@@ -120,6 +121,9 @@
           input.value = '';
           await loadChat();
           window.scrollTo(0, document.body.scrollHeight);
+        } else {
+          const errData = await response.json();
+          console.error('Server rejected message:', errData);
         }
       } catch (err) {
         console.error('Error sending message:', err);
