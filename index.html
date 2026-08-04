@@ -44,6 +44,7 @@
     }
 
     function logout() {
+      localStorage.removeItem('retro_session');
       localStorage.removeItem('username');
       window.location.href = 'auth.html';
     }
