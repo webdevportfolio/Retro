@@ -133,14 +133,29 @@
       });
     }, 1000);
 window.addEventListener('DOMContentLoaded', () => {
-  // 1. Grab target recipient from URL parameter ?u=
   const urlParams = new URLSearchParams(window.location.search);
   const targetUser = urlParams.get('u');
 
-  // If a target user exists in URL, remember it
   if (targetUser) {
     localStorage.setItem('pendingChatUser', targetUser);
   }
+
+  const loggedInUser = localStorage.getItem('username');
+
+  if (!loggedInUser) {
+    // If not logged in, show auth or keep them on auth screen
+    window.location.href = 'auth.html'; 
+  } else {
+    // If logged in and someone clicked a link, redirect straight to chat.html!
+    const pendingUser = localStorage.getItem('pendingChatUser');
+    
+    if (pendingUser) {
+      localStorage.removeItem('pendingChatUser');
+      window.location.href = `chat.html?user=${pendingUser}`;
+    }
+  }
+});
+
 
   // 2. Check if active user is authenticated
     const loggedInUser = localStorage.getItem('username');
