@@ -48,104 +48,62 @@
     </div>
   </div>
 
-  <script>
-  
-    let isLogin = true;
+<script>
+  // Your Live Render Server Base URL
+  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    const authForm = document.getElementById('auth-form');
-    const subtitle = document.getElementById('subtitle');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const submitBtn = document.getElementById('submit-btn');
-    const switchBtn = document.getElementById('switch-btn');
-    const switchText = document.getElementById('switch-text');
-    const eyeBtn = document.getElementById('eye-btn');
-    const errorBox = document.getElementById('error-box');
+  let isLogin = true;
 
-    // Auto Check Existing Session
-    window.addEventListener('DOMContentLoaded', () => {
-      const activeSession = localStorage.getItem('retro_session');
-      if (activeSession) {
-        window.location.href = 'index.html';
-      }
-    });
+  function toggleMode() {
+    isLogin = !isLogin;
+    document.getElementById('form-title').innerText = isLogin ? 'Login to Retro' : 'Register for Retro';
+    document.getElementById('submit-btn').innerText = isLogin ? 'Login' : 'Register';
+    document.getElementById('toggle-btn').innerText = isLogin ? 'Need an account? Register' : 'Already have an account? Login';
+    document.getElementById('error-msg').innerText = '';
+  }
 
-    // Password Eye Toggle
-    eyeBtn.addEventListener('click', () => {
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        eyeBtn.textContent = 'HIDE';
-      } else {
-        passwordInput.type = 'password';
-        eyeBtn.textContent = 'SHOW';
-      }
-    });
+  async function handleSubmit() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorMsg = document.getElementById('error-msg');
+    errorMsg.innerText = '';
 
-    // Toggle Between Login & Sign Up
-    switchBtn.addEventListener('click', () => {
-      isLogin = !isLogin;
-      errorBox.style.display = 'none';
-
-      if (isLogin) {
-        subtitle.textContent = 'Welcome back. Enter your details.';
-        submitBtn.textContent = 'Log In';
-        switchText.textContent = 'Need an account?';
-        switchBtn.textContent = 'Sign Up';
-        passwordInput.setAttribute('autocomplete', 'current-password');
-      } else {
-        subtitle.textContent = 'Choose a username & password.';
-        submitBtn.textContent = 'Create Account';
-        switchText.textContent = 'Already have an account?';
-        switchBtn.textContent = 'Log In';
-        passwordInput.setAttribute('autocomplete', 'new-password');
-      }
-    });
-
-    // Handle Auth Submission
-    authForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const username = usernameInput.value.trim().toLowerCase();
-      const password = passwordInput.value;
-
-      if (!username || !password) return;
-
-      let users = JSON.parse(localStorage.getItem('retro_users')) || {};
-
-      if (isLogin) {
-        if (!users[username]) {
-          showError('User does not exist.');
-          return;
-        }
-        if (users[username].password !== password) {
-          showError('Incorrect password.');
-          return;
-        }
-
-        localStorage.setItem('retro_session', username);
-        window.location.href = 'inbox.html';
-
-      } else {
-        if (users[username]) {
-          showError('Username is already taken.');
-          return;
-        }
-
-        users[username] = {
-          password: password,
-          friendsCount: 0
-        };
-
-        localStorage.setItem('retro_users', JSON.stringify(users));
-        localStorage.setItem('retro_session', username);
-        window.location.href = 'inbox.html';
-      }
-    });
-
-    function showError(msg) {
-      errorBox.textContent = msg;
-      errorBox.style.display = 'block';
+    if (!username || !password) {
+      errorMsg.innerText = 'Please enter both username and password.';
+      return;
     }
-  </script>
+
+    const endpoint = isLogin 
+      ? `${API_BASE_URL}/api/login` 
+      : `${API_BASE_URL}/api/register`;
+    
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        errorMsg.innerText = data.error || 'Something went wrong.';
+        return;
+      }
+
+      if (isLogin) {
+        // Save user session and go to inbox (index.html)
+        localStorage.setItem('retro_session', data.user.username);
+        window.location.href = 'index.html';
+      } else {
+        alert('Registration successful! You can now log in.');
+        toggleMode();
+      }
+    } catch (err) {
+      errorMsg.innerText = 'Network error. Server might still be waking up.';
+    }
+  }
+</script>
+
 </body>
 </html>
