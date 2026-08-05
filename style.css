@@ -323,17 +323,18 @@ body {
 }
 
 .chat-container {
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 16px 16px 90px 16px; /* Extra bottom padding so messages aren't covered by input */
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 80px; /* leaves space for input bar */
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  padding: 10px;
 }
+
 
 /* Message Wrappers & Alignments */
 .message-wrapper {
