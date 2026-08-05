@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RETRO | Profile</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Web App Manifest & App Icon Link -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#a855f7">
-
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="theme-color" content="#a855f7">
+  
 </head>
 <body class="inbox-body">
-
 
   <!-- Top Navigation Header -->
   <header class="nav-bar">
@@ -30,6 +28,18 @@
       
       <h2 id="display-username" class="profile-name">username</h2>
       <p class="profile-status">Status: Active</p>
+
+      <!-- Chat Metrics Grid -->
+      <div class="profile-stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-chats">0</div>
+          <div class="stat-label">Active Chats</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-messages">0</div>
+          <div class="stat-label">Total Messages</div>
+        </div>
+      </div>
 
       <!-- Personal Chat Link Box -->
       <div class="link-box">
@@ -48,55 +58,101 @@
       </div>
 
       <button id="logout-btn" class="logout-btn">Log Out</button>
+
+      <!-- Danger Zone -->
+      <div class="danger-zone">
+        <button id="open-delete-modal-btn" class="delete-btn">Delete Account</button>
+      </div>
     </div>
   </main>
 
+  <!-- Delete Account Confirmation Modal -->
+  <div id="delete-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="color: #ef4444; margin-bottom: 8px;">Delete Account?</h3>
+      <p style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">
+        This action cannot be undone. Your profile and stored messages will be permanently removed.
+      </p>
+      <div class="modal-actions">
+        <button id="cancel-delete-btn" class="cancel-btn">Cancel</button>
+        <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Fetch current logged-in user supporting both keys
-  const currentUser = localStorage.getItem('retro_session') || localStorage.getItem('username');
+  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-  // Redirect to login if unauthenticated
-  if (!currentUser) {
+  // 1. Session Auth Check
+  const rawUser = localStorage.getItem('retro_session') || localStorage.getItem('username');
+  if (!rawUser) {
     window.location.href = 'auth.html';
     return;
   }
+  const currentUser = rawUser.trim().replace('@', '');
 
-  // 2. DOM Element Selectors
+  // 2. DOM Elements
   const avatarLetter = document.getElementById('avatar-initial');
   const usernameDisplay = document.getElementById('display-username');
   const linkInput = document.getElementById('user-link-input');
   const copyBtn = document.getElementById('copy-btn');
   const logoutBtn = document.getElementById('logout-btn');
+  const statChats = document.getElementById('stat-chats');
+  const statMessages = document.getElementById('stat-messages');
 
-  // 3. Update Profile UI Info
-  if (usernameDisplay) {
-    usernameDisplay.textContent = currentUser;
+  const deleteModal = document.getElementById('delete-modal');
+  const openDeleteModalBtn = document.getElementById('open-delete-modal-btn');
+  const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+  const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+  // 3. Render User Details
+  if (usernameDisplay) usernameDisplay.textContent = currentUser;
+  if (avatarLetter) avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
+
+  const baseUrl = window.location.origin + window.location.pathname.replace('profile.html', 'index.html');
+  const directLink = `${baseUrl}?u=${encodeURIComponent(currentUser)}`;
+  if (linkInput) linkInput.value = directLink;
+
+  // 4. Fetch Metrics (Active Chats & Total Messages)
+  async function loadUserStats() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`);
+      if (!response.ok) return;
+
+      const messages = await response.json();
+      if (!messages || !Array.isArray(messages)) return;
+
+      const userLower = currentUser.toLowerCase();
+      const uniqueContacts = new Set();
+
+      messages.forEach(msg => {
+        const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
+        const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
+
+        if (sender && sender !== userLower) uniqueContacts.add(sender);
+        if (receiver && receiver !== userLower) uniqueContacts.add(receiver);
+      });
+
+      if (statChats) statChats.textContent = uniqueContacts.size;
+      if (statMessages) statMessages.textContent = messages.length;
+    } catch (err) {
+      console.error('Error fetching user stats:', err);
+    }
   }
 
-  if (avatarLetter) {
-    avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
-  }
+  loadUserStats();
 
-const baseUrl = window.location.origin + window.location.pathname.replace('profile.html', 'index.html');
-const directLink = `${baseUrl}?u=${encodeURIComponent(currentUser)}`;
-
-  if (linkInput) {
-    linkInput.value = directLink;
-  }
-
-  // 5. Copy Button Logic with Fallbacks
+  // 5. Copy Link Action
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {
       try {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(directLink);
-        } else {
-          if (linkInput) {
-            linkInput.select();
-            linkInput.setSelectionRange(0, 99999);
-            document.execCommand('copy');
-          }
+        } else if (linkInput) {
+          linkInput.select();
+          linkInput.setSelectionRange(0, 99999);
+          document.execCommand('copy');
         }
 
         const originalText = copyBtn.innerText;
@@ -108,18 +164,54 @@ const directLink = `${baseUrl}?u=${encodeURIComponent(currentUser)}`;
           copyBtn.style.opacity = '1';
         }, 2000);
       } catch (err) {
-        console.error('Failed to copy: ', err);
         alert('Could not copy link automatically. Please select and copy manually.');
       }
     });
   }
 
-  // 6. Complete Logout Handler (Clears all variations)
+  // 6. Logout Action
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('retro_session');
       localStorage.removeItem('username');
       window.location.href = 'auth.html';
+    });
+  }
+
+  // 7. Modal Control & Delete Account Logic
+  if (openDeleteModalBtn && deleteModal) {
+    openDeleteModalBtn.addEventListener('click', () => deleteModal.classList.add('active'));
+  }
+
+  if (cancelDeleteBtn && deleteModal) {
+    cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.remove('active'));
+  }
+
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener('click', async () => {
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.textContent = 'Deleting...';
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok || response.status === 404) {
+          localStorage.clear();
+          window.location.href = 'auth.html';
+        } else {
+          alert('Failed to delete account. Please try again.');
+          confirmDeleteBtn.disabled = false;
+          confirmDeleteBtn.textContent = 'Delete';
+        }
+      } catch (err) {
+        console.error('Error deleting account:', err);
+        // Fallback cleanup if offline or endpoint responds with CORS block
+        localStorage.clear();
+        window.location.href = 'auth.html';
+      }
     });
   }
 });
