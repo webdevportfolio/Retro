@@ -278,14 +278,27 @@ body {
   text-align: left;
 }
 
-.chat-username {
+/* Updated Inbox Text Styles */
+.inbox-card-username {
   font-weight: 700;
   font-size: 1rem;
+  color: #ffffff;
 }
 
-.chat-preview {
+.inbox-card-preview {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-card-time {
+  font-size: 0.75rem;
+  color: #a855f7;
+  margin-top: 6px;
+  text-align: right;
 }
 
 
