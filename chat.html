@@ -67,47 +67,39 @@
       isUserScrolling = !isAtBottom;
     });
 
-        async function sendMessage() {
+            async function sendMessage() {
       const input = document.getElementById('message-input');
-      if (!input) return;
-      
       const content = input.value.trim();
 
-      if (!content || !targetUser || targetUser === 'user' || !activeUser) {
-        console.error('Validation failed: Missing content, target, or active user.');
-        return;
-      }
+      if (!content || !targetUser || targetUser === 'user' || !activeUser) return;
 
-      if (targetUser.toLowerCase() === activeUser.toLowerCase()) {
-        console.error('Cannot send a message to yourself.');
-        return;
-      }
+      if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sender_username: activeUser,
-            receiver_username: targetUser,
-            content: content,
-            duration_minutes: 10
+            sender: activeUser,
+            receiver: targetUser,
+            content: content
           })
         });
 
         if (response.ok) {
           input.value = '';
-          isUserScrolling = false; 
+          isUserScrolling = false;
           await loadChat();
           chatContainer.scrollTop = chatContainer.scrollHeight;
         } else {
-          const errData = await response.json().catch(() => ({}));
-          console.error('Server rejected message. Status:', response.status, errData);
+          const errData = await response.json();
+          console.error('Server rejected message:', errData);
         }
       } catch (err) {
-        console.error('Network or fetch error while sending:', err);
+        console.error('Error sending message:', err);
       }
     }
+
 
         // Auto scroll only if user hasn't scrolled up manually
         
