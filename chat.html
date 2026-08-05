@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat</title>
+  <title>RETRO | Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,8 +15,8 @@
     <a href="profile.html" id="profile-btn" class="nav-btn">Profile</a>
   </header>
 
-  <!-- Chat Messages Stream -->
-  <main class="chat-container">
+  <!-- Chat Messages Stream with explicit scroll behavior -->
+  <main class="chat-container" id="chat-container" style="overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1;">
     <div id="messages-list" class="messages-list"></div>
   </main>
 
@@ -36,8 +36,7 @@
   </footer>
 
   <script>
-            
-          const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
     const activeUser = rawActiveUser ? rawActiveUser.trim().replace('@', '') : '';
@@ -59,11 +58,12 @@
     document.getElementById('chat-with-user').textContent = targetUser;
 
     let isUserScrolling = false;
+    const chatContainer = document.getElementById('chat-container');
     const messagesList = document.getElementById('messages-list');
 
-    // Detect if user scrolls up manually to prevent auto-scroll from locking them
-    messagesList.addEventListener('scroll', () => {
-      const isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight < 50;
+    // Track manual scrolling so user can read history without getting jerked down
+    chatContainer.addEventListener('scroll', () => {
+      const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
       isUserScrolling = !isAtBottom;
     });
 
@@ -80,8 +80,8 @@
         const cleanActive = activeUser.toLowerCase().trim();
 
         const filteredMessages = messages.filter(msg => {
-          const s = msg.sender_username?.toLowerCase().trim().replace('@', '');
-          const r = msg.receiver_username?.toLowerCase().trim().replace('@', '');
+          const s = (msg.sender_username || msg.sender || '').toLowerCase().trim().replace('@', '');
+          const r = (msg.receiver_username || msg.receiver || '').toLowerCase().trim().replace('@', '');
           return (s === cleanTarget && r === cleanActive) || (s === cleanActive && r === cleanTarget);
         });
 
@@ -91,8 +91,9 @@
         }
 
         messagesList.innerHTML = filteredMessages.map(msg => {
-          const isSent = msg.sender_username?.toLowerCase().trim().replace('@', '') === cleanActive;
-          const expiresAt = new Date(msg.expires_at).getTime();
+          const sCheck = (msg.sender_username || msg.sender || '').toLowerCase().trim().replace('@', '');
+          const isSent = sCheck === cleanActive;
+          const expiresAt = new Date(msg.expires_at || Date.now() + 600000).getTime();
           const now = new Date().getTime();
           const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
           
@@ -113,9 +114,9 @@
           `;
         }).join('');
 
-        // Only auto-scroll down if the user isn't actively reading higher up
+        // Auto scroll only if user hasn't scrolled up manually
         if (!isUserScrolling) {
-          messagesList.scrollTop = messagesList.scrollHeight;
+          chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
       } catch (err) {
@@ -127,15 +128,9 @@
       const input = document.getElementById('message-input');
       const content = input.value.trim();
 
-      if (!content || !targetUser || targetUser === 'user' || !activeUser) {
-        console.error('Cannot send: Missing target user or content');
-        return;
-      }
+      if (!content || !targetUser || targetUser === 'user' || !activeUser) return;
 
-      if (targetUser.toLowerCase() === activeUser.toLowerCase()) {
-        console.error('Cannot send a message to yourself');
-        return;
-      }
+      if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
@@ -151,9 +146,9 @@
 
         if (response.ok) {
           input.value = '';
-          isUserScrolling = false; // Reset scroll lock so new message forces view down
+          isUserScrolling = false; 
           await loadChat();
-          messagesList.scrollTop = messagesList.scrollHeight;
+          chatContainer.scrollTop = chatContainer.scrollHeight;
         } else {
           const errData = await response.json();
           console.error('Server rejected message:', errData);
@@ -165,11 +160,6 @@
 
     loadChat();
     setInterval(loadChat, 3000);
-
   </script>
-
-
-
-
 </body>
 </html>
