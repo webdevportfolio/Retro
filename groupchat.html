@@ -72,6 +72,16 @@
         </div>
       </div>
 
+      <!-- Add Member Section -->
+      <div style="margin-bottom: 24px;">
+        <div class="section-label">Add Member</div>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="add-member-input" class="input-field" placeholder="Enter username..." style="flex: 1;">
+          <button class="nav-btn" onclick="addMember()">Add</button>
+        </div>
+        <div id="add-member-error" style="font-size: 0.75rem; color: #ef4444; margin-top: 6px; display: none;"></div>
+      </div>
+
       <button class="danger-btn" onclick="leaveGroup()">Leave Group</button>
     </div>
   </div>
@@ -281,6 +291,50 @@
     }
   }
 
+  async function addMember() {
+    const input = document.getElementById('add-member-input');
+    const errorEl = document.getElementById('add-member-error');
+    const newUsername = input.value.trim().replace('@', '');
+
+    errorEl.style.display = 'none';
+
+    if (!newUsername) return;
+
+    const alreadyMember = currentGroupData.members.some(
+      m => m.trim().replace('@', '').toLowerCase() === newUsername.toLowerCase()
+    );
+
+    if (alreadyMember) {
+      errorEl.textContent = 'That user is already in the group.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    try {
+      const updatedMembers = [...currentGroupData.members, newUsername];
+
+      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: updatedMembers })
+      });
+
+      if (res.ok) {
+        currentGroupData.members = updatedMembers;
+        renderDrawerMembers(currentGroupData);
+        renderGroupHeader(currentGroupData);
+        input.value = '';
+      } else {
+        errorEl.textContent = 'Failed to add member. User may not exist.';
+        errorEl.style.display = 'block';
+      }
+    } catch (err) {
+      console.error('Failed to add member:', err);
+      errorEl.textContent = 'Network error while adding member.';
+      errorEl.style.display = 'block';
+    }
+  }
+
   function handlePfpChange(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -294,9 +348,28 @@
     reader.readAsDataURL(file);
   }
 
-  function leaveGroup() {
-    if (confirm('Are you sure you want to leave this group?')) {
-      window.location.href = 'index.html';
+  async function leaveGroup() {
+    if (!confirm('Are you sure you want to leave this group?')) return;
+
+    try {
+      const updatedMembers = currentGroupData.members.filter(
+        m => m.trim().replace('@', '').toLowerCase() !== activeUser.toLowerCase()
+      );
+
+      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: updatedMembers })
+      });
+
+      if (res.ok) {
+        window.location.href = 'index.html';
+      } else {
+        alert('Failed to leave group. Try again.');
+      }
+    } catch (err) {
+      console.error('Failed to leave group:', err);
+      alert('Network error while leaving group.');
     }
   }
 </script>
