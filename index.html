@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inbox</title>
+  <title>RETRO | Inbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,10 +12,9 @@
   <header class="nav-bar">
     <a href="index.html" class="logo-glow">RETRO</a>
     <div>
-  <a href="profile.html" id="profile-btn" class="nav-btn">User</a>
-  <button class="nav-btn" onclick="logout()" style="margin-left: 6px;">Logout</button>
-</div>
-
+      <a href="profile.html" id="profile-btn" class="nav-btn">User</a>
+      <button class="nav-btn" onclick="logout()" style="margin-left: 6px;">Logout</button>
+    </div>
   </header>
 
   <!-- Main Feed -->
@@ -24,52 +23,48 @@
       <h2>Inbox</h2>
     </div>
 
-    <div id="chat-list" class="chat-list"></div>
+    <!-- Correct ID matching the script -->
+    <div id="inbox-list" class="chat-list"></div>
 
     <div id="empty-state" class="empty-state" style="display: none;">
       <div class="empty-title">No Active Messages</div>
       <div class="empty-sub">Share your profile link to receive ephemeral chats.</div>
     </div>
   </main>
+
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    // 1. Core initialization on page load
     window.addEventListener('DOMContentLoaded', () => {
-      // Grab target recipient from URL parameter ?u=
       const urlParams = new URLSearchParams(window.location.search);
       const targetUser = urlParams.get('u');
 
       if (targetUser) {
-        localStorage.setItem('pendingChatUser', targetUser);
+        localStorage.setItem('pendingChatUser', targetUser.trim().replace('@', ''));
       }
 
-      // Check if active user is authenticated using 'username'
-      const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
+      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session');
+      const activeUser = rawActive ? rawActive.trim().replace('@', '') : '';
 
       if (!activeUser) {
-        // Not logged in -> Redirect to auth page
         window.location.href = 'auth.html';
         return;
       }
 
-      // User IS logged in -> Update navbar button to show username
       const profileBtn = document.getElementById('profile-btn');
       if (profileBtn) {
         profileBtn.textContent = activeUser;
       }
 
-      // Check if someone clicked a share link to chat with this user
       const pendingUser = localStorage.getItem('pendingChatUser');
-      if (pendingUser && pendingUser !== activeUser) {
+      if (pendingUser && pendingUser.toLowerCase() !== activeUser.toLowerCase()) {
         localStorage.removeItem('pendingChatUser');
-        window.location.href = `chat.html?user=${pendingUser}`;
+        window.location.href = `chat.html?user=${encodeURIComponent(pendingUser)}`;
         return;
       }
 
-      // Otherwise, load normal inbox messages
-      loadInboxMessages();
-      setInterval(loadInboxMessages, 4000);
+      loadInbox();
+      setInterval(loadInbox, 4000);
     });
 
     function logout() {
@@ -77,53 +72,30 @@
       localStorage.removeItem('retro_session');
       window.location.href = 'auth.html';
     }
-// Filter out messages where the conversation partner is YOURSELF
-const uniqueConversations = messages.filter(msg => {
-  const sender = msg.sender_username?.toLowerCase().trim().replace('@', '');
-  const receiver = msg.receiver_username?.toLowerCase().trim().replace('@', '');
-  const active = activeUser.toLowerCase().trim().replace('@', '');
 
-  // The other person in the chat cannot be yourself
-  const otherUser = sender === active ? receiver : sender;
-  
-  // Exclude chats with yourself completely
-  return otherUser && otherUser !== active;
-});
-
-            
-        
-
-            async function loadInbox() {
+    async function loadInbox() {
       const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
       const activeUser = rawActive.trim().replace('@', '').toLowerCase();
       
-      if (!activeUser) {
-        window.location.href = 'auth.html';
-        return;
-      }
+      if (!activeUser) return;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) {
-          console.error("Server error response:", response.status);
-          return;
-        }
+        if (!response.ok) return;
         
         const messages = await response.json();
-        
-        // DEBUG: Check what your backend actually sent back
-        console.log("RAW MESSAGES FROM BACKEND:", messages);
-
         const inboxList = document.getElementById('inbox-list');
-        if (!inboxList) {
-          console.error("Missing element with ID 'inbox-list' in your HTML!");
-          return;
-        }
+        const emptyState = document.getElementById('empty-state');
+        
+        if (!inboxList) return;
 
         if (!messages || messages.length === 0) {
-          inboxList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">No messages yet.</p>`;
+          inboxList.innerHTML = '';
+          if (emptyState) emptyState.style.display = 'block';
           return;
         }
+
+        if (emptyState) emptyState.style.display = 'none';
 
         const conversationMap = {};
         
@@ -141,6 +113,7 @@ const uniqueConversations = messages.filter(msg => {
             otherUser = senderRaw.trim().replace('@', '');
           }
 
+          // Exclude self-chats completely
           if (!otherUser || otherUser.toLowerCase() === activeUser) return;
 
           const mapKey = otherUser.toLowerCase();
@@ -148,7 +121,7 @@ const uniqueConversations = messages.filter(msg => {
 
           if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
             conversationMap[mapKey] = {
-              username: otherUser,
+              username: otherUser, // Clean name guaranteed without '@'
               content: msg.content || '',
               created_at: msgDate
             };
@@ -158,7 +131,8 @@ const uniqueConversations = messages.filter(msg => {
         const conversations = Object.values(conversationMap);
 
         if (conversations.length === 0) {
-          inboxList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">No messages yet.</p>`;
+          inboxList.innerHTML = '';
+          if (emptyState) emptyState.style.display = 'block';
           return;
         }
 
@@ -166,7 +140,7 @@ const uniqueConversations = messages.filter(msg => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
           return `
-            <div class="inbox-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
+            <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
               <div class="inbox-card-username">${conv.username}</div>
               <div class="inbox-card-preview">${conv.content}</div>
               <div class="inbox-card-time">${time}</div>
@@ -178,48 +152,6 @@ const uniqueConversations = messages.filter(msg => {
         console.error('Failed to load inbox:', err);
       }
     }
-
-
-
-const displayUsername = otherUser.replace('@', '');
-
-    function openChat(username) {
-      window.location.href = `chat.html?user=${username}`;
-    }
-
-    function checkEmptyState() {
-      const chatList = document.getElementById('chat-list');
-      const emptyState = document.getElementById('empty-state');
-      if (!chatList || !emptyState) return;
-      
-      if (chatList.querySelectorAll('.chat-card').length === 0) {
-        emptyState.style.display = 'block';
-      } else {
-        emptyState.style.display = 'none';
-      }
-    }
-
-    // Countdown timer ticks every second
-    setInterval(() => {
-      const clocks = document.querySelectorAll('.timer-clock');
-      clocks.forEach(clock => {
-        let seconds = parseInt(clock.getAttribute('data-seconds'));
-        if (seconds > 0) {
-          seconds--;
-          clock.setAttribute('data-seconds', seconds);
-          const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-          const secs = (seconds % 60).toString().padStart(2, '0');
-          clock.textContent = `${mins}:${secs}`;
-        } else {
-          const card = clock.closest('.chat-card');
-          if (card) {
-            card.remove();
-            checkEmptyState();
-          }
-        }
-      });
-    }, 1000);
   </script>
-
 </body>
 </html>
