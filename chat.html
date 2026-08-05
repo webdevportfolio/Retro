@@ -78,57 +78,59 @@
 
     // 2. Fetch & Render Messages
     async function loadChat() {
-      if (!activeUser || !targetUser) return;
+  if (!activeUser || !targetUser) return;
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
+    if (!response.ok) return;
 
-        const allMessages = await response.json();
-        if (!messagesList) return;
+    const allMessages = await response.json();
+    if (!messagesList) return;
 
-        // Filter messages between activeUser and targetUser
-        const messages = allMessages.filter(msg => {
-          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-          const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
-          const target = targetUser.toLowerCase();
-          
-          return sender === target || receiver === target;
-        });
-
-        if (!messages || messages.length === 0) {
-          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
-          return;
-        }
-
-        messagesList.innerHTML = messages.map(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const isSent = senderRaw.trim().replace('@', '').toLowerCase() === activeUser.toLowerCase();
-          const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-          return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
-              <div class="message-bubble">
-                <div class="message-text">${msg.content}</div>
-                <div class="message-meta">
-                  <span class="timer-clock">${time}</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        // Scroll fix execution
-        if (!isUserScrolling) {
-          setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          }, 50);
-        }
+    // Filter AND sort chronologically (oldest at top, newest at bottom)
+    const messages = allMessages
+      .filter(msg => {
+        const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
+        const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
+        const target = targetUser.toLowerCase();
         
-      } catch (err) {
-        console.error('Error fetching chat messages:', err);
-      }
+        return sender === target || receiver === target;
+      })
+      .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
+
+    if (!messages || messages.length === 0) {
+      messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
+      return;
     }
+
+    messagesList.innerHTML = messages.map(msg => {
+      const senderRaw = msg.sender_username || msg.sender || '';
+      const isSent = senderRaw.trim().replace('@', '').toLowerCase() === activeUser.toLowerCase();
+      const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
+          <div class="message-bubble">
+            <div class="message-text">${msg.content}</div>
+            <div class="message-meta">
+              <span class="timer-clock">${time}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (!isUserScrolling) {
+      setTimeout(() => {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 50);
+    }
+    
+  } catch (err) {
+    console.error('Error fetching chat messages:', err);
+  }
+}
+
 
     // 3. Send Message Functionality
     async function sendMessage() {
