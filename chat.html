@@ -67,38 +67,44 @@
       isUserScrolling = !isAtBottom;
     });
 
-            async function sendMessage() {
-      const input = document.getElementById('message-input');
-      const content = input.value.trim();
+            async function loadChat() {
+  if (!activeUser || !targetUser) return;
 
-      if (!content || !targetUser || targetUser === 'user' || !activeUser) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}/${targetUser}`);
+    if (!response.ok) return;
 
-      if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
+    const messages = await response.json();
+    const messagesList = document.getElementById('messages-list');
+    
+    if (!messagesList) return;
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: activeUser,
-            receiver: targetUser,
-            content: content
-          })
-        });
+    messagesList.innerHTML = messages.map(msg => {
+      const senderRaw = msg.sender_username || msg.sender || '';
+      const isSent = senderRaw.trim().replace('@', '').toLowerCase() === activeUser.toLowerCase();
+      const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        if (response.ok) {
-          input.value = '';
-          isUserScrolling = false;
-          await loadChat();
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-        } else {
-          const errData = await response.json();
-          console.error('Server rejected message:', errData);
-        }
-      } catch (err) {
-        console.error('Error sending message:', err);
-      }
+      return `
+        <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
+          <div class="message-bubble">
+            <div class="message-text">${msg.content}</div>
+            <div class="message-meta">
+              <span class="timer-clock">${time}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Auto-scroll to bottom if user is not manually scrolling up
+    if (!isUserScrolling) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+  } catch (err) {
+    console.error('Error fetching messages:', err);
+  }
+}
+
 
 
         // Auto scroll only if user hasn't scrolled up manually
