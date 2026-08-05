@@ -123,17 +123,27 @@
         clearTimeout(wakeUpTimer);
         const data = await response.json();
 
-        if (!response.ok) {
-          errorBox.style.color = '#ef4444';
-          errorBox.innerText = data.error || 'Authentication failed.';
-          errorBox.style.display = 'block';
-          resetButton();
-          return;
-        }
+        // Inside handleSubmit try block in auth.html:
+if (!response.ok) {
+  errorBox.style.color = '#ef4444';
+  errorBox.innerText = data.error || 'Authentication failed.';
+  errorBox.style.display = 'block';
+  resetButton();
+  return;
+}
 
-        // Save session locally and redirect
-        localStorage.setItem('retro_session', username);
-        window.location.href = 'index.html';
+// Save session locally
+localStorage.setItem('retro_session', username);
+localStorage.setItem('username', username);
+
+// Check if user followed a direct chat link
+const pendingUser = localStorage.getItem('pendingChatUser');
+if (pendingUser && pendingUser.toLowerCase() !== username.toLowerCase()) {
+  localStorage.removeItem('pendingChatUser');
+  window.location.href = `chat.html?user=${encodeURIComponent(pendingUser)}`;
+} else {
+  window.location.href = 'index.html';
+}
 
       } catch (err) {
         clearTimeout(wakeUpTimer);
