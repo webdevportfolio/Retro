@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inbox</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Web App Manifest & App Icon Link -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#a855f7">
-
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="theme-color" content="#a855f7">
 </head>
 <body class="inbox-body">
 
@@ -40,8 +38,14 @@
 
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    let lastKnownMsgCount = 0;
 
     window.addEventListener('DOMContentLoaded', () => {
+      // Request Notification Permission
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
       const urlParams = new URLSearchParams(window.location.search);
       const targetUser = urlParams.get('u') || urlParams.get('user') || urlParams.get('username');
 
@@ -92,13 +96,11 @@
       if (!activeUser) return;
 
       try {
-        // Fetch using exact active username case and fallback lowercased
         let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
         if (!response.ok) return;
         
         let messages = await response.json();
 
-        // If exact case returns empty, try lowecased username query as fallback
         if ((!messages || messages.length === 0) && activeUser !== lowerActive) {
           const fallbackRes = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
           if (fallbackRes.ok) {
@@ -116,6 +118,22 @@
           if (emptyState) emptyState.style.display = 'block';
           return;
         }
+
+        // Trigger notification if new message arrives and page is hidden
+        if (messages.length > lastKnownMsgCount && lastKnownMsgCount !== 0) {
+          const newest = messages[messages.length - 1];
+          const sender = (newest.sender_username || newest.sender || '').trim().replace('@', '');
+          
+          if (sender.toLowerCase() !== lowerActive && 'Notification' in window && Notification.permission === 'granted') {
+            if (document.hidden) {
+              new Notification(`New message from ${sender}`, {
+                body: newest.content || 'Sent a message',
+                icon: 'icon.png'
+              });
+            }
+          }
+        }
+        lastKnownMsgCount = messages.length;
 
         const conversationMap = {};
         
@@ -148,7 +166,6 @@
           }
         });
 
-        // SORT CHATS: Newest created_at first (top to bottom)
         const conversations = Object.values(conversationMap).sort((a, b) => {
           return new Date(b.created_at) - new Date(a.created_at);
         });
