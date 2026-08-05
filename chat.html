@@ -36,175 +36,29 @@
   </footer>
 
   <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+        const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
+    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
+    const activeUser = rawActiveUser ? rawActiveUser.trim().replace('@', '') : '';
+    
     const urlParams = new URLSearchParams(window.location.search);
-    const targetUser = urlParams.get('user');
+    let targetUser = urlParams.get('user') || urlParams.get('username');
+    if (targetUser) {
+      targetUser = targetUser.trim().replace('@', '');
+    }
 
     if (!activeUser) {
       window.location.href = 'auth.html';
     }
 
-    if (targetUser) {
-      document.getElementById('chat-with-user').textContent = targetUser;
-    } else {
-      document.getElementById('chat-with-user').textContent = 'Select a user';
-    }
-
-    async function loadChat() {
-      if (!targetUser || !activeUser) {
-        console.warn('Missing activeUser or targetUser');
-        return;
-      }
-
-      try {
-        // Fetch messages where activeUser is the receiver
-        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) return;
-        
-        const messages = await response.json();
-        const messagesList = document.getElementById('messages-list');
-        
-        // Filter conversation between activeUser and targetUser (both sent and received)
-        const filteredMessages = messages.filter(
-          msg => (msg.sender_username?.toLowerCase() === targetUser.toLowerCase() && msg.receiver_username?.toLowerCase() === activeUser.toLowerCase()) ||
-                 (msg.sender_username?.toLowerCase() === activeUser.toLowerCase() && msg.receiver_username?.toLowerCase() === targetUser.toLowerCase())
-        );
-
-        if (filteredMessages.length === 0) {
-          messagesList.innerHTML = '<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">No active messages yet. Say hi!</p>';
-          return;
-        }
-
-        messagesList.innerHTML = filteredMessages.map(msg => {
-          const isSent = msg.sender_username?.toLowerCase() === activeUser.toLowerCase();
-          const expiresAt = new Date(msg.expires_at).getTime();
-          const now = new Date().getTime();
-          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
-          
-          const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
-          const secs = (secondsLeft % 60).toString().padStart(2, '0');
-
-          return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
-              <div class="message-bubble">
-                <p class="message-text">${msg.content}</p>
-                <div class="message-meta">
-                  <span class="timer-clock" data-seconds="${secondsLeft}">${mins}:${secs}</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        window.scrollTo(0, document.body.scrollHeight);
-
-      } catch (err) {
-        console.error('Failed to load chat:', err);
-      }
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById('message-input');
-      const content = input.value.trim();
-
-      if (!content || !targetUser || !activeUser) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender_username: activeUser,
-            receiver_username: targetUser,
-            content: content,
-            duration_minutes: 5
-          })
-        });
-
-        if (response.ok) {
-          input.value = '';
-  <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-
-    const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetUser = urlParams.get('user');
-
-    if (!activeUser) {
-      window.location.href = 'auth.html';
-    }
-
-    if (targetUser) {
-      document.getElementById('chat-with-user').textContent = targetUser;
-    } else {
-      document.getElementById('chat-with-user').textContent = 'Select a user';
-    }
-
-    async function loadChat() {
-      if (!targetUser || !activeUser) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) return;
-        
-        const messages = await response.json();
-        const messagesList = document.getElementById('messages-list');
-        
-        const filteredMessages = messages.filter(
-          msg => (msg.sender_username?.toLowerCase() === targetUser.toLowerCase() && msg.receiver_username?.toLowerCase() === activeUser.toLowerCase()) ||
-                 (msg.sender_username?.toLowerCase() === activeUser.toLowerCase() && msg.receiver_username?.toLowerCase() === targetUser.toLowerCase())
-        );
-
-        if (filteredMessages.length === 0) {
-          messagesList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">Chat with ${targetUser} is open. Say hi!</p>`;
-          return;
-        }
-
-        messagesList.innerHTML = filteredMessages.map(msg => {
-          const isSent = msg.sender_username?.toLowerCase() === activeUser.toLowerCase();
-          const expiresAt = new Date(msg.expires_at).getTime();
-          const now = new Date().getTime();
-          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
-          
-          const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
-          const secs = (secondsLeft % 60).toString().padStart(2, '0');
-
-          // If time has elapsed, show an expired placeholder instead of the text
-          const displayContent = secondsLeft > 0 ? msg.content : '<span style="font-style: italic; opacity: 0.5;">Message expired</span>';
-
-          return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
-              <div class="message-bubble">
-                <p class="message-text">${displayContent}</p>
-                <div class="message-meta">
-                  <span class="timer-clock" data-seconds="${secondsLeft}">${secondsLeft > 0 ? `${mins}:${secs}` : 'Expired'}</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-          <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-
-    const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetUser = urlParams.get('user');
-
-    if (!activeUser) {
-      window.location.href = 'auth.html';
-    }
-
-    if (targetUser) {
+    if (targetUser && targetUser !== 'user') {
       document.getElementById('chat-with-user').textContent = targetUser;
     } else {
       document.getElementById('chat-with-user').textContent = 'Inbox';
     }
 
     async function loadChat() {
-      if (!targetUser || !activeUser) return;
+      if (!targetUser || !activeUser || targetUser === 'user') return;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
@@ -218,7 +72,6 @@
                  (msg.sender_username?.toLowerCase() === activeUser.toLowerCase() && msg.receiver_username?.toLowerCase() === targetUser.toLowerCase())
         );
 
-        // If no messages ever existed or all are gone, keep the chat room open so you can still type
         if (filteredMessages.length === 0) {
           messagesList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">Chat with ${targetUser}. Send a message to start!</p>`;
           return;
@@ -233,7 +86,6 @@
           const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
           const secs = (secondsLeft % 60).toString().padStart(2, '0');
 
-          // If expired, wipe the content completely (true ephemeral style) but keep the bubble wrapper
           const displayContent = secondsLeft > 0 ? msg.content : '<span style="font-style: italic; opacity: 0.3; font-size: 0.85rem;">[Message expired]</span>';
 
           return `
@@ -259,7 +111,10 @@
       const input = document.getElementById('message-input');
       const content = input.value.trim();
 
-      if (!content || !targetUser || !activeUser) return;
+      if (!content || !targetUser || targetUser === 'user' || !activeUser) {
+        console.error('Cannot send: Missing target user or content');
+        return;
+      }
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
@@ -287,6 +142,10 @@
 
     loadChat();
     setInterval(loadChat, 3000);
+
+          
+    
+          
   </script>
 
 
