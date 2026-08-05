@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group Chat</title>
+  <link rel="stylesheet" href="groupchat.css">
+  <link rel="icon" type="image/png" href="icon.png">
+  <meta name="theme-color" content="#000000">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="nav-bar">
+    <a href="index.html" class="nav-btn">← Back</a>
+    
+    <div class="chat-header-group">
+      <div class="chat-header-avatar">👥</div>
+      <div>
+        <div class="chat-header-title">Dev Squad</div>
+        <div class="group-members-count">4 members</div>
+      </div>
+    </div>
+
+    <div style="width: 40px;"></div>
+  </header>
+
+  <!-- Message Feed -->
+  <main class="chat-container">
+    <div class="messages-list">
+      
+      <!-- Received Message Sample 1 -->
+      <div class="message-wrapper received">
+        <div class="message-bubble">
+          <div class="group-sender-name">@temmix</div>
+          <div class="message-text">Yo, did we get the search code bug fixed?</div>
+          <div class="message-meta">
+            <span class="timer-clock">20:41</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sent Message Sample -->
+      <div class="message-wrapper sent">
+        <div class="message-bubble">
+          <div class="message-text">Yeah, API endpoint is up. We are starting on group chat visual layouts now!</div>
+          <div class="message-meta">
+            <span class="timer-clock">20:42</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Received Message Sample 2 -->
+      <div class="message-wrapper received">
+        <div class="message-bubble">
+          <div class="group-sender-name">@nero</div>
+          <div class="message-text">Nice! Clean design.</div>
+          <div class="message-meta">
+            <span class="timer-clock">20:43</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Input Bar -->
+  <footer class="chat-input-bar">
+    <form action="javascript:void(0);">
+      <input type="text" class="input-field" placeholder="Type a group message..." autocomplete="off">
+      <button type="button" class="send-btn">Send</button>
+    </form>
+  </footer>
+
+</body>
+</html>
