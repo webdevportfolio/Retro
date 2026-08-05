@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,7 +37,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const targetUser = urlParams.get('u');
+      const targetUser = urlParams.get('u') || urlParams.get('user') || urlParams.get('username');
 
       if (targetUser) {
         localStorage.setItem('pendingChatUser', targetUser.trim().replace('@', ''));
@@ -75,22 +74,32 @@
     }
 
     function openChat(username, timestamp) {
-      // Save read state locally so glow disappears when opened
       localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
       window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
     }
 
     async function loadInbox() {
       const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      const activeUser = rawActive.trim().replace('@', '').toLowerCase();
+      const activeUser = rawActive.trim().replace('@', '');
+      const lowerActive = activeUser.toLowerCase();
       
       if (!activeUser) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
+        // Fetch using exact active username case and fallback lowercased
+        let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
         if (!response.ok) return;
         
-        const messages = await response.json();
+        let messages = await response.json();
+
+        // If exact case returns empty, try lowecased username query as fallback
+        if ((!messages || messages.length === 0) && activeUser !== lowerActive) {
+          const fallbackRes = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
+          if (fallbackRes.ok) {
+            messages = await fallbackRes.json();
+          }
+        }
+
         const inboxList = document.getElementById('inbox-list');
         const emptyState = document.getElementById('empty-state');
         
@@ -102,8 +111,6 @@
           return;
         }
 
-        if (emptyState) emptyState.style.display = 'none';
-
         const conversationMap = {};
         
         messages.forEach(msg => {
@@ -113,21 +120,21 @@
           const sender = senderRaw.trim().replace('@', '').toLowerCase();
           const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
           
-          let otherUser = '';
-          if (sender === activeUser) {
-            otherUser = receiverRaw.trim().replace('@', '');
-          } else if (receiver === activeUser) {
-            otherUser = senderRaw.trim().replace('@', '');
+          let otherUserDisplay = '';
+          if (sender === lowerActive) {
+            otherUserDisplay = receiverRaw.trim().replace('@', '');
+          } else if (receiver === lowerActive) {
+            otherUserDisplay = senderRaw.trim().replace('@', '');
           }
 
-          if (!otherUser || otherUser.toLowerCase() === activeUser) return;
+          if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
 
-          const mapKey = otherUser.toLowerCase();
+          const mapKey = otherUserDisplay.toLowerCase();
           const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
 
           if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
             conversationMap[mapKey] = {
-              username: otherUser,
+              username: otherUserDisplay,
               sender: sender,
               content: msg.content || '',
               created_at: msgDate
@@ -135,7 +142,10 @@
           }
         });
 
-        const conversations = Object.values(conversationMap);
+        // SORT CHATS: Newest created_at first (top to bottom)
+        const conversations = Object.values(conversationMap).sort((a, b) => {
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
 
         if (conversations.length === 0) {
           inboxList.innerHTML = '';
@@ -143,12 +153,13 @@
           return;
         }
 
+        if (emptyState) emptyState.style.display = 'none';
+
         inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           
-          // Unread logic check against local read timestamp
           const lastReadMsgTime = localStorage.getItem(`read_${conv.username.toLowerCase()}`);
-          const isUnread = conv.sender.toLowerCase() !== activeUser.toLowerCase() && 
+          const isUnread = conv.sender.toLowerCase() !== lowerActive && 
                            (!lastReadMsgTime || new Date(conv.created_at) > new Date(lastReadMsgTime));
 
           const cardClass = isUnread ? 'chat-card unread' : 'chat-card';
