@@ -336,7 +336,83 @@
           document.title = 'RETRO | Inbox';
           updateHomeScreenBadge(0);
         }
+function toggleGroupModal(open) {
+  const modal = document.getElementById('create-group-modal');
+  if (modal) {
+    if (open) modal.classList.add('active');
+    else modal.classList.remove('active');
+  }
+}
 
+async function handleCreateGroup(event) {
+  event.preventDefault();
+
+  const nameInput = document.getElementById('new-group-name');
+  const membersInput = document.getElementById('new-group-members');
+
+  const groupName = nameInput.value.trim();
+  const rawMembers = membersInput.value.split(',').map(m => m.trim()).filter(Boolean);
+
+  if (!groupName) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/groups`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: groupName,
+        created_by: activeUser,
+        members: rawMembers
+      })
+    });
+
+    if (res.ok) {
+      const newGroup = await res.json();
+      toggleGroupModal(false);
+      // Redirect straight to the new group chat room
+      window.location.href = `groupchat.html?id=${newGroup.id}`;
+    } else {
+      alert('Failed to create group. Check server connection.');
+    }
+  } catch (err) {
+    console.error('Error creating group:', err);
+  }
+}
+
+async function fetchUserGroups() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/users/${activeUser}/groups`);
+    if (!res.ok) return;
+
+    const groups = await res.json();
+    renderGroupsList(groups);
+  } catch (err) {
+    console.error('Failed to fetch groups:', err);
+  }
+}
+
+function renderGroupsList(groups) {
+  const container = document.getElementById('groups-feed'); // Make sure this element exists in index.html
+  if (!container) return;
+
+  if (groups.length === 0) {
+    container.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 20px;">No group chats yet.</div>`;
+    return;
+  }
+
+  container.innerHTML = groups.map(g => `
+    <div class="chat-item" onclick="window.location.href='groupchat.html?id=${g.id}'">
+      <div class="chat-avatar">👥</div>
+      <div class="chat-info">
+        <div class="chat-title">${g.name}</div>
+        <div class="chat-sub">${g.members.length} members</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+
+        
         inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const hasUnread = conv.unreadCount > 0;
