@@ -63,9 +63,19 @@
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
     let lastKnownMsgCount = 0;
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 1. Explicitly Register Service Worker
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.register('/sw.js');
+        } catch (swErr) {
+          console.error('Service Worker Registration Failed:', swErr);
+        }
+      }
+
+      // 2. Request Notification Permission
       if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
+        await Notification.requestPermission();
       }
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -88,7 +98,7 @@
         profileBtn.textContent = activeUser;
       }
 
-      // Trigger push subscription on login/inbox load
+      // Trigger Push Subscription Registration
       registerPushSubscription(activeUser);
 
       const pendingUser = localStorage.getItem('pendingChatUser');
@@ -125,6 +135,7 @@
 
     async function registerPushSubscription(username) {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (Notification.permission !== 'granted') return;
 
       try {
         const registration = await navigator.serviceWorker.ready;
@@ -133,10 +144,14 @@
         if (!res.ok) return;
         const { publicKey } = await res.json();
 
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
-        });
+        // Check for existing subscription or create new
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+          });
+        }
 
         await fetch(`${API_BASE_URL}/api/subscribe`, {
           method: 'POST',
@@ -192,19 +207,6 @@
           return;
         }
 
-        if (messages.length > lastKnownMsgCount && lastKnownMsgCount !== 0) {
-          const newest = messages[messages.length - 1];
-          const sender = (newest.sender_username || newest.sender || '').trim().replace('@', '');
-          
-          if (sender.toLowerCase() !== lowerActive && 'Notification' in window && Notification.permission === 'granted') {
-            if (document.hidden) {
-              new Notification(`New message from ${sender}`, {
-                body: newest.content || 'Sent a message',
-                icon: 'icon.png'
-              });
-            }
-          }
-        }
         lastKnownMsgCount = messages.length;
 
         const conversationMap = {};
