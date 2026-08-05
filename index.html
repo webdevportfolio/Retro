@@ -9,6 +9,23 @@
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
+  <style>
+    .inbox-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .unread-badge {
+      background: #a855f7;
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+    }
+  </style>
 </head>
 <body class="inbox-body">
 
@@ -41,7 +58,6 @@
     let lastKnownMsgCount = 0;
 
     window.addEventListener('DOMContentLoaded', () => {
-      // Request Notification Permission
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
       }
@@ -88,6 +104,16 @@
       window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
     }
 
+    function updateHomeScreenBadge(count) {
+      if ('setAppBadge' in navigator) {
+        if (count > 0) {
+          navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
+        } else {
+          navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
+        }
+      }
+    }
+
     async function loadInbox() {
       const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
       const activeUser = rawActive.trim().replace('@', '');
@@ -116,10 +142,11 @@
         if (!messages || messages.length === 0) {
           inboxList.innerHTML = '';
           if (emptyState) emptyState.style.display = 'block';
+          document.title = 'RETRO | Inbox';
+          updateHomeScreenBadge(0);
           return;
         }
 
-        // Trigger notification if new message arrives and page is hidden
         if (messages.length > lastKnownMsgCount && lastKnownMsgCount !== 0) {
           const newest = messages[messages.length - 1];
           const sender = (newest.sender_username || newest.sender || '').trim().replace('@', '');
@@ -156,13 +183,28 @@
           const mapKey = otherUserDisplay.toLowerCase();
           const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
 
-          if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
+          if (!conversationMap[mapKey]) {
             conversationMap[mapKey] = {
               username: otherUserDisplay,
               sender: sender,
               content: msg.content || '',
-              created_at: msgDate
+              created_at: msgDate,
+              unreadCount: 0
             };
+          }
+
+          const lastReadTime = localStorage.getItem(`read_${mapKey}`);
+          const isIncoming = sender !== lowerActive;
+          const isUnread = isIncoming && (!lastReadTime || msgDate > new Date(lastReadTime));
+
+          if (isUnread) {
+            conversationMap[mapKey].unreadCount++;
+          }
+
+          if (msgDate >= new Date(conversationMap[mapKey].created_at)) {
+            conversationMap[mapKey].created_at = msgDate;
+            conversationMap[mapKey].content = msg.content || '';
+            conversationMap[mapKey].sender = sender;
           }
         });
 
@@ -173,42 +215,35 @@
         if (conversations.length === 0) {
           inboxList.innerHTML = '';
           if (emptyState) emptyState.style.display = 'block';
+          document.title = 'RETRO | Inbox';
+          updateHomeScreenBadge(0);
           return;
         }
-// Function to update the home screen app icon badge
-function updateHomeScreenBadge(count) {
-  if ('setAppBadge' in navigator) {
-    if (count > 0) {
-      navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
-    } else {
-      navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
-    }
-  }
-}
-
-// Call this inside your loadInbox() function right after calculating totalUnread:
-if (totalUnread > 0) {
-  document.title = `(${totalUnread}) RETRO | Inbox`;
-  updateHomeScreenBadge(totalUnread); // Updates 1, 2, 3 on app icon
-} else {
-  document.title = 'RETRO | Inbox';
-  updateHomeScreenBadge(0); // Clears icon badge when read
-}
 
         if (emptyState) emptyState.style.display = 'none';
 
+        // Calculate unread totals properly
+        const totalUnread = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
+
+        if (totalUnread > 0) {
+          document.title = `(${totalUnread}) RETRO | Inbox`;
+          updateHomeScreenBadge(totalUnread);
+        } else {
+          document.title = 'RETRO | Inbox';
+          updateHomeScreenBadge(0);
+        }
+
         inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          
-          const lastReadMsgTime = localStorage.getItem(`read_${conv.username.toLowerCase()}`);
-          const isUnread = conv.sender.toLowerCase() !== lowerActive && 
-                           (!lastReadMsgTime || new Date(conv.created_at) > new Date(lastReadMsgTime));
-
-          const cardClass = isUnread ? 'chat-card unread' : 'chat-card';
+          const hasUnread = conv.unreadCount > 0;
+          const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
 
           return `
             <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
-              <div class="inbox-card-username">${conv.username}</div>
+              <div class="inbox-card-header">
+                <div class="inbox-card-username">${conv.username}</div>
+                ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
+              </div>
               <div class="inbox-card-preview">${conv.content}</div>
               <div class="inbox-card-time">${time}</div>
             </div>
