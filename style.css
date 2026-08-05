@@ -440,6 +440,19 @@ body {
   transition: all 0.2s ease;
   white-space: nowrap;
 }
+/* Read Receipt Styling */
+.read-status {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 6px;
+  transition: all 0.2s ease;
+}
+
+.read-status.read {
+  color: #a855f7;
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+  font-weight: bold;
+}
 
 .copy-btn:hover {
   border-color: var(--accent-purple);
