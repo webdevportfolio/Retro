@@ -14,10 +14,13 @@
 
   <!-- Top Navigation Header -->
   <header class="nav-bar">
-    <a href="index.html" class="nav-btn">← Back</a>
+  <a href="index.html" class="nav-btn">← Back</a>
+  <div style="text-align: center;">
     <div id="chat-with-user" class="chat-header-title">Loading...</div>
-    <a href="profile.html" id="profile-btn" class="nav-btn">Profile</a>
-  </header>
+    <div id="typing-indicator" style="font-size: 0.75rem; color: #a855f7; height: 14px; font-weight: 500;"></div>
+  </div>
+  <a href="profile.html" id="profile-btn" class="nav-btn">Profile</a>
+</header>
 
   <!-- Chat Messages Stream -->
   <main class="chat-container" id="chat-container" style="overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1;">
