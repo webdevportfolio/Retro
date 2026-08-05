@@ -78,55 +78,68 @@
       window.location.href = 'auth.html';
     }
 
-    async function loadInboxMessages() {
-      const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
-      const chatList = document.getElementById('chat-list');
-      if (!chatList || !activeUser) return;
-      
+        async function loadInbox() {
+      const activeUser = (localStorage.getItem('username') || localStorage.getItem('retro_session') || '').trim().replace('@', '');
+      if (!activeUser) {
+        window.location.href = 'auth.html';
+        return;
+      }
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
+        if (!response.ok) return;
+        
         const messages = await response.json();
+        const inboxList = document.getElementById('inbox-list'); // or whatever your container ID is
 
-        if (!response.ok || !messages.length) {
-          chatList.innerHTML = '';
-          checkEmptyState();
-          return;
-        }
-
-        const chatMap = {};
+        // Group or map unique conversation partners, completely filtering out yourself
+        const conversationMap = {};
+        
         messages.forEach(msg => {
-          if (!chatMap[msg.sender_username]) {
-            chatMap[msg.sender_username] = msg;
+          const sender = (msg.sender_username || '').trim().replace('@', '');
+          const receiver = (msg.receiver_username || '').trim().replace('@', '');
+          
+          // Determine who the *other* person is in this message
+          const otherUser = sender.toLowerCase() === activeUser.toLowerCase() ? receiver : sender;
+
+          // Skip if it's yourself or empty
+          if (!otherUser || otherUser.toLowerCase() === activeUser.toLowerCase()) return;
+
+          // Keep the latest message for each unique user
+          if (!conversationMap[otherUser.toLowerCase()] || new Date(msg.created_at) > new Date(conversationMap[otherUser.toLowerCase()].created_at)) {
+            conversationMap[otherUser.toLowerCase()] = {
+              username: otherUser, // Clean name without '@'
+              content: msg.content,
+              created_at: msg.created_at
+            };
           }
         });
 
-        chatList.innerHTML = Object.values(chatMap).map(msg => {
-          const expiresAt = new Date(msg.expires_at).getTime();
-          const now = new Date().getTime();
-          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
-          
-          const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
-          const secs = (secondsLeft % 60).toString().padStart(2, '0');
+        const conversations = Object.values(conversationMap);
+
+        if (conversations.length === 0) {
+          inboxList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">No messages yet.</p>`;
+          return;
+        }
+
+        inboxList.innerHTML = conversations.map(conv => {
+          const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
           return `
-            <div class="chat-card" onclick="openChat('${msg.sender_username}')">
-              <div class="chat-info">
-                <div class="chat-meta">
-                  <span class="chat-username">@${msg.sender_username}</span>
-                </div>
-                <div class="chat-preview">${msg.content}</div>
-              </div>
-              <div class="timer-clock" data-seconds="${secondsLeft}">${mins}:${secs}</div>
+            <div class="inbox-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
+              <div class="inbox-card-username">${conv.username}</div>
+              <div class="inbox-card-preview">${conv.content}</div>
+              <div class="inbox-card-time">${time}</div>
             </div>
           `;
         }).join('');
 
-        checkEmptyState();
       } catch (err) {
         console.error('Failed to load inbox:', err);
-        checkEmptyState();
       }
     }
+
+const displayUsername = otherUser.replace('@', '');
 
     function openChat(username) {
       window.location.href = `chat.html?user=${username}`;
