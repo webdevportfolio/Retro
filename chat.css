@@ -65,6 +65,10 @@ body {
 .message-wrapper {
   display: flex;
   width: 100%;
+  position: relative;
+  touch-action: pan-y;
+  transition: transform 0.15s ease-out;
+  will-change: transform;
 }
 
 .message-wrapper.received {
@@ -116,6 +120,70 @@ body {
   font-size: 0.85rem;
   text-shadow: 0 0 6px var(--purple-glow-soft);
   white-space: nowrap;
+}
+
+/* --- Swipe & Reply UI Enhancements --- */
+.reply-preview-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--accent-purple);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  max-width: 520px;
+  margin: 0 auto 8px auto;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.reply-preview-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 85%;
+}
+
+.reply-preview-user {
+  color: var(--accent-purple);
+  font-weight: 700;
+  margin-bottom: 2px;
+  font-size: 0.75rem;
+}
+
+.close-reply-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.close-reply-btn:hover {
+  color: #ffffff;
+}
+
+.quoted-reply-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 3px solid var(--accent-purple);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quoted-reply-user {
+  font-weight: bold;
+  color: var(--accent-purple);
+  font-size: 0.72rem;
+  margin-bottom: 2px;
 }
 
 /* Fixed Bottom Chat Input Bar */
@@ -205,6 +273,7 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 /* Read Receipt Styling */
 .read-status {
   font-size: 0.75rem;
