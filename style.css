@@ -15,6 +15,8 @@ body {
   align-items: center;
   padding: 20px;
   overflow: hidden;
+  flex-direction:column;
+  height:100%
 }
 
 /* 2. Frosted Glass Container */
@@ -324,9 +326,9 @@ body {
 
 .chat-container {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 80px; /* leaves space for input bar */
+  min-height: 0;
 }
 
 .messages-list {
