@@ -18,8 +18,8 @@
     <div class="chat-header-group" onclick="toggleSettingsDrawer(true)">
       <div class="chat-header-avatar" id="header-gc-avatar">👥</div>
       <div>
-        <div class="chat-header-title" id="header-gc-name">Dev Squad</div>
-        <div class="group-members-count" id="header-gc-count">3 members</div>
+        <div class="chat-header-title" id="header-gc-name">Loading...</div>
+        <div class="group-members-count" id="header-gc-count">0 members</div>
       </div>
     </div>
 
@@ -29,39 +29,7 @@
   <!-- Message Feed -->
   <main class="chat-container">
     <div class="messages-list">
-      
-      <!-- Received Message Sample 1 -->
-      <div class="message-wrapper received">
-        <div class="message-bubble">
-          <div class="group-sender-name">temmix</div>
-          <div class="message-text">Yo, did we get the search code bug fixed?</div>
-          <div class="message-meta">
-            <span class="timer-clock">20:41</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sent Message Sample -->
-      <div class="message-wrapper sent">
-        <div class="message-bubble">
-          <div class="message-text">Yeah, API endpoint is up. We are starting on group chat visual layouts now!</div>
-          <div class="message-meta">
-            <span class="timer-clock">20:42</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Received Message Sample 2 -->
-      <div class="message-wrapper received">
-        <div class="message-bubble">
-          <div class="group-sender-name">nero</div>
-          <div class="message-text">Nice! Clean design.</div>
-          <div class="message-meta">
-            <span class="timer-clock">20:43</span>
-          </div>
-        </div>
-      </div>
-
+      <!-- Dynamically populated via script -->
     </div>
   </main>
 
@@ -69,7 +37,7 @@
   <footer class="chat-input-bar">
     <form action="javascript:void(0);">
       <input type="text" class="input-field" placeholder="Type a message..." autocomplete="off">
-      <button type="button" class="send-btn">Send</button>
+      <button type="button" class="send-btn" onclick="sendMessage()">Send</button>
     </form>
   </footer>
 
@@ -91,7 +59,7 @@
       <!-- Group Name Display/Edit -->
       <div style="margin-bottom: 24px;">
         <div class="section-label">Group Name</div>
-        <input type="text" id="drawer-gc-name-input" value="Dev Squad" class="input-field" style="width: 100%;">
+        <input type="text" id="drawer-gc-name-input" class="input-field" style="width: 100%;">
       </div>
 
       <!-- Members List Section -->
@@ -158,7 +126,7 @@
     const titleEl = document.getElementById('header-gc-name');
     const countEl = document.getElementById('header-gc-count');
     if (titleEl) titleEl.textContent = group.name;
-    if (countEl) countEl.textContent = `${group.members.length} members`;
+    if (countEl) countEl.textContent = `${group.members ? group.members.length : 0} members`;
   }
 
   async function loadMessages() {
@@ -167,7 +135,7 @@
       if (!res.ok) return;
 
       const messages = await res.json();
-      if (messages.length === lastMessageCount) return;
+      if (messages.length === lastMessageCount && lastMessageCount !== 0) return;
 
       lastMessageCount = messages.length;
       renderMessages(messages);
@@ -180,10 +148,19 @@
     const container = document.querySelector('.messages-list');
     if (!container) return;
 
+    if (!messages || messages.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; color: rgba(255,255,255,0.4); padding: 40px 20px; font-size: 0.85rem;">
+          No messages here yet. Say hello to start the chat!
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = messages.map(msg => {
-      const sender = msg.sender.trim().replace('@', '');
+      const sender = (msg.sender || '').trim().replace('@', '');
       const isSent = sender.toLowerCase() === activeUser.toLowerCase();
-      const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const time = new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       return `
         <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
@@ -251,14 +228,16 @@
     const nameInput = document.getElementById('drawer-gc-name-input');
     
     if (nameInput) nameInput.value = group.name;
-    if (membersCount) membersCount.textContent = group.members.length;
+    if (membersCount) membersCount.textContent = group.members ? group.members.length : 0;
 
-    const isAdmin = group.created_by.toLowerCase() === activeUser.toLowerCase();
+    const isAdmin = (group.created_by || '').toLowerCase() === activeUser.toLowerCase();
+
+    if (!group.members) return;
 
     membersList.innerHTML = group.members.map(member => {
       const cleanName = member.trim().replace('@', '');
       const isSelf = cleanName.toLowerCase() === activeUser.toLowerCase();
-      const isCreator = cleanName.toLowerCase() === group.created_by.toLowerCase();
+      const isCreator = cleanName.toLowerCase() === (group.created_by || '').toLowerCase();
 
       return `
         <div class="member-item">
