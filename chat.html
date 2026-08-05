@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RETRO | Chat</title>
+  <title>Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -186,6 +186,68 @@
           `;
         }).join('');
 
+          <script>
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+
+    const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUser = urlParams.get('user');
+
+    if (!activeUser) {
+      window.location.href = 'auth.html';
+    }
+
+    if (targetUser) {
+      document.getElementById('chat-with-user').textContent = targetUser;
+    } else {
+      document.getElementById('chat-with-user').textContent = 'Inbox';
+    }
+
+    async function loadChat() {
+      if (!targetUser || !activeUser) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
+        if (!response.ok) return;
+        
+        const messages = await response.json();
+        const messagesList = document.getElementById('messages-list');
+        
+        const filteredMessages = messages.filter(
+          msg => (msg.sender_username?.toLowerCase() === targetUser.toLowerCase() && msg.receiver_username?.toLowerCase() === activeUser.toLowerCase()) ||
+                 (msg.sender_username?.toLowerCase() === activeUser.toLowerCase() && msg.receiver_username?.toLowerCase() === targetUser.toLowerCase())
+        );
+
+        // If no messages ever existed or all are gone, keep the chat room open so you can still type
+        if (filteredMessages.length === 0) {
+          messagesList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">Chat with ${targetUser}. Send a message to start!</p>`;
+          return;
+        }
+
+        messagesList.innerHTML = filteredMessages.map(msg => {
+          const isSent = msg.sender_username?.toLowerCase() === activeUser.toLowerCase();
+          const expiresAt = new Date(msg.expires_at).getTime();
+          const now = new Date().getTime();
+          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
+          
+          const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+          const secs = (secondsLeft % 60).toString().padStart(2, '0');
+
+          // If expired, wipe the content completely (true ephemeral style) but keep the bubble wrapper
+          const displayContent = secondsLeft > 0 ? msg.content : '<span style="font-style: italic; opacity: 0.3; font-size: 0.85rem;">[Message expired]</span>';
+
+          return `
+            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
+              <div class="message-bubble">
+                <p class="message-text">${displayContent}</p>
+                <div class="message-meta">
+                  <span class="timer-clock" data-seconds="${secondsLeft}">${secondsLeft > 0 ? `${mins}:${secs}` : '00:00'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
         window.scrollTo(0, document.body.scrollHeight);
 
       } catch (err) {
@@ -207,7 +269,7 @@
             sender_username: activeUser,
             receiver_username: targetUser,
             content: content,
-            duration_minutes: 10 // <--- Updated to 10 minutes
+            duration_minutes: 10
           })
         });
 
@@ -226,6 +288,7 @@
     loadChat();
     setInterval(loadChat, 3000);
   </script>
+
 
 
 
