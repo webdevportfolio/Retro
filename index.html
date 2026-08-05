@@ -368,6 +368,29 @@
       }
     }
   </script>
+<!-- Create Group Modal -->
+<div class="modal-overlay" id="create-group-modal" onclick="if(event.target === this) toggleGroupModal(false)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 style="font-weight: 800;">Create New Group</h3>
+      <button class="close-btn" onclick="toggleGroupModal(false)">&times;</button>
+    </div>
+
+    <form onsubmit="handleCreateGroup(event)" style="display: flex; flex-direction: column; gap: 14px;">
+      <div>
+        <label style="font-size: 0.8rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700;">Group Name</label>
+        <input type="text" id="new-group-name" class="input-field" placeholder="e.g. Dev Squad" required style="width: 100%; margin-top: 6px;">
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700;">Add Members (comma separated usernames)</label>
+        <input type="text" id="new-group-members" class="input-field" placeholder="temmix, nero, alex" style="width: 100%; margin-top: 6px;">
+      </div>
+
+      <button type="submit" class="send-btn" style="padding: 12px; margin-top: 10px;">Create Group</button>
+    </form>
+  </div>
+</div>
 
                   
 </body>
