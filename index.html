@@ -175,6 +175,25 @@
           if (emptyState) emptyState.style.display = 'block';
           return;
         }
+// Function to update the home screen app icon badge
+function updateHomeScreenBadge(count) {
+  if ('setAppBadge' in navigator) {
+    if (count > 0) {
+      navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
+    } else {
+      navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
+    }
+  }
+}
+
+// Call this inside your loadInbox() function right after calculating totalUnread:
+if (totalUnread > 0) {
+  document.title = `(${totalUnread}) RETRO | Inbox`;
+  updateHomeScreenBadge(totalUnread); // Updates 1, 2, 3 on app icon
+} else {
+  document.title = 'RETRO | Inbox';
+  updateHomeScreenBadge(0); // Clears icon badge when read
+}
 
         if (emptyState) emptyState.style.display = 'none';
 
