@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RETRO | Profile</title>
+  <title>Profile</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
-  
 </head>
 <body class="inbox-body">
 
@@ -22,10 +21,17 @@
 
   <main class="main-container">
     <div class="auth-card glass-panel" style="max-width: 100%;">
-      <div class="profile-avatar">
-        <span id="avatar-initial">M</span>
-      </div>
       
+      <!-- Profile Picture Setup -->
+      <div class="profile-avatar-wrapper">
+        <div class="profile-avatar" id="avatar-container">
+          <img id="avatar-img" src="" alt="Profile Picture" style="display: none;">
+          <span id="avatar-initial">M</span>
+        </div>
+        <label for="pfp-upload" class="pfp-edit-badge" title="Change Avatar">📷</label>
+        <input type="file" id="pfp-upload" accept="image/*" style="display: none;">
+      </div>
+
       <h2 id="display-username" class="profile-name">username</h2>
       <p class="profile-status">Status: Active</p>
 
@@ -41,12 +47,12 @@
         </div>
       </div>
 
-      <!-- Personal Chat Link Box -->
+      <!-- Secret Chat Code Box -->
       <div class="link-box">
-        <label class="link-label">Your Direct Chat Link</label>
+        <label class="link-label">Your Private Chat Code</label>
         <div class="link-input-group">
-          <input type="text" id="user-link-input" readonly class="input-field link-field">
-          <button id="copy-btn" class="copy-btn">Copy</button>
+          <input type="text" id="chat-code-input" readonly class="input-field link-field code-field" value="Generating...">
+          <button id="copy-code-btn" class="copy-btn">Copy Code</button>
         </div>
       </div>
 
@@ -93,10 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentUser = rawUser.trim().replace('@', '');
 
   // 2. DOM Elements
+  const avatarImg = document.getElementById('avatar-img');
   const avatarLetter = document.getElementById('avatar-initial');
+  const pfpUpload = document.getElementById('pfp-upload');
   const usernameDisplay = document.getElementById('display-username');
-  const linkInput = document.getElementById('user-link-input');
-  const copyBtn = document.getElementById('copy-btn');
+  const codeInput = document.getElementById('chat-code-input');
+  const copyCodeBtn = document.getElementById('copy-code-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const statChats = document.getElementById('stat-chats');
   const statMessages = document.getElementById('stat-messages');
@@ -106,15 +114,56 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
   const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
-  // 3. Render User Details
+  // 3. Render Profile Details & Avatar
   if (usernameDisplay) usernameDisplay.textContent = currentUser;
-  if (avatarLetter) avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
 
-  const baseUrl = window.location.origin + window.location.pathname.replace('profile.html', 'index.html');
-  const directLink = `${baseUrl}?u=${encodeURIComponent(currentUser)}`;
-  if (linkInput) linkInput.value = directLink;
+  function loadSavedAvatar() {
+    const savedPfp = localStorage.getItem(`retro_pfp_${currentUser.toLowerCase()}`);
+    if (savedPfp) {
+      avatarImg.src = savedPfp;
+      avatarImg.style.display = 'block';
+      avatarLetter.style.display = 'none';
+    } else {
+      avatarImg.style.display = 'none';
+      avatarLetter.style.display = 'block';
+      avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
+    }
+  }
 
-  // 4. Fetch Metrics (Active Chats & Total Messages)
+  loadSavedAvatar();
+
+  // Profile Picture Upload Listener
+  if (pfpUpload) {
+    pfpUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Img = event.target.result;
+          localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`, base64Img);
+          loadSavedAvatar();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // 4. Generate or Retrieve Deterministic Chat Code
+  function getChatCode(user) {
+    let hash = 0;
+    const str = user.toLowerCase() + "_retro_secret_salt";
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
+    return `RETRO-${cleanHash}`;
+  }
+
+  const userCode = getChatCode(currentUser);
+  if (codeInput) codeInput.value = userCode;
+
+  // 5. Fetch Metrics
   async function loadUserStats() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`);
@@ -143,33 +192,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadUserStats();
 
-  // 5. Copy Link Action
-  if (copyBtn) {
-    copyBtn.addEventListener('click', async () => {
+  // 6. Copy Code Action
+  if (copyCodeBtn) {
+    copyCodeBtn.addEventListener('click', async () => {
       try {
         if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(directLink);
-        } else if (linkInput) {
-          linkInput.select();
-          linkInput.setSelectionRange(0, 99999);
+          await navigator.clipboard.writeText(userCode);
+        } else if (codeInput) {
+          codeInput.select();
           document.execCommand('copy');
         }
 
-        const originalText = copyBtn.innerText;
-        copyBtn.innerText = 'Copied!';
-        copyBtn.style.opacity = '0.8';
+        const originalText = copyCodeBtn.innerText;
+        copyCodeBtn.innerText = 'Copied!';
+        copyCodeBtn.style.opacity = '0.8';
 
         setTimeout(() => {
-          copyBtn.innerText = originalText;
-          copyBtn.style.opacity = '1';
+          copyCodeBtn.innerText = originalText;
+          copyCodeBtn.style.opacity = '1';
         }, 2000);
       } catch (err) {
-        alert('Could not copy link automatically. Please select and copy manually.');
+        alert('Could not copy code automatically. Please select and copy manually.');
       }
     });
   }
 
-  // 6. Logout Action
+  // 7. Logout Action
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('retro_session');
@@ -178,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 7. Modal Control & Delete Account Logic
+  // 8. Modal Control & Delete Account Logic
   if (openDeleteModalBtn && deleteModal) {
     openDeleteModalBtn.addEventListener('click', () => deleteModal.classList.add('active'));
   }
@@ -208,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) {
         console.error('Error deleting account:', err);
-        // Fallback cleanup if offline or endpoint responds with CORS block
         localStorage.clear();
         window.location.href = 'auth.html';
       }
