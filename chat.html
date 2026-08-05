@@ -144,12 +144,13 @@
           })
         });
 
-        if (response.ok) {
+                if (response.ok) {
           input.value = '';
           isUserScrolling = false; 
           await loadChat();
           chatContainer.scrollTop = chatContainer.scrollHeight;
-        } else {
+        }
+ else {
           const errData = await response.json();
           console.error('Server rejected message:', errData);
         }
