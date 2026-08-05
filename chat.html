@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat</title>
   <link rel="stylesheet" href="chat.css">
-  <!-- Web App Manifest & App Icon Link -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#a855f7">
-
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="theme-color" content="#a855f7">
 </head>
 <body>
 
@@ -52,7 +50,6 @@
 
     if (targetUser) {
       targetUser = targetUser.trim().replace('@', '');
-      localStorage.setItem(`read_${targetUser.toLowerCase()}`, new Date().toISOString());
     }
 
     // Redirect guards
@@ -84,59 +81,75 @@
 
     // 2. Fetch & Render Messages
     async function loadChat() {
-  if (!activeUser || !targetUser) return;
+      if (!activeUser || !targetUser) return;
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-    if (!response.ok) return;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+        if (!response.ok) return;
 
-    const allMessages = await response.json();
-    if (!messagesList) return;
+        const allMessages = await response.json();
+        if (!messagesList) return;
 
-    // Filter AND sort chronologically (oldest at top, newest at bottom)
-    const messages = allMessages
-      .filter(msg => {
-        const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-        const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
-        const target = targetUser.toLowerCase();
-        
-        return sender === target || receiver === target;
-      })
-      .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
+        // Filter AND sort chronologically (oldest at top, newest at bottom)
+        const messages = allMessages
+          .filter(msg => {
+            const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
+            const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
+            const target = targetUser.toLowerCase();
+            
+            return sender === target || receiver === target;
+          })
+          .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
 
-    if (!messages || messages.length === 0) {
-      messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
-      return;
-    }
+        if (!messages || messages.length === 0) {
+          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
+          return;
+        }
 
-    messagesList.innerHTML = messages.map(msg => {
-      const senderRaw = msg.sender_username || msg.sender || '';
-      const isSent = senderRaw.trim().replace('@', '').toLowerCase() === activeUser.toLowerCase();
-      const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // Mark incoming messages as read in localStorage
+        const latestIncoming = [...messages].reverse().find(msg => {
+          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
+          return sender === targetUser.toLowerCase();
+        });
 
-      return `
-        <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
-          <div class="message-bubble">
-            <div class="message-text">${msg.content}</div>
-            <div class="message-meta">
-              <span class="timer-clock">${time}</span>
+        if (latestIncoming) {
+          const msgTime = latestIncoming.created_at || latestIncoming.timestamp || new Date().toISOString();
+          localStorage.setItem(`read_${targetUser.toLowerCase()}`, msgTime);
+        }
+
+        messagesList.innerHTML = messages.map(msg => {
+          const senderRaw = msg.sender_username || msg.sender || '';
+          const isSent = senderRaw.trim().replace('@', '').toLowerCase() === activeUser.toLowerCase();
+          const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          // Check if message was read by target
+          const lastReadByTarget = localStorage.getItem(`read_${targetUser.toLowerCase()}`);
+          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
+          const isRead = msg.is_read || (lastReadByTarget && new Date(lastReadByTarget) >= msgDate);
+
+          return `
+            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
+              <div class="message-bubble">
+                <div class="message-text">${msg.content}</div>
+                <div class="message-meta">
+                  <span class="timer-clock">${time}</span>
+                  ${isSent ? `<span class="read-status ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+          `;
+        }).join('');
 
-    if (!isUserScrolling) {
-      setTimeout(() => {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }, 50);
+        if (!isUserScrolling) {
+          setTimeout(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }, 50);
+        }
+        
+      } catch (err) {
+        console.error('Error fetching chat messages:', err);
+      }
     }
-    
-  } catch (err) {
-    console.error('Error fetching chat messages:', err);
-  }
-}
-
 
     // 3. Send Message Functionality
     async function sendMessage() {
@@ -149,7 +162,6 @@
       if (!content || !targetUser || !activeUser) return;
       if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
 
-      // Lock UI briefly during send
       if (sendBtn) sendBtn.disabled = true;
 
       try {
@@ -183,7 +195,6 @@
       }
     }
 
-    // Enable enter key submission via input directly
     document.getElementById('message-input')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -191,7 +202,6 @@
       }
     });
 
-    // Initial load & Polling Loop
     loadChat();
     setInterval(loadChat, 3000);
   </script>
