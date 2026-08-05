@@ -119,13 +119,15 @@
           const mapKey = otherUser.toLowerCase();
           const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
 
-          if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
+                    if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
             conversationMap[mapKey] = {
-              username: otherUser, // Clean name guaranteed without '@'
+              username: otherUser,
+              sender: sender, // <-- Add this line so unread detection works
               content: msg.content || '',
               created_at: msgDate
             };
           }
+
         });
 
         const conversations = Object.values(conversationMap);
