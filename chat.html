@@ -36,7 +36,7 @@
   </footer>
 
   <script>
-        const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+            const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
     const activeUser = rawActiveUser ? rawActiveUser.trim().replace('@', '') : '';
@@ -51,11 +51,13 @@
       window.location.href = 'auth.html';
     }
 
-    if (targetUser && targetUser !== 'user') {
-      document.getElementById('chat-with-user').textContent = targetUser;
-    } else {
-      document.getElementById('chat-with-user').textContent = 'Inbox';
+    // Strict validation: If there is no valid targetUser in the URL, redirect back to index/inbox instead of opening a blank chat window
+    if (!targetUser || targetUser === 'user' || targetUser.toLowerCase() === activeUser.toLowerCase()) {
+      window.location.href = 'index.html';
     }
+
+    document.getElementById('chat-with-user').textContent = targetUser;
+
 
     async function loadChat() {
       if (!targetUser || !activeUser || targetUser === 'user') return;
