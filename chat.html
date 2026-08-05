@@ -36,7 +36,8 @@
   </footer>
 
   <script>
-            const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+            
+          const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
     const activeUser = rawActiveUser ? rawActiveUser.trim().replace('@', '') : '';
@@ -51,13 +52,20 @@
       window.location.href = 'auth.html';
     }
 
-    // Strict validation: If there is no valid targetUser in the URL, redirect back to index/inbox instead of opening a blank chat window
     if (!targetUser || targetUser === 'user' || targetUser.toLowerCase() === activeUser.toLowerCase()) {
       window.location.href = 'index.html';
     }
 
     document.getElementById('chat-with-user').textContent = targetUser;
 
+    let isUserScrolling = false;
+    const messagesList = document.getElementById('messages-list');
+
+    // Detect if user scrolls up manually to prevent auto-scroll from locking them
+    messagesList.addEventListener('scroll', () => {
+      const isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight < 50;
+      isUserScrolling = !isAtBottom;
+    });
 
     async function loadChat() {
       if (!targetUser || !activeUser || targetUser === 'user') return;
@@ -67,12 +75,15 @@
         if (!response.ok) return;
         
         const messages = await response.json();
-        const messagesList = document.getElementById('messages-list');
         
-        const filteredMessages = messages.filter(
-          msg => (msg.sender_username?.toLowerCase() === targetUser.toLowerCase() && msg.receiver_username?.toLowerCase() === activeUser.toLowerCase()) ||
-                 (msg.sender_username?.toLowerCase() === activeUser.toLowerCase() && msg.receiver_username?.toLowerCase() === targetUser.toLowerCase())
-        );
+        const cleanTarget = targetUser.toLowerCase().trim();
+        const cleanActive = activeUser.toLowerCase().trim();
+
+        const filteredMessages = messages.filter(msg => {
+          const s = msg.sender_username?.toLowerCase().trim().replace('@', '');
+          const r = msg.receiver_username?.toLowerCase().trim().replace('@', '');
+          return (s === cleanTarget && r === cleanActive) || (s === cleanActive && r === cleanTarget);
+        });
 
         if (filteredMessages.length === 0) {
           messagesList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">Chat with ${targetUser}. Send a message to start!</p>`;
@@ -80,7 +91,7 @@
         }
 
         messagesList.innerHTML = filteredMessages.map(msg => {
-          const isSent = msg.sender_username?.toLowerCase() === activeUser.toLowerCase();
+          const isSent = msg.sender_username?.toLowerCase().trim().replace('@', '') === cleanActive;
           const expiresAt = new Date(msg.expires_at).getTime();
           const now = new Date().getTime();
           const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -102,7 +113,10 @@
           `;
         }).join('');
 
-        window.scrollTo(0, document.body.scrollHeight);
+        // Only auto-scroll down if the user isn't actively reading higher up
+        if (!isUserScrolling) {
+          messagesList.scrollTop = messagesList.scrollHeight;
+        }
 
       } catch (err) {
         console.error('Failed to load chat:', err);
@@ -115,6 +129,11 @@
 
       if (!content || !targetUser || targetUser === 'user' || !activeUser) {
         console.error('Cannot send: Missing target user or content');
+        return;
+      }
+
+      if (targetUser.toLowerCase() === activeUser.toLowerCase()) {
+        console.error('Cannot send a message to yourself');
         return;
       }
 
@@ -132,7 +151,9 @@
 
         if (response.ok) {
           input.value = '';
+          isUserScrolling = false; // Reset scroll lock so new message forces view down
           await loadChat();
+          messagesList.scrollTop = messagesList.scrollHeight;
         } else {
           const errData = await response.json();
           console.error('Server rejected message:', errData);
@@ -145,9 +166,6 @@
     loadChat();
     setInterval(loadChat, 3000);
 
-          
-    
-          
   </script>
 
 
