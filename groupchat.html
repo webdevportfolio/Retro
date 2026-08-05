@@ -14,11 +14,12 @@
   <header class="nav-bar">
     <a href="index.html" class="nav-btn">← Back</a>
     
-    <div class="chat-header-group">
-      <div class="chat-header-avatar">👥</div>
+    <!-- Tapping header opens group settings -->
+    <div class="chat-header-group" onclick="toggleSettingsDrawer(true)">
+      <div class="chat-header-avatar" id="header-gc-avatar">👥</div>
       <div>
-        <div class="chat-header-title">Dev Squad</div>
-        <div class="group-members-count">4 members</div>
+        <div class="chat-header-title" id="header-gc-name">Dev Squad</div>
+        <div class="group-members-count" id="header-gc-count">3 members</div>
       </div>
     </div>
 
@@ -32,7 +33,7 @@
       <!-- Received Message Sample 1 -->
       <div class="message-wrapper received">
         <div class="message-bubble">
-          <div class="group-sender-name">@temmix</div>
+          <div class="group-sender-name">temmix</div>
           <div class="message-text">Yo, did we get the search code bug fixed?</div>
           <div class="message-meta">
             <span class="timer-clock">20:41</span>
@@ -53,7 +54,7 @@
       <!-- Received Message Sample 2 -->
       <div class="message-wrapper received">
         <div class="message-bubble">
-          <div class="group-sender-name">@nero</div>
+          <div class="group-sender-name">nero</div>
           <div class="message-text">Nice! Clean design.</div>
           <div class="message-meta">
             <span class="timer-clock">20:43</span>
@@ -67,10 +68,151 @@
   <!-- Bottom Input Bar -->
   <footer class="chat-input-bar">
     <form action="javascript:void(0);">
-      <input type="text" class="input-field" placeholder="Type a group message..." autocomplete="off">
+      <input type="text" class="input-field" placeholder="Type a message..." autocomplete="off">
       <button type="button" class="send-btn">Send</button>
     </form>
   </footer>
 
+  <!-- Group Settings Side Drawer -->
+  <div class="modal-overlay" id="settings-drawer" onclick="if(event.target === this) toggleSettingsDrawer(false)">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Group Details</h2>
+        <button class="close-btn" onclick="toggleSettingsDrawer(false)">&times;</button>
+      </div>
+
+      <!-- Change Profile Picture -->
+      <div class="pfp-upload-section">
+        <div class="pfp-preview-container" id="drawer-gc-avatar">👥</div>
+        <label for="group-pfp-input" class="change-pfp-btn">Change Group Icon</label>
+        <input type="file" id="group-pfp-input" accept="image/*" style="display: none;" onchange="handlePfpChange(event)">
+      </div>
+
+      <!-- Group Name Display/Edit -->
+      <div style="margin-bottom: 24px;">
+        <div class="section-label">Group Name</div>
+        <input type="text" id="drawer-gc-name-input" value="Dev Squad" class="input-field" style="width: 100%;">
+      </div>
+
+      <!-- Members List Section -->
+      <div>
+        <div class="section-label">Members (<span id="drawer-members-count">0</span>)</div>
+        <div class="members-list" id="drawer-members-list">
+          <!-- Dynamically populated via script -->
+        </div>
+      </div>
+
+      <button class="danger-btn" onclick="leaveGroup()">Leave Group</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    const activeUser = (localStorage.getItem('username') || localStorage.getItem('retro_session') || '').trim().replace('@', '');
+    const urlParams = new URLSearchParams(window.location.search);
+    const groupId = urlParams.get('id');
+
+    let currentGroupData = null;
+
+    function toggleSettingsDrawer(open) {
+      const drawer = document.getElementById('settings-drawer');
+      if (open) {
+        drawer.classList.add('active');
+        if (groupId) loadGroupDetails();
+      } else {
+        drawer.classList.remove('active');
+      }
+    }
+
+    async function loadGroupDetails() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}`);
+        if (!res.ok) return;
+
+        currentGroupData = await res.json();
+        renderDrawerMembers(currentGroupData);
+      } catch (err) {
+        console.error('Failed to load group details:', err);
+      }
+    }
+
+    function renderDrawerMembers(group) {
+      const membersList = document.getElementById('drawer-members-list');
+      const membersCount = document.getElementById('drawer-members-count');
+      const nameInput = document.getElementById('drawer-gc-name-input');
+      const headerName = document.getElementById('header-gc-name');
+      const headerCount = document.getElementById('header-gc-count');
+      
+      if (nameInput) nameInput.value = group.name;
+      if (headerName) headerName.textContent = group.name;
+      if (membersCount) membersCount.textContent = group.members.length;
+      if (headerCount) headerCount.textContent = `${group.members.length} members`;
+
+      const isAdmin = group.created_by.toLowerCase() === activeUser.toLowerCase();
+
+      membersList.innerHTML = group.members.map(member => {
+        const cleanName = member.trim().replace('@', '');
+        const isSelf = cleanName.toLowerCase() === activeUser.toLowerCase();
+        const isCreator = cleanName.toLowerCase() === group.created_by.toLowerCase();
+
+        return `
+          <div class="member-item">
+            <div class="member-info">
+              <div class="member-avatar">${cleanName.charAt(0).toUpperCase()}</div>
+              <div class="member-name">${cleanName}</div>
+              ${isCreator ? '<span class="admin-badge">Admin</span>' : ''}
+            </div>
+            ${(isAdmin && !isSelf && !isCreator) 
+              ? `<button class="remove-member-btn" onclick="removeMember('${cleanName}')">Remove</button>` 
+              : ''
+            }
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function removeMember(targetUsername) {
+      if (!confirm(`Are you sure you want to remove ${targetUsername} from the group?`)) return;
+
+      try {
+        const updatedMembers = currentGroupData.members.filter(
+          m => m.trim().replace('@', '').toLowerCase() !== targetUsername.toLowerCase()
+        );
+
+        const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ members: updatedMembers })
+        });
+
+        if (res.ok) {
+          currentGroupData.members = updatedMembers;
+          renderDrawerMembers(currentGroupData);
+        }
+      } catch (err) {
+        console.error('Failed to remove member:', err);
+      }
+    }
+
+    function handlePfpChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const imageSrc = e.target.result;
+        
+        document.getElementById('header-gc-avatar').innerHTML = `<img src="${imageSrc}" alt="Group Avatar">`;
+        document.getElementById('drawer-gc-avatar').innerHTML = `<img src="${imageSrc}" alt="Group Avatar">`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function leaveGroup() {
+      if (confirm('Are you sure you want to leave this group?')) {
+        window.location.href = 'index.html';
+      }
+    }
+  </script>
 </body>
 </html>
