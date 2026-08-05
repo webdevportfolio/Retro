@@ -72,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
     avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
   }
 
-  // 4. Construct Direct Chat URL
-  const directLink = `https://webdevportfolio.github.io/Retro/index.html?u=${encodeURIComponent(currentUser)}`;
+const baseUrl = window.location.origin + window.location.pathname.replace('profile.html', 'index.html');
+const directLink = `${baseUrl}?u=${encodeURIComponent(currentUser)}`;
 
   if (linkInput) {
     linkInput.value = directLink;
