@@ -67,70 +67,21 @@
       isUserScrolling = !isAtBottom;
     });
 
-    async function loadChat() {
-      if (!targetUser || !activeUser || targetUser === 'user') return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) return;
-        
-        const messages = await response.json();
-        
-        const cleanTarget = targetUser.toLowerCase().trim();
-        const cleanActive = activeUser.toLowerCase().trim();
-
-        const filteredMessages = messages.filter(msg => {
-          const s = (msg.sender_username || msg.sender || '').toLowerCase().trim().replace('@', '');
-          const r = (msg.receiver_username || msg.receiver || '').toLowerCase().trim().replace('@', '');
-          return (s === cleanTarget && r === cleanActive) || (s === cleanActive && r === cleanTarget);
-        });
-
-        if (filteredMessages.length === 0) {
-          messagesList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">Chat with ${targetUser}. Send a message to start!</p>`;
-          return;
-        }
-
-        messagesList.innerHTML = filteredMessages.map(msg => {
-          const sCheck = (msg.sender_username || msg.sender || '').toLowerCase().trim().replace('@', '');
-          const isSent = sCheck === cleanActive;
-          const expiresAt = new Date(msg.expires_at || Date.now() + 600000).getTime();
-          const now = new Date().getTime();
-          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
-          
-          const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
-          const secs = (secondsLeft % 60).toString().padStart(2, '0');
-
-          const displayContent = secondsLeft > 0 ? msg.content : '<span style="font-style: italic; opacity: 0.3; font-size: 0.85rem;">[Message expired]</span>';
-
-          return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
-              <div class="message-bubble">
-                <p class="message-text">${displayContent}</p>
-                <div class="message-meta">
-                  <span class="timer-clock" data-seconds="${secondsLeft}">${secondsLeft > 0 ? `${mins}:${secs}` : '00:00'}</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        // Auto scroll only if user hasn't scrolled up manually
-        if (!isUserScrolling) {
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-      } catch (err) {
-        console.error('Failed to load chat:', err);
-      }
-    }
-
-    async function sendMessage() {
+        async function sendMessage() {
       const input = document.getElementById('message-input');
+      if (!input) return;
+      
       const content = input.value.trim();
 
-      if (!content || !targetUser || targetUser === 'user' || !activeUser) return;
+      if (!content || !targetUser || targetUser === 'user' || !activeUser) {
+        console.error('Validation failed: Missing content, target, or active user.');
+        return;
+      }
 
-      if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
+      if (targetUser.toLowerCase() === activeUser.toLowerCase()) {
+        console.error('Cannot send a message to yourself.');
+        return;
+      }
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
@@ -144,20 +95,22 @@
           })
         });
 
-                if (response.ok) {
+        if (response.ok) {
           input.value = '';
           isUserScrolling = false; 
           await loadChat();
           chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
- else {
-          const errData = await response.json();
-          console.error('Server rejected message:', errData);
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          console.error('Server rejected message. Status:', response.status, errData);
         }
       } catch (err) {
-        console.error('Error sending message:', err);
+        console.error('Network or fetch error while sending:', err);
       }
     }
+
+        // Auto scroll only if user hasn't scrolled up manually
+        
 
     loadChat();
     setInterval(loadChat, 3000);
