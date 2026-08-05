@@ -115,7 +115,7 @@
         try {
           // Resolve target username from API users
           const res = await fetch(`${API_BASE_URL}/api/users`);
-          if (!res.ok) throw new Error('Failed to fetch users');
+          if (!res.ok) throw new Error('Failed to fetch users list');
           const users = await res.json();
 
           const matchedUser = users.find(u => {
@@ -125,19 +125,29 @@
 
           if (matchedUser) {
             const targetUsername = typeof matchedUser === 'string' ? matchedUser : matchedUser.username;
+
+            // Prevent user from matching their own chat code
+            if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
+              codeError.textContent = 'You cannot chat with yourself!';
+              codeError.style.display = 'block';
+              joinCodeBtn.disabled = false;
+              joinCodeBtn.textContent = 'Search';
+              return;
+            }
+
             window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
           } else {
             codeError.textContent = 'Invalid Chat Code. Please check and try again.';
             codeError.style.display = 'block';
             joinCodeBtn.disabled = false;
-            joinCodeBtn.textContent = 'Start Chat';
+            joinCodeBtn.textContent = 'Search';
           }
         } catch (err) {
           console.error('Error resolving code:', err);
           codeError.textContent = 'Network error. Could not verify code.';
           codeError.style.display = 'block';
           joinCodeBtn.disabled = false;
-          joinCodeBtn.textContent = 'Start Chat';
+          joinCodeBtn.textContent = 'Search';
         }
       }
 
@@ -358,5 +368,7 @@
       }
     }
   </script>
+
+                  
 </body>
 </html>
