@@ -22,22 +22,22 @@
 
   <!-- Fixed Bottom Message Input Bar -->
   <footer class="chat-input-bar">
-    <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
+    <form id="chat-form" action="javascript:void(0);" onsubmit="sendMessage(); return false;">
       <input 
         type="text" 
         id="message-input" 
         class="input-field chat-field" 
         placeholder="Type a message..." 
         autocomplete="off"
-        required
       >
-      <button type="submit" class="send-btn">Send</button>
+      <button type="button" id="send-btn" class="send-btn" onclick="sendMessage()">Send</button>
     </form>
   </footer>
 
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
+    // 1. Session & Target Resolution
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
     const activeUser = rawActiveUser ? rawActiveUser.trim().replace('@', '') : '';
     
@@ -49,6 +49,7 @@
       localStorage.setItem(`read_${targetUser.toLowerCase()}`, new Date().toISOString());
     }
 
+    // Redirect guards
     if (!activeUser) {
       window.location.href = 'auth.html';
     }
@@ -57,11 +58,13 @@
       window.location.href = 'index.html';
     }
 
+    // Header title update
     const chatTitleElem = document.getElementById('chat-with-user');
     if (chatTitleElem && targetUser) {
       chatTitleElem.textContent = targetUser;
     }
 
+    // Scroll state tracking
     let isUserScrolling = false;
     const chatContainer = document.getElementById('chat-container');
     const messagesList = document.getElementById('messages-list');
@@ -73,6 +76,7 @@
       });
     }
 
+    // 2. Fetch & Render Messages
     async function loadChat() {
       if (!activeUser || !targetUser) return;
 
@@ -83,6 +87,7 @@
         const allMessages = await response.json();
         if (!messagesList) return;
 
+        // Filter messages between activeUser and targetUser
         const messages = allMessages.filter(msg => {
           const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
           const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
@@ -113,6 +118,7 @@
           `;
         }).join('');
 
+        // Scroll fix execution
         if (!isUserScrolling) {
           setTimeout(() => {
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -124,12 +130,19 @@
       }
     }
 
+    // 3. Send Message Functionality
     async function sendMessage() {
       const input = document.getElementById('message-input');
+      const sendBtn = document.getElementById('send-btn');
+      if (!input) return;
+
       const content = input.value.trim();
 
       if (!content || !targetUser || !activeUser) return;
       if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
+
+      // Lock UI briefly during send
+      if (sendBtn) sendBtn.disabled = true;
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
@@ -138,6 +151,8 @@
           body: JSON.stringify({
             sender: activeUser,
             receiver: targetUser,
+            sender_username: activeUser,
+            receiver_username: targetUser,
             content: content
           })
         });
@@ -155,9 +170,20 @@
         }
       } catch (err) {
         console.error('Error sending message:', err);
+      } finally {
+        if (sendBtn) sendBtn.disabled = false;
       }
     }
 
+    // Enable enter key submission via input directly
+    document.getElementById('message-input')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Initial load & Polling Loop
     loadChat();
     setInterval(loadChat, 3000);
   </script>
