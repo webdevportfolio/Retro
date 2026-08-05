@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RETRO | Inbox</title>
+  <title>Inbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -77,6 +77,18 @@
       localStorage.removeItem('retro_session');
       window.location.href = 'auth.html';
     }
+// Filter out messages where the conversation partner is YOURSELF
+const uniqueConversations = messages.filter(msg => {
+  const sender = msg.sender_username?.toLowerCase().trim().replace('@', '');
+  const receiver = msg.receiver_username?.toLowerCase().trim().replace('@', '');
+  const active = activeUser.toLowerCase().trim().replace('@', '');
+
+  // The other person in the chat cannot be yourself
+  const otherUser = sender === active ? receiver : sender;
+  
+  // Exclude chats with yourself completely
+  return otherUser && otherUser !== active;
+});
 
         async function loadInbox() {
       const activeUser = (localStorage.getItem('username') || localStorage.getItem('retro_session') || '').trim().replace('@', '');
