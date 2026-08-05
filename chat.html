@@ -15,11 +15,23 @@
   <!-- Top Navigation Header -->
   <header class="nav-bar">
     <a href="index.html" class="nav-btn">← Back</a>
-    <div style="text-align: center;">
-      <div id="chat-with-user" class="chat-header-title">Loading...</div>
-      <div id="typing-indicator" style="font-size: 0.75rem; color: #a855f7; height: 14px; font-weight: 500;"></div>
+    
+    <div class="chat-header-user">
+      <div class="chat-header-avatar-wrapper">
+        <div class="chat-header-avatar" id="header-avatar-container">
+          <img id="header-avatar-img" src="" alt="Avatar" style="display: none;">
+          <span id="header-avatar-initial">?</span>
+        </div>
+        <div class="online-dot" title="Active"></div>
+      </div>
+      <div>
+        <div id="chat-with-user" class="chat-header-title">Loading...</div>
+        <div id="typing-indicator" style="font-size: 0.72rem; color: #a855f7; height: 12px; font-weight: 500;"></div>
+      </div>
     </div>
-    <a href="profile.html" id="profile-btn" class="nav-btn">Profile</a>
+
+    <!-- Balanced Spacer replacing Profile button -->
+    <div class="nav-spacer"></div>
   </header>
 
   <!-- Chat Messages Stream -->
@@ -76,10 +88,22 @@
       window.location.href = 'index.html';
     }
 
-    // Header title update
+    // Header title and avatar setup
     const chatTitleElem = document.getElementById('chat-with-user');
+    const avatarImg = document.getElementById('header-avatar-img');
+    const avatarInitial = document.getElementById('header-avatar-initial');
+
     if (chatTitleElem && targetUser) {
       chatTitleElem.textContent = targetUser;
+      
+      const savedPfp = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
+      if (savedPfp && avatarImg && avatarInitial) {
+        avatarImg.src = savedPfp;
+        avatarImg.style.display = 'block';
+        avatarInitial.style.display = 'none';
+      } else if (avatarInitial) {
+        avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
+      }
     }
 
     // Scroll state tracking
