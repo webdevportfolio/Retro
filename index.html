@@ -44,8 +44,8 @@
         localStorage.setItem('pendingChatUser', targetUser.trim().replace('@', ''));
       }
 
-      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session');
-      const activeUser = rawActive ? rawActive.trim().replace('@', '') : '';
+      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+const activeUser = rawActive.trim().replace('@', '');
 
       if (!activeUser) {
         window.location.href = 'auth.html';
