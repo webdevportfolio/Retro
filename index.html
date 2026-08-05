@@ -74,91 +74,100 @@ const activeUser = rawActive.trim().replace('@', '');
       window.location.href = 'auth.html';
     }
 
-    async function loadInbox() {
-      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      const activeUser = rawActive.trim().replace('@', '').toLowerCase();
+    
+          function openChat(username, timestamp) {
+  // Save read state locally so glow disappears when opened
+  localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
+  window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+}
+
+async function loadInbox() {
+  const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+  const activeUser = rawActive.trim().replace('@', '').toLowerCase();
+  
+  if (!activeUser) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
+    if (!response.ok) return;
+    
+    const messages = await response.json();
+    const inboxList = document.getElementById('inbox-list');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (!inboxList) return;
+
+    if (!messages || messages.length === 0) {
+      inboxList.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'block';
+      return;
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+
+    const conversationMap = {};
+    
+    messages.forEach(msg => {
+      const senderRaw = msg.sender_username || msg.sender || '';
+      const receiverRaw = msg.receiver_username || msg.receiver || '';
       
-      if (!activeUser) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) return;
-        
-        const messages = await response.json();
-        const inboxList = document.getElementById('inbox-list');
-        const emptyState = document.getElementById('empty-state');
-        
-        if (!inboxList) return;
-
-        if (!messages || messages.length === 0) {
-          inboxList.innerHTML = '';
-          if (emptyState) emptyState.style.display = 'block';
-          return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-
-        const conversationMap = {};
-        
-        messages.forEach(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const receiverRaw = msg.receiver_username || msg.receiver || '';
-          
-          const sender = senderRaw.trim().replace('@', '').toLowerCase();
-          const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
-          
-          let otherUser = '';
-          if (sender === activeUser) {
-            otherUser = receiverRaw.trim().replace('@', '');
-          } else if (receiver === activeUser) {
-            otherUser = senderRaw.trim().replace('@', '');
-          }
-
-          // Exclude self-chats completely
-          if (!otherUser || otherUser.toLowerCase() === activeUser) return;
-
-          const mapKey = otherUser.toLowerCase();
-          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
-
-                    if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
-            conversationMap[mapKey] = {
-              username: otherUser,
-              sender: sender, // <-- Add this line so unread detection works
-              content: msg.content || '',
-              created_at: msgDate
-            };
-          }
-
-        });
-
-        const conversations = Object.values(conversationMap);
-
-        if (conversations.length === 0) {
-          inboxList.innerHTML = '';
-          if (emptyState) emptyState.style.display = 'block';
-          return;
-        }
-
-                inboxList.innerHTML = conversations.map(conv => {
-          const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          
-          // Check if the latest message was sent BY the other user (unread indicator)
-          const isUnread = conv.sender.toLowerCase() !== activeUser.toLowerCase();
-          const cardClass = isUnread ? 'chat-card unread' : 'chat-card';
-
-          return `
-            <div class="${cardClass}" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
-              <div class="inbox-card-username">${conv.username}</div>
-              <div class="inbox-card-preview">${conv.content}</div>
-              <div class="inbox-card-time">${time}</div>
-            </div>
-          `;
-        }).join('');
-
-
-      } catch (err) {
-        console.error('Failed to load inbox:', err);
+      const sender = senderRaw.trim().replace('@', '').toLowerCase();
+      const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
+      
+      let otherUser = '';
+      if (sender === activeUser) {
+        otherUser = receiverRaw.trim().replace('@', '');
+      } else if (receiver === activeUser) {
+        otherUser = senderRaw.trim().replace('@', '');
       }
+
+      if (!otherUser || otherUser.toLowerCase() === activeUser) return;
+
+      const mapKey = otherUser.toLowerCase();
+      const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
+
+      if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
+        conversationMap[mapKey] = {
+          username: otherUser,
+          sender: sender,
+          content: msg.content || '',
+          created_at: msgDate
+        };
+      }
+    });
+
+    const conversations = Object.values(conversationMap);
+
+    if (conversations.length === 0) {
+      inboxList.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'block';
+      return;
+    }
+
+    inboxList.innerHTML = conversations.map(conv => {
+      const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      // Unread logic check against local read timestamp
+      const lastReadMsgTime = localStorage.getItem(`read_${conv.username.toLowerCase()}`);
+      const isUnread = conv.sender.toLowerCase() !== activeUser.toLowerCase() && 
+                       (!lastReadMsgTime || new Date(conv.created_at) > new Date(lastReadMsgTime));
+
+      const cardClass = isUnread ? 'chat-card unread' : 'chat-card';
+
+      return `
+        <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
+          <div class="inbox-card-username">${conv.username}</div>
+          <div class="inbox-card-preview">${conv.content}</div>
+          <div class="inbox-card-time">${time}</div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Failed to load inbox:', err);
+  }
+}
+
     }
   </script>
 </body>
