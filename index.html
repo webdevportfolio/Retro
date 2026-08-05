@@ -79,7 +79,7 @@
 
   <!-- Create Group Modal -->
   <div class="modal-overlay" id="create-group-modal" onclick="if(event.target === this) toggleGroupModal(false)">
-    <div class="modal-box" style="text-align: left; border-color: var(--glass-border);">
+    <div class="modal-box" style="text-align: left; border-color: var(--glass-border); max-height: 85vh; overflow-y: auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 1.1rem;">Create New Group</h3>
         <button onclick="toggleGroupModal(false)" style="background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer;">&times;</button>
@@ -88,12 +88,14 @@
       <form onsubmit="handleCreateGroup(event)" style="display: flex; flex-direction: column; gap: 14px;">
         <div>
           <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Group Name</label>
-          <input type="text" id="new-group-name" class="input-field" placeholder="e.g. Dev Squad" required>
+          <input type="text" id="new-group-name" class="input-field" placeholder="Enter group name..." required>
         </div>
 
         <div>
-          <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Add Members (comma separated)</label>
-          <input type="text" id="new-group-members" class="input-field" placeholder="temmix, nero, alex">
+          <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Select Members from DMs</label>
+          <div id="dm-members-selection" style="max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">Loading contacts...</div>
+          </div>
         </div>
 
         <button type="submit" class="auth-btn" style="margin-top: 8px;">Create Group</button>
@@ -271,11 +273,57 @@
       return outputArray;
     }
 
-    function toggleGroupModal(open) {
+    async function toggleGroupModal(open) {
       const modal = document.getElementById('create-group-modal');
-      if (modal) {
-        if (open) modal.classList.add('active');
-        else modal.classList.remove('active');
+      if (!modal) return;
+
+      if (open) {
+        modal.classList.add('active');
+        document.getElementById('new-group-name').value = '';
+        await loadDmContactsForGroup();
+      } else {
+        modal.classList.remove('active');
+      }
+    }
+
+    async function loadDmContactsForGroup() {
+      const container = document.getElementById('dm-members-selection');
+      if (!container) return;
+
+      const lowerActive = activeUser.toLowerCase();
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+        if (!res.ok) throw new Error('Failed to fetch messages');
+        
+        const messages = await res.json();
+        const contactsSet = new Set();
+
+        messages.forEach(msg => {
+          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '');
+          const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '');
+
+          if (sender && sender.toLowerCase() !== lowerActive) contactsSet.add(sender);
+          if (receiver && receiver.toLowerCase() !== lowerActive) contactsSet.add(receiver);
+        });
+
+        const contacts = Array.from(contactsSet);
+
+        if (contacts.length === 0) {
+          container.innerHTML = `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">No DM contacts found yet.</div>`;
+          return;
+        }
+
+        container.innerHTML = contacts.map(username => `
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; padding: 4px 0;">
+            <input type="checkbox" class="group-member-checkbox" value="${username}" style="accent-color: var(--accent-purple); width: 16px; height: 16px;">
+            <span>${username}</span>
+          </label>
+        `).join('');
+
+      } catch (err) {
+        console.error('Failed to load DM contacts:', err);
+        container.innerHTML = `<div style="font-size: 0.8rem; color: #ef4444;">Error loading contacts.</div>`;
       }
     }
 
@@ -283,10 +331,10 @@
       event.preventDefault();
 
       const nameInput = document.getElementById('new-group-name');
-      const membersInput = document.getElementById('new-group-members');
-
       const groupName = nameInput.value.trim();
-      const rawMembers = membersInput.value.split(',').map(m => m.trim()).filter(Boolean);
+
+      const checkedBoxes = document.querySelectorAll('.group-member-checkbox:checked');
+      const selectedMembers = Array.from(checkedBoxes).map(cb => cb.value);
 
       if (!groupName) return;
 
@@ -297,7 +345,7 @@
           body: JSON.stringify({
             name: groupName,
             created_by: activeUser,
-            members: rawMembers
+            members: selectedMembers
           })
         });
 
