@@ -132,18 +132,17 @@ if (!response.ok) {
   return;
 }
 
-// Save session locally
-localStorage.setItem('retro_session', username);
-localStorage.setItem('username', username);
+        // Save session locally and redirect
+        localStorage.setItem('retro_session', username);
+        localStorage.setItem('username', username);
 
-// Check if user followed a direct chat link
-const pendingUser = localStorage.getItem('pendingChatUser');
-if (pendingUser && pendingUser.toLowerCase() !== username.toLowerCase()) {
-  localStorage.removeItem('pendingChatUser');
-  window.location.href = `chat.html?user=${encodeURIComponent(pendingUser)}`;
-} else {
-  window.location.href = 'index.html';
-}
+        const pendingUser = localStorage.getItem('pendingChatUser');
+        if (pendingUser && pendingUser.toLowerCase() !== username.toLowerCase()) {
+          localStorage.removeItem('pendingChatUser');
+          window.location.href = `chat.html?user=${encodeURIComponent(pendingUser)}`;
+        } else {
+          window.location.href = 'index.html';
+        }
 
       } catch (err) {
         clearTimeout(wakeUpTimer);
@@ -160,22 +159,6 @@ if (pendingUser && pendingUser.toLowerCase() !== username.toLowerCase()) {
           resetButton();
         }
       }
-// Inside successful Auth submission (Sign Up or Login)
-async function handleAuthSuccess(username) {
-  localStorage.setItem('username', username);
-  
-  // Close auth screen
-  hideAuthModal();
-
-  // Check if they came from someone's shared link
-  const pendingUser = localStorage.getItem('pendingChatUser');
-  if (pendingUser) {
-    localStorage.removeItem('pendingChatUser');
-    startChatWith(pendingUser);
-  } else {
-    loadInbox(); // Normal dashboard view
-  }
-}
 
       function resetButton() {
         submitBtn.disabled = false;
@@ -183,6 +166,7 @@ async function handleAuthSuccess(username) {
       }
     }
   </script>
+
 
 </body>
 </html>
