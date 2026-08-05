@@ -233,6 +233,219 @@
 
         if (totalUnread > 0) {
           document.title = `(${totalUnread}) RETRO | Inbox`;
+  <script>
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    let lastKnownMsgCount = 0;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetUser = urlParams.get('u') || urlParams.get('user') || urlParams.get('username');
+
+      if (targetUser) {
+        localStorage.setItem('pendingChatUser', targetUser.trim().replace('@', ''));
+      }
+
+      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+      const activeUser = rawActive.trim().replace('@', '');
+
+      if (!activeUser) {
+        window.location.href = 'auth.html';
+        return;
+      }
+
+      const profileBtn = document.getElementById('profile-btn');
+      if (profileBtn) {
+        profileBtn.textContent = activeUser;
+      }
+
+      // --> ADD THIS LINE HERE TO TRIGGER PUSH SUBSCRIPTION ON LOGIN/INBOX LOAD
+      registerPushSubscription(activeUser);
+
+      const pendingUser = localStorage.getItem('pendingChatUser');
+      if (pendingUser && pendingUser.toLowerCase() !== activeUser.toLowerCase()) {
+        localStorage.removeItem('pendingChatUser');
+        window.location.href = `chat.html?user=${encodeURIComponent(pendingUser)}`;
+        return;
+      }
+
+      loadInbox();
+      setInterval(loadInbox, 4000);
+    });
+
+    function logout() {
+      localStorage.removeItem('username');
+      localStorage.removeItem('retro_session');
+      window.location.href = 'auth.html';
+    }
+
+    function openChat(username, timestamp) {
+      localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
+      window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+    }
+
+    function updateHomeScreenBadge(count) {
+      if ('setAppBadge' in navigator) {
+        if (count > 0) {
+          navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
+        } else {
+          navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
+        }
+      }
+    }
+
+    // --> ADD THESE PUSH REGISTRATION FUNCTIONS AT THE BOTTOM
+    async function registerPushSubscription(username) {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        const res = await fetch(`${API_BASE_URL}/api/vapid-key`);
+        if (!res.ok) return;
+        const { publicKey } = await res.json();
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        await fetch(`${API_BASE_URL}/api/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, subscription })
+        });
+      } catch (err) {
+        console.error('Push subscription failed:', err);
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    async function loadInbox() {
+      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+      const activeUser = rawActive.trim().replace('@', '');
+      const lowerActive = activeUser.toLowerCase();
+      
+      if (!activeUser) return;
+
+      try {
+        let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+        if (!response.ok) return;
+        
+        let messages = await response.json();
+
+        if ((!messages || messages.length === 0) && activeUser !== lowerActive) {
+          const fallbackRes = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
+          if (fallbackRes.ok) {
+            messages = await fallbackRes.json();
+          }
+        }
+
+        const inboxList = document.getElementById('inbox-list');
+        const emptyState = document.getElementById('empty-state');
+        
+        if (!inboxList) return;
+
+        if (!messages || messages.length === 0) {
+          inboxList.innerHTML = '';
+          if (emptyState) emptyState.style.display = 'block';
+          document.title = 'RETRO | Inbox';
+          updateHomeScreenBadge(0);
+          return;
+        }
+
+        if (messages.length > lastKnownMsgCount && lastKnownMsgCount !== 0) {
+          const newest = messages[messages.length - 1];
+          const sender = (newest.sender_username || newest.sender || '').trim().replace('@', '');
+          
+          if (sender.toLowerCase() !== lowerActive && 'Notification' in window && Notification.permission === 'granted') {
+            if (document.hidden) {
+              new Notification(`New message from ${sender}`, {
+                body: newest.content || 'Sent a message',
+                icon: 'icon.png'
+              });
+            }
+          }
+        }
+        lastKnownMsgCount = messages.length;
+
+        const conversationMap = {};
+        
+        messages.forEach(msg => {
+          const senderRaw = msg.sender_username || msg.sender || '';
+          const receiverRaw = msg.receiver_username || msg.receiver || '';
+          
+          const sender = senderRaw.trim().replace('@', '').toLowerCase();
+          const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
+          
+          let otherUserDisplay = '';
+          if (sender === lowerActive) {
+            otherUserDisplay = receiverRaw.trim().replace('@', '');
+          } else if (receiver === lowerActive) {
+            otherUserDisplay = senderRaw.trim().replace('@', '');
+          }
+
+          if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
+
+          const mapKey = otherUserDisplay.toLowerCase();
+          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
+
+          if (!conversationMap[mapKey]) {
+            conversationMap[mapKey] = {
+              username: otherUserDisplay,
+              sender: sender,
+              content: msg.content || '',
+              created_at: msgDate,
+              unreadCount: 0
+            };
+          }
+
+          const lastReadTime = localStorage.getItem(`read_${mapKey}`);
+          const isIncoming = sender !== lowerActive;
+          const isUnread = isIncoming && (!lastReadTime || msgDate > new Date(lastReadTime));
+
+          if (isUnread) {
+            conversationMap[mapKey].unreadCount++;
+          }
+
+          if (msgDate >= new Date(conversationMap[mapKey].created_at)) {
+            conversationMap[mapKey].created_at = msgDate;
+            conversationMap[mapKey].content = msg.content || '';
+            conversationMap[mapKey].sender = sender;
+          }
+        });
+
+        const conversations = Object.values(conversationMap).sort((a, b) => {
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+
+        if (conversations.length === 0) {
+          inboxList.innerHTML = '';
+          if (emptyState) emptyState.style.display = 'block';
+          document.title = 'RETRO | Inbox';
+          updateHomeScreenBadge(0);
+          return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        const totalUnread = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
+
+        if (totalUnread > 0) {
+          document.title = `(${totalUnread}) RETRO | Inbox`;
           updateHomeScreenBadge(totalUnread);
         } else {
           document.title = 'RETRO | Inbox';
@@ -241,7 +454,7 @@
 
         inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const hasUnread = conv.unreadCount > 0;
+          const hasUnread = conv.convCount > 0 || conv.unreadCount > 0;
           const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
 
           return `
@@ -261,5 +474,6 @@
       }
     }
   </script>
+
 </body>
 </html>
