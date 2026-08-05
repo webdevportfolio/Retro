@@ -144,7 +144,17 @@
       if (profileBtn) {
         profileBtn.textContent = activeUser;
       }
+function dismissNotifModal() {
+      document.getElementById('notif-modal').classList.remove('active');
+    }
 
+    async function handleEnableNotifsClick() {
+      const perm = await Notification.requestPermission();
+      dismissNotifModal();
+      if (perm === 'granted') {
+        registerPushSubscription(activeUser);
+      }
+    }
       // Notification permission is gated behind a user gesture (required on iOS,
       // and best practice everywhere else). Shown as a popup instead of a nav button.
       if ('Notification' in window && Notification.permission === 'default') {
