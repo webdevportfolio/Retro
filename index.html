@@ -47,6 +47,7 @@
   <main class="main-container">
     <div class="inbox-header">
       <h2>Inbox</h2>
+      <button class="nav-btn" onclick="toggleGroupModal(true)" style="border-color: var(--accent-purple); color: var(--accent-purple);">+ Group</button>
     </div>
 
     <!-- Enter Private Chat Code Section -->
@@ -58,8 +59,17 @@
       <div id="code-error" class="code-error-msg"></div>
     </div>
 
-    <!-- Container for active chats -->
-    <div id="inbox-list" class="chat-list"></div>
+    <!-- Container for Active Group Chats -->
+    <div style="margin-bottom: 24px;">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; margin-bottom: 8px;">Groups</div>
+      <div id="groups-feed" class="chat-list"></div>
+    </div>
+
+    <!-- Container for Direct Messages -->
+    <div>
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; margin-bottom: 8px;">Direct Messages</div>
+      <div id="inbox-list" class="chat-list"></div>
+    </div>
 
     <div id="empty-state" class="empty-state" style="display: none;">
       <div class="empty-title">No Active Messages</div>
@@ -67,9 +77,34 @@
     </div>
   </main>
 
+  <!-- Create Group Modal -->
+  <div class="modal-overlay" id="create-group-modal" onclick="if(event.target === this) toggleGroupModal(false)">
+    <div class="modal-box" style="text-align: left; border-color: var(--glass-border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 1.1rem;">Create New Group</h3>
+        <button onclick="toggleGroupModal(false)" style="background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer;">&times;</button>
+      </div>
+
+      <form onsubmit="handleCreateGroup(event)" style="display: flex; flex-direction: column; gap: 14px;">
+        <div>
+          <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Group Name</label>
+          <input type="text" id="new-group-name" class="input-field" placeholder="e.g. Dev Squad" required>
+        </div>
+
+        <div>
+          <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Add Members (comma separated)</label>
+          <input type="text" id="new-group-members" class="input-field" placeholder="temmix, nero, alex">
+        </div>
+
+        <button type="submit" class="auth-btn" style="margin-top: 8px;">Create Group</button>
+      </form>
+    </div>
+  </div>
+
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
     let lastKnownMsgCount = 0;
+    let activeUser = '';
 
     window.addEventListener('DOMContentLoaded', async () => {
       if ('serviceWorker' in navigator) {
@@ -85,7 +120,7 @@
       }
 
       const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      const activeUser = rawActive.trim().replace('@', '');
+      activeUser = rawActive.trim().replace('@', '');
 
       if (!activeUser) {
         window.location.href = 'auth.html';
@@ -113,7 +148,6 @@
         codeError.style.display = 'none';
 
         try {
-          // Resolve target username from API users
           const res = await fetch(`${API_BASE_URL}/api/users`);
           if (!res.ok) throw new Error('Failed to fetch users list');
           const users = await res.json();
@@ -126,7 +160,6 @@
           if (matchedUser) {
             const targetUsername = typeof matchedUser === 'string' ? matchedUser : matchedUser.username;
 
-            // Prevent user from matching their own chat code
             if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
               codeError.textContent = 'You cannot chat with yourself!';
               codeError.style.display = 'block';
@@ -170,7 +203,12 @@
       }
 
       loadInbox();
-      setInterval(loadInbox, 4000);
+      fetchUserGroups();
+
+      setInterval(() => {
+        loadInbox();
+        fetchUserGroups();
+      }, 4000);
     });
 
     function logout() {
@@ -233,11 +271,87 @@
       return outputArray;
     }
 
+    function toggleGroupModal(open) {
+      const modal = document.getElementById('create-group-modal');
+      if (modal) {
+        if (open) modal.classList.add('active');
+        else modal.classList.remove('active');
+      }
+    }
+
+    async function handleCreateGroup(event) {
+      event.preventDefault();
+
+      const nameInput = document.getElementById('new-group-name');
+      const membersInput = document.getElementById('new-group-members');
+
+      const groupName = nameInput.value.trim();
+      const rawMembers = membersInput.value.split(',').map(m => m.trim()).filter(Boolean);
+
+      if (!groupName) return;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/groups`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: groupName,
+            created_by: activeUser,
+            members: rawMembers
+          })
+        });
+
+        if (res.ok) {
+          const newGroup = await res.json();
+          toggleGroupModal(false);
+          window.location.href = `groupchat.html?id=${newGroup.id}`;
+        } else {
+          alert('Failed to create group. Check server connection.');
+        }
+      } catch (err) {
+        console.error('Error creating group:', err);
+      }
+    }
+
+    async function fetchUserGroups() {
+      if (!activeUser) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/${activeUser}/groups`);
+        if (!res.ok) return;
+
+        const groups = await res.json();
+        renderGroupsList(groups);
+      } catch (err) {
+        console.error('Failed to fetch groups:', err);
+      }
+    }
+
+    function renderGroupsList(groups) {
+      const container = document.getElementById('groups-feed');
+      if (!container) return;
+
+      if (!groups || groups.length === 0) {
+        container.innerHTML = `<div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); padding: 8px 0;">No group chats joined yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = groups.map(g => `
+        <div class="chat-card" onclick="window.location.href='groupchat.html?id=${g.id}'">
+          <div class="inbox-card-avatar">
+            <span class="inbox-avatar-initial">👥</span>
+          </div>
+          <div class="inbox-card-content">
+            <div class="inbox-card-header">
+              <div class="inbox-card-username">${g.name}</div>
+            </div>
+            <div class="inbox-card-preview">${g.members ? g.members.length : 0} members</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
     async function loadInbox() {
-      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      const activeUser = rawActive.trim().replace('@', '');
       const lowerActive = activeUser.toLowerCase();
-      
       if (!activeUser) return;
 
       try {
@@ -336,83 +450,7 @@
           document.title = 'RETRO | Inbox';
           updateHomeScreenBadge(0);
         }
-function toggleGroupModal(open) {
-  const modal = document.getElementById('create-group-modal');
-  if (modal) {
-    if (open) modal.classList.add('active');
-    else modal.classList.remove('active');
-  }
-}
 
-async function handleCreateGroup(event) {
-  event.preventDefault();
-
-  const nameInput = document.getElementById('new-group-name');
-  const membersInput = document.getElementById('new-group-members');
-
-  const groupName = nameInput.value.trim();
-  const rawMembers = membersInput.value.split(',').map(m => m.trim()).filter(Boolean);
-
-  if (!groupName) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/groups`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: groupName,
-        created_by: activeUser,
-        members: rawMembers
-      })
-    });
-
-    if (res.ok) {
-      const newGroup = await res.json();
-      toggleGroupModal(false);
-      // Redirect straight to the new group chat room
-      window.location.href = `groupchat.html?id=${newGroup.id}`;
-    } else {
-      alert('Failed to create group. Check server connection.');
-    }
-  } catch (err) {
-    console.error('Error creating group:', err);
-  }
-}
-
-async function fetchUserGroups() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/users/${activeUser}/groups`);
-    if (!res.ok) return;
-
-    const groups = await res.json();
-    renderGroupsList(groups);
-  } catch (err) {
-    console.error('Failed to fetch groups:', err);
-  }
-}
-
-function renderGroupsList(groups) {
-  const container = document.getElementById('groups-feed'); // Make sure this element exists in index.html
-  if (!container) return;
-
-  if (groups.length === 0) {
-    container.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 20px;">No group chats yet.</div>`;
-    return;
-  }
-
-  container.innerHTML = groups.map(g => `
-    <div class="chat-item" onclick="window.location.href='groupchat.html?id=${g.id}'">
-      <div class="chat-avatar">👥</div>
-      <div class="chat-info">
-        <div class="chat-title">${g.name}</div>
-        <div class="chat-sub">${g.members.length} members</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-
-        
         inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const hasUnread = conv.unreadCount > 0;
@@ -444,30 +482,5 @@ function renderGroupsList(groups) {
       }
     }
   </script>
-<!-- Create Group Modal -->
-<div class="modal-overlay" id="create-group-modal" onclick="if(event.target === this) toggleGroupModal(false)">
-  <div class="modal-card">
-    <div class="modal-header">
-      <h3 style="font-weight: 800;">Create New Group</h3>
-      <button class="close-btn" onclick="toggleGroupModal(false)">&times;</button>
-    </div>
-
-    <form onsubmit="handleCreateGroup(event)" style="display: flex; flex-direction: column; gap: 14px;">
-      <div>
-        <label style="font-size: 0.8rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700;">Group Name</label>
-        <input type="text" id="new-group-name" class="input-field" placeholder="e.g. Dev Squad" required style="width: 100%; margin-top: 6px;">
-      </div>
-
-      <div>
-        <label style="font-size: 0.8rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700;">Add Members (comma separated usernames)</label>
-        <input type="text" id="new-group-members" class="input-field" placeholder="temmix, nero, alex" style="width: 100%; margin-top: 6px;">
-      </div>
-
-      <button type="submit" class="send-btn" style="padding: 12px; margin-top: 10px;">Create Group</button>
-    </form>
-  </div>
-</div>
-
-                  
 </body>
 </html>
