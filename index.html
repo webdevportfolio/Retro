@@ -136,17 +136,22 @@
           return;
         }
 
-        inboxList.innerHTML = conversations.map(conv => {
+                inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          // Check if the latest message was sent BY the other user (unread indicator)
+          const isUnread = conv.sender.toLowerCase() !== activeUser.toLowerCase();
+          const cardClass = isUnread ? 'chat-card unread' : 'chat-card';
 
           return `
-            <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
+            <div class="${cardClass}" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
               <div class="inbox-card-username">${conv.username}</div>
               <div class="inbox-card-preview">${conv.content}</div>
               <div class="inbox-card-time">${time}</div>
             </div>
           `;
         }).join('');
+
 
       } catch (err) {
         console.error('Failed to load inbox:', err);
