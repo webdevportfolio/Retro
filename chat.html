@@ -14,13 +14,13 @@
 
   <!-- Top Navigation Header -->
   <header class="nav-bar">
-  <a href="index.html" class="nav-btn">← Back</a>
-  <div style="text-align: center;">
-    <div id="chat-with-user" class="chat-header-title">Loading...</div>
-    <div id="typing-indicator" style="font-size: 0.75rem; color: #a855f7; height: 14px; font-weight: 500;"></div>
-  </div>
-  <a href="profile.html" id="profile-btn" class="nav-btn">Profile</a>
-</header>
+    <a href="index.html" class="nav-btn">← Back</a>
+    <div style="text-align: center;">
+      <div id="chat-with-user" class="chat-header-title">Loading...</div>
+      <div id="typing-indicator" style="font-size: 0.75rem; color: #a855f7; height: 14px; font-weight: 500;"></div>
+    </div>
+    <a href="profile.html" id="profile-btn" class="nav-btn">Profile</a>
+  </header>
 
   <!-- Chat Messages Stream -->
   <main class="chat-container" id="chat-container" style="overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1;">
@@ -29,6 +29,15 @@
 
   <!-- Fixed Bottom Message Input Bar -->
   <footer class="chat-input-bar">
+    <!-- Reply Preview Container -->
+    <div id="reply-preview-bar" class="reply-preview-bar">
+      <div>
+        <div id="reply-user-label" class="reply-preview-user">Replying to</div>
+        <div id="reply-text-label" class="reply-preview-content"></div>
+      </div>
+      <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
+    </div>
+
     <form id="chat-form" action="javascript:void(0);" onsubmit="sendMessage(); return false;">
       <input 
         type="text" 
@@ -43,6 +52,9 @@
 
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+
+    // Active reply tracking variable
+    let activeReplyTo = null;
 
     // 1. Session & Target Resolution
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
@@ -93,7 +105,7 @@
         const allMessages = await response.json();
         if (!messagesList) return;
 
-        // Filter AND sort chronologically (oldest at top, newest at bottom)
+        // Filter AND sort chronologically
         const messages = allMessages
           .filter(msg => {
             const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
@@ -122,18 +134,41 @@
 
         messagesList.innerHTML = messages.map(msg => {
           const senderRaw = msg.sender_username || msg.sender || '';
-          const isSent = senderRaw.trim().replace('@', '').toLowerCase() === activeUser.toLowerCase();
+          const senderClean = senderRaw.trim().replace('@', '');
+          const isSent = senderClean.toLowerCase() === activeUser.toLowerCase();
           const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-          // Check if message was read by target
           const lastReadByTarget = localStorage.getItem(`read_${targetUser.toLowerCase()}`);
           const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
           const isRead = msg.is_read || (lastReadByTarget && new Date(lastReadByTarget) >= msgDate);
 
+          // Parse quoted reply if embedded in content
+          let quotedHtml = '';
+          let displayContent = msg.content;
+
+          if (displayContent.startsWith('[reply:')) {
+            const splitIdx = displayContent.indexOf(']');
+            if (splitIdx !== -1) {
+              const meta = displayContent.substring(7, splitIdx).split('|');
+              const replyUser = meta[0] || 'User';
+              const replySnippet = meta.slice(1).join('|');
+              quotedHtml = `
+                <div class="quoted-reply-box">
+                  <div class="quoted-reply-user">${replyUser}</div>
+                  <div>${replySnippet}</div>
+                </div>
+              `;
+              displayContent = displayContent.substring(splitIdx + 1).trim();
+            }
+          }
+
           return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
+            <div class="message-wrapper ${isSent ? 'sent' : 'received'}" 
+                 data-sender="${senderClean}" 
+                 data-content="${msg.content.replace(/"/g, '&quot;')}">
               <div class="message-bubble">
-                <div class="message-text">${msg.content}</div>
+                ${quotedHtml}
+                <div class="message-text">${displayContent}</div>
                 <div class="message-meta">
                   <span class="timer-clock">${time}</span>
                   ${isSent ? `<span class="read-status ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}
@@ -142,6 +177,8 @@
             </div>
           `;
         }).join('');
+
+        attachSwipeListeners();
 
         if (!isUserScrolling) {
           setTimeout(() => {
@@ -154,16 +191,94 @@
       }
     }
 
-    // 3. Send Message Functionality
+    // 3. Swipe-to-Reply Logic
+    function attachSwipeListeners() {
+      const wrappers = document.querySelectorAll('.message-wrapper');
+      wrappers.forEach(wrapper => {
+        let startX = 0;
+        let currentX = 0;
+        let isSwiping = false;
+
+        wrapper.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          isSwiping = true;
+          wrapper.style.transition = 'none';
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+          if (!isSwiping) return;
+          currentX = e.touches[0].clientX - startX;
+
+          // Allow swiping to the right up to 90px max
+          if (currentX > 0 && currentX < 90) {
+            wrapper.style.transform = `translateX(${currentX}px)`;
+          }
+        }, { passive: true });
+
+        wrapper.addEventListener('touchend', () => {
+          if (!isSwiping) return;
+          isSwiping = false;
+          wrapper.style.transition = 'transform 0.2s ease';
+
+          if (currentX > 50) {
+            const sender = wrapper.getAttribute('data-sender');
+            let content = wrapper.getAttribute('data-content');
+
+            // Strip nested reply metadata if replying to a reply
+            if (content.startsWith('[reply:')) {
+              const closeIdx = content.indexOf(']');
+              if (closeIdx !== -1) content = content.substring(closeIdx + 1).trim();
+            }
+
+            triggerReplyUI(sender, content);
+
+            if (navigator.vibrate) navigator.vibrate(25);
+          }
+
+          wrapper.style.transform = 'translateX(0px)';
+          currentX = 0;
+        });
+      });
+    }
+
+    function triggerReplyUI(sender, text) {
+      activeReplyTo = { sender, text };
+      const bar = document.getElementById('reply-preview-bar');
+      const userLabel = document.getElementById('reply-user-label');
+      const textLabel = document.getElementById('reply-text-label');
+      const input = document.getElementById('message-input');
+
+      if (bar && userLabel && textLabel) {
+        userLabel.textContent = `Replying to ${sender}`;
+        textLabel.textContent = text;
+        bar.style.display = 'flex';
+      }
+
+      if (input) input.focus();
+    }
+
+    function cancelReply() {
+      activeReplyTo = null;
+      const bar = document.getElementById('reply-preview-bar');
+      if (bar) bar.style.display = 'none';
+    }
+
+    // 4. Send Message Functionality
     async function sendMessage() {
       const input = document.getElementById('message-input');
       const sendBtn = document.getElementById('send-btn');
       if (!input) return;
 
-      const content = input.value.trim();
+      let content = input.value.trim();
 
       if (!content || !targetUser || !activeUser) return;
       if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
+
+      // Attach reply meta tag if replying
+      if (activeReplyTo) {
+        const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
+        content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
+      }
 
       if (sendBtn) sendBtn.disabled = true;
 
@@ -182,6 +297,7 @@
 
         if (response.ok) {
           input.value = '';
+          cancelReply();
           isUserScrolling = false;
           await loadChat();
           setTimeout(() => {
@@ -197,63 +313,60 @@
         if (sendBtn) sendBtn.disabled = false;
       }
     }
-const messageInput = document.getElementById('message-input'); // Your text input ID
-const typingIndicator = document.getElementById('typing-indicator');
-let typingTimeout;
 
-// 1. Broadcast "typing" event when user types
-if (messageInput) {
-  messageInput.addEventListener('input', () => {
-    sendTypingStatus(true);
-    
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      sendTypingStatus(false);
-    }, 2000); // Stops typing status after 2 seconds of inactivity
-  });
-}
+    // 5. Typing Indicator Logic
+    const messageInput = document.getElementById('message-input');
+    const typingIndicator = document.getElementById('typing-indicator');
+    let typingTimeout;
 
-async function sendTypingStatus(isTyping) {
-  const activeUser = (localStorage.getItem('username') || '').trim().replace('@', '');
-  if (!activeUser || !targetUser) return;
+    if (messageInput) {
+      messageInput.addEventListener('input', () => {
+        sendTypingStatus(true);
+        
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          sendTypingStatus(false);
+        }, 2000);
+      });
+    }
 
-  try {
-    await fetch(`${API_BASE_URL}/api/typing`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender: activeUser,
-        receiver: targetUser,
-        isTyping: isTyping
-      })
-    });
-  } catch (err) {
-    console.error('Typing indicator error:', err);
-  }
-}
+    async function sendTypingStatus(isTyping) {
+      if (!activeUser || !targetUser) return;
 
-// 2. Poll for partner's typing status
-async function checkPartnerTyping() {
-  const activeUser = (localStorage.getItem('username') || '').trim().replace('@', '');
-  if (!activeUser || !targetUser) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.isTyping) {
-        typingIndicator.textContent = `${targetUser} is typing...`;
-      } else {
-        typingIndicator.textContent = '';
+      try {
+        await fetch(`${API_BASE_URL}/api/typing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: activeUser,
+            receiver: targetUser,
+            isTyping: isTyping
+          })
+        });
+      } catch (err) {
+        console.error('Typing indicator error:', err);
       }
     }
-  } catch (err) {
-    console.error('Check typing error:', err);
-  }
-}
 
-// Run check alongside your message polling loop (e.g., every 2 seconds)
-setInterval(checkPartnerTyping, 2000);
+    async function checkPartnerTyping() {
+      if (!activeUser || !targetUser) return;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isTyping) {
+            typingIndicator.textContent = `${targetUser} is typing...`;
+          } else {
+            typingIndicator.textContent = '';
+          }
+        }
+      } catch (err) {
+        console.error('Check typing error:', err);
+      }
+    }
+
+    setInterval(checkPartnerTyping, 2000);
 
     document.getElementById('message-input')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -264,7 +377,6 @@ setInterval(checkPartnerTyping, 2000);
 
     loadChat();
     setInterval(loadChat, 3000);
-    
   </script>
 </body>
 </html>
