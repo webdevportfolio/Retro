@@ -145,22 +145,12 @@
         profileBtn.textContent = activeUser;
       }
 
-      // Notification permission is now gated behind a user gesture (required on iOS,
-      // and best practice everywhere else). Only auto-resubscribe if already granted.
-      const enableBtn = document.getElementById('enable-notifs-btn');
-      if ('Notification' in window) {
-        if (Notification.permission === 'default') {
-          enableBtn.style.display = 'inline-block';
-        }
-        enableBtn.addEventListener('click', async () => {
-          const perm = await Notification.requestPermission();
-          if (perm === 'granted') {
-            enableBtn.style.display = 'none';
-            registerPushSubscription(activeUser);
-          } else {
-            enableBtn.textContent = 'Notifications Blocked';
-          }
-        });
+      // Notification permission is gated behind a user gesture (required on iOS,
+      // and best practice everywhere else). Shown as a popup instead of a nav button.
+      if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(() => {
+          document.getElementById('notif-modal').classList.add('active');
+        }, 800);
       }
 
       registerPushSubscription(activeUser);
