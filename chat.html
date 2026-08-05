@@ -38,7 +38,6 @@
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    // Fixed to read 'username' consistently across your app
     const activeUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
     const urlParams = new URLSearchParams(window.location.search);
     const targetUser = urlParams.get('user');
@@ -49,23 +48,28 @@
 
     if (targetUser) {
       document.getElementById('chat-with-user').textContent = targetUser;
+    } else {
+      document.getElementById('chat-with-user').textContent = 'Select a user';
     }
 
     async function loadChat() {
-      if (!targetUser || !activeUser) return;
+      if (!targetUser || !activeUser) {
+        console.warn('Missing activeUser or targetUser');
+        return;
+      }
 
       try {
+        // Fetch messages where activeUser is the receiver
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        const messages = await response.json();
-
         if (!response.ok) return;
-
+        
+        const messages = await response.json();
         const messagesList = document.getElementById('messages-list');
         
-        // Filter conversation between activeUser and targetUser
+        // Filter conversation between activeUser and targetUser (both sent and received)
         const filteredMessages = messages.filter(
-          msg => (msg.sender_username === targetUser && msg.receiver_username === activeUser) ||
-                 (msg.sender_username === activeUser && msg.receiver_username === targetUser)
+          msg => (msg.sender_username?.toLowerCase() === targetUser.toLowerCase() && msg.receiver_username?.toLowerCase() === activeUser.toLowerCase()) ||
+                 (msg.sender_username?.toLowerCase() === activeUser.toLowerCase() && msg.receiver_username?.toLowerCase() === targetUser.toLowerCase())
         );
 
         if (filteredMessages.length === 0) {
@@ -74,7 +78,7 @@
         }
 
         messagesList.innerHTML = filteredMessages.map(msg => {
-          const isSent = msg.sender_username === activeUser;
+          const isSent = msg.sender_username?.toLowerCase() === activeUser.toLowerCase();
           const expiresAt = new Date(msg.expires_at).getTime();
           const now = new Date().getTime();
           const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -93,6 +97,8 @@
             </div>
           `;
         }).join('');
+
+        window.scrollTo(0, document.body.scrollHeight);
 
       } catch (err) {
         console.error('Failed to load chat:', err);
@@ -120,7 +126,6 @@
         if (response.ok) {
           input.value = '';
           await loadChat();
-          window.scrollTo(0, document.body.scrollHeight);
         } else {
           const errData = await response.json();
           console.error('Server rejected message:', errData);
@@ -133,6 +138,7 @@
     loadChat();
     setInterval(loadChat, 3000);
   </script>
+
 
 </body>
 </html>
