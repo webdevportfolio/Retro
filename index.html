@@ -38,7 +38,6 @@
   <header class="nav-bar">
     <a href="index.html" class="logo-glow">RETRO</a>
     <div>
-      
       <a href="profile.html" id="profile-btn" class="nav-btn">User</a>
       <button class="nav-btn" onclick="logout()" style="margin-left: 6px;">Logout</button>
     </div>
@@ -103,7 +102,8 @@
       </form>
     </div>
   </div>
-    <!-- Enable Notifications Modal -->
+
+  <!-- Enable Notifications Modal -->
   <div class="modal-overlay" id="notif-modal">
     <div class="modal-box" style="text-align: center;">
       <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 10px;">Stay in the loop</h3>
@@ -115,7 +115,6 @@
         <button class="auth-btn" onclick="handleEnableNotifsClick()">Enable</button>
       </div>
     </div>
-  </div>
   </div>
 
   <script>
@@ -144,17 +143,7 @@
       if (profileBtn) {
         profileBtn.textContent = activeUser;
       }
-function dismissNotifModal() {
-      document.getElementById('notif-modal').classList.remove('active');
-    }
 
-    async function handleEnableNotifsClick() {
-      const perm = await Notification.requestPermission();
-      dismissNotifModal();
-      if (perm === 'granted') {
-        registerPushSubscription(activeUser);
-      }
-    }
       // Notification permission is gated behind a user gesture (required on iOS,
       // and best practice everywhere else). Shown as a popup instead of a nav button.
       if ('Notification' in window && Notification.permission === 'default') {
@@ -248,16 +237,35 @@ function dismissNotifModal() {
       window.location.href = 'auth.html';
     }
 
+    function dismissNotifModal() {
+      const modal = document.getElementById('notif-modal');
+      if (!modal) return;
+      modal.classList.remove('active');
+    }
+
+    async function handleEnableNotifsClick() {
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          registerPushSubscription(activeUser);
+        }
+      } catch (err) {
+        console.error('Notification permission error:', err);
+      } finally {
+        dismissNotifModal();
+      }
+    }
+
     function openChat(username, timestamp) {
-  localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
+      localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
 
-  fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ other_user: username })
-  }).catch(err => console.error('Mark-read failed:', err));
+      fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ other_user: username })
+      }).catch(err => console.error('Mark-read failed:', err));
 
-  window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+      window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
     }
 
     function updateHomeScreenBadge(count) {
