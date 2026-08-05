@@ -7,6 +7,7 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-blur: blur(16px);
   --text-main: #ffffff;
+  --danger-red: #ef4444;
 }
 
 * {
@@ -67,11 +68,19 @@ body {
   background: rgba(168, 85, 247, 0.2);
 }
 
-/* Header Info */
+/* Header Info - Clickable for Settings */
 .chat-header-group {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.chat-header-group:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .chat-header-avatar {
@@ -85,6 +94,14 @@ body {
   justify-content: center;
   font-size: 1.2rem;
   color: var(--accent-purple);
+  overflow: hidden;
+  object-fit: cover;
+}
+
+.chat-header-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .chat-header-title {
@@ -154,10 +171,10 @@ body {
   border-bottom-right-radius: 4px;
 }
 
-/* Sender Name Tag Inside Received Bubbles */
+/* Sender Name Tag (No @) */
 .group-sender-name {
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: var(--accent-purple);
   margin-bottom: 4px;
 }
@@ -227,4 +244,180 @@ body {
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
+}
+
+/* Group Settings Modal/Drawer */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-content {
+  width: 100%;
+  max-width: 380px;
+  height: 100%;
+  background: #0a0a0a;
+  border-left: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .drawer-content {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.drawer-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* Settings Profile Picture Section */
+.pfp-upload-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.pfp-preview-container {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-purple);
+  background: rgba(168, 85, 247, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  overflow: hidden;
+}
+
+.pfp-preview-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.change-pfp-btn {
+  font-size: 0.8rem;
+  color: var(--accent-purple);
+  cursor: pointer;
+  font-weight: 600;
+  background: rgba(168, 85, 247, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+/* Members List */
+.section-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.member-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.admin-badge {
+  font-size: 0.7rem;
+  color: var(--accent-purple);
+  background: rgba(168, 85, 247, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Drawer Action Buttons */
+.danger-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger-red);
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: auto;
+  transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
 }
