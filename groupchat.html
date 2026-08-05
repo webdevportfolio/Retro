@@ -278,13 +278,16 @@
       const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: updatedMembers })
+        body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
       });
 
       if (res.ok) {
         currentGroupData.members = updatedMembers;
         renderDrawerMembers(currentGroupData);
         renderGroupHeader(currentGroupData);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to remove member.');
       }
     } catch (err) {
       console.error('Failed to remove member:', err);
@@ -316,7 +319,7 @@
       const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: updatedMembers })
+        body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
       });
 
       if (res.ok) {
@@ -325,7 +328,8 @@
         renderGroupHeader(currentGroupData);
         input.value = '';
       } else {
-        errorEl.textContent = 'Failed to add member. User may not exist.';
+        const errData = await res.json();
+        errorEl.textContent = errData.error || 'Failed to add member.';
         errorEl.style.display = 'block';
       }
     } catch (err) {
@@ -359,13 +363,14 @@
       const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: updatedMembers })
+        body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
       });
 
       if (res.ok) {
         window.location.href = 'index.html';
       } else {
-        alert('Failed to leave group. Try again.');
+        const errData = await res.json();
+        alert(errData.error || 'Failed to leave group. Try again.');
       }
     } catch (err) {
       console.error('Failed to leave group:', err);
