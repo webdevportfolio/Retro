@@ -41,14 +41,14 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 4. Handle Top-of-Phone System Push Notifications
+// 4. Handle Top-of-Phone System Push Notifications & App Badge
 self.addEventListener('push', (event) => {
   let data = {};
   if (event.data) {
     try {
       data = event.data.json();
     } catch (e) {
-      data = { body: event.data.text() };
+      data = { title: 'New Message', body: event.data.text() };
     }
   }
 
@@ -57,9 +57,16 @@ self.addEventListener('push', (event) => {
     body: data.body || 'You received a new message.',
     icon: '/icon.png',
     badge: '/icon.png',
-    vibrate: [100, 50, 100],
+    vibrate: [200, 100, 200],
+    tag: 'retro-message', // Replaces old popups with fresh ones
+    renotify: true,
     data: { url: data.url || '/index.html' }
   };
+
+  // Update App Icon Badge on phone home screen
+  if ('setAppBadge' in navigator) {
+    navigator.setAppBadge(1).catch(() => {});
+  }
 
   event.waitUntil(
     self.registration.showNotification(title, options)
@@ -69,15 +76,24 @@ self.addEventListener('push', (event) => {
 // 5. Open App when Top Notification Banner is Tapped
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  // Clear App Icon Badge on notification click
+  if ('clearAppBadge' in navigator) {
+    navigator.clearAppBadge().catch(() => {});
+  }
+
+  const targetUrl = event.notification.data.url || '/index.html';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes('index.html') && 'focus' in client) {
-          return client.focus();
+        if (client.url.includes('index.html') || client.url.includes('chat.html')) {
+          client.focus();
+          return client.navigate(targetUrl);
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url || '/index.html');
+        return clients.openWindow(targetUrl);
       }
     })
   );
