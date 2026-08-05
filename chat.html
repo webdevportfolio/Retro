@@ -154,6 +154,13 @@
         if (latestIncoming) {
           const msgTime = latestIncoming.created_at || latestIncoming.timestamp || new Date().toISOString();
           localStorage.setItem(`read_${targetUser.toLowerCase()}`, msgTime);
+
+          // Tell the backend these messages are read too, so badgeCount stays accurate
+          fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ other_user: targetUser })
+          }).catch(err => console.error('Mark-read failed:', err));
         }
 
         messagesList.innerHTML = messages.map(msg => {
