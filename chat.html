@@ -197,6 +197,63 @@
         if (sendBtn) sendBtn.disabled = false;
       }
     }
+const messageInput = document.getElementById('message-input'); // Your text input ID
+const typingIndicator = document.getElementById('typing-indicator');
+let typingTimeout;
+
+// 1. Broadcast "typing" event when user types
+if (messageInput) {
+  messageInput.addEventListener('input', () => {
+    sendTypingStatus(true);
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      sendTypingStatus(false);
+    }, 2000); // Stops typing status after 2 seconds of inactivity
+  });
+}
+
+async function sendTypingStatus(isTyping) {
+  const activeUser = (localStorage.getItem('username') || '').trim().replace('@', '');
+  if (!activeUser || !targetUser) return;
+
+  try {
+    await fetch(`${API_BASE_URL}/api/typing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: activeUser,
+        receiver: targetUser,
+        isTyping: isTyping
+      })
+    });
+  } catch (err) {
+    console.error('Typing indicator error:', err);
+  }
+}
+
+// 2. Poll for partner's typing status
+async function checkPartnerTyping() {
+  const activeUser = (localStorage.getItem('username') || '').trim().replace('@', '');
+  if (!activeUser || !targetUser) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.isTyping) {
+        typingIndicator.textContent = `${targetUser} is typing...`;
+      } else {
+        typingIndicator.textContent = '';
+      }
+    }
+  } catch (err) {
+    console.error('Check typing error:', err);
+  }
+}
+
+// Run check alongside your message polling loop (e.g., every 2 seconds)
+setInterval(checkPartnerTyping, 2000);
 
     document.getElementById('message-input')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -207,6 +264,7 @@
 
     loadChat();
     setInterval(loadChat, 3000);
+    
   </script>
 </body>
 </html>
