@@ -2,382 +2,262 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>Group Chat</title>
   <link rel="stylesheet" href="groupchat.css">
-  <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
   <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
+
 </head>
 <body>
 
-  <!-- Top Bar -->
+  <!-- Navigation Bar -->
   <header class="nav-bar">
-    <a href="index.html" class="nav-btn">← Back</a>
-    
-    <!-- Tapping header opens group settings -->
     <div class="chat-header-group" onclick="toggleSettingsDrawer(true)">
-      <div class="chat-header-avatar" id="header-gc-avatar">👥</div>
+      <div class="chat-header-avatar" id="header-avatar">G</div>
       <div>
-        <div class="chat-header-title" id="header-gc-name">Loading...</div>
-        <div class="group-members-count" id="header-gc-count">0 members</div>
+        <div class="chat-header-title" id="header-group-name">Loading Group...</div>
+        <div class="group-members-count" id="header-group-members">0 members</div>
       </div>
     </div>
-
-    <div style="width: 40px;"></div>
+    <a href="index.html" class="nav-btn">Back</a>
   </header>
 
-  <!-- Message Feed -->
-  <main class="chat-container">
-    <div class="messages-list">
-      <!-- Dynamically populated via script -->
+  <!-- Scrollable Stream Container -->
+  <div class="chat-container">
+    <div class="messages-list" id="chat-container">
+      <!-- Messages populated dynamically -->
     </div>
-  </main>
+  </div>
 
-  <!-- Bottom Input Bar -->
-  <footer class="chat-input-bar">
-    <form action="javascript:void(0);">
-      <input type="text" class="input-field" placeholder="Type a message..." autocomplete="off">
-      <button type="button" class="send-btn" onclick="sendMessage()">Send</button>
+  <!-- Input Bar -->
+  <div class="chat-input-bar">
+    <form onsubmit="event.preventDefault(); sendMessage();">
+      <input type="text" id="message-input" class="input-field" placeholder="Type a message..." autocomplete="off">
+      <button type="submit" class="send-btn">Send</button>
     </form>
-  </footer>
+  </div>
 
-  <!-- Group Settings Side Drawer -->
-  <div class="modal-overlay" id="settings-drawer" onclick="if(event.target === this) toggleSettingsDrawer(false)">
+  <!-- Group Settings Modal/Drawer -->
+  <div class="modal-overlay" id="settings-drawer-overlay" onclick="if(event.target === this) toggleSettingsDrawer(false)">
     <div class="drawer-content">
       <div class="drawer-header">
-        <h2 class="drawer-title">Group Details</h2>
+        <div class="drawer-title">Group Settings</div>
         <button class="close-btn" onclick="toggleSettingsDrawer(false)">&times;</button>
       </div>
 
-      <!-- Change Profile Picture -->
-      <div class="pfp-upload-section">
-        <div class="pfp-preview-container" id="drawer-gc-avatar">👥</div>
-        <label for="group-pfp-input" class="change-pfp-btn">Change Group Icon</label>
-        <input type="file" id="group-pfp-input" accept="image/*" style="display: none;" onchange="handlePfpChange(event)">
-      </div>
-
-      <!-- Group Name Display/Edit -->
+      <!-- Add Members Section -->
       <div style="margin-bottom: 24px;">
-        <div class="section-label">Group Name</div>
-        <input type="text" id="drawer-gc-name-input" class="input-field" style="width: 100%;">
-      </div>
-
-      <!-- Members List Section -->
-      <div>
-        <div class="section-label">Members (<span id="drawer-members-count">0</span>)</div>
-        <div class="members-list" id="drawer-members-list">
-          <!-- Dynamically populated via script -->
+        <div class="section-label">Add Members from DMs</div>
+        <div id="drawer-dm-selection" style="max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+          <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">Loading contacts...</div>
         </div>
+        <button class="nav-btn" style="width: 100%; text-align: center; border-color: var(--accent-purple); color: var(--accent-purple);" onclick="addSelectedMembers()">Add Selected</button>
+        <div id="add-member-error" style="font-size: 0.75rem; color: var(--danger-red); margin-top: 6px; display: none;"></div>
       </div>
 
-      <!-- Add Member Section -->
-      <div style="margin-bottom: 24px;">
-        <div class="section-label">Add Member</div>
-        <div style="display: flex; gap: 8px;">
-          <input type="text" id="add-member-input" class="input-field" placeholder="Enter username..." style="flex: 1;">
-          <button class="nav-btn" onclick="addMember()">Add</button>
-        </div>
-        <div id="add-member-error" style="font-size: 0.75rem; color: #ef4444; margin-top: 6px; display: none;"></div>
+      <div class="section-label">Current Members</div>
+      <div class="members-list" id="drawer-members-list">
+        <!-- Members populated dynamically -->
       </div>
 
-      <button class="danger-btn" onclick="leaveGroup()">Leave Group</button>
+      <button class="danger-btn" onclick="leaveOrDeleteGroup()">Leave Group</button>
     </div>
   </div>
 
   <script>
-  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-  const activeUser = (localStorage.getItem('username') || localStorage.getItem('retro_session') || '').trim().replace('@', '');
-  const urlParams = new URLSearchParams(window.location.search);
-  const groupId = urlParams.get('id');
+    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    const urlParams = new URLSearchParams(window.location.search);
+    const groupId = urlParams.get('id');
+    const activeUser = localStorage.getItem('retro_username') || 'Anonymous';
 
-  let currentGroupData = null;
-  let lastMessageCount = 0;
+    let currentGroupData = null;
 
-  window.addEventListener('DOMContentLoaded', () => {
-    if (!activeUser) {
-      window.location.href = 'auth.html';
-      return;
-    }
-    if (!groupId) {
-      window.location.href = 'index.html';
-      return;
-    }
-
-    loadGroupDetails();
-    loadMessages();
-
-    // Poll for new messages every 3 seconds
-    setInterval(loadMessages, 3000);
-
-    // Form submit listener
-    const form = document.querySelector('.chat-input-bar form');
-    if (form) {
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        sendMessage();
-      });
-    }
-  });
-
-  async function loadGroupDetails() {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}`);
-      if (!res.ok) return;
-
-      currentGroupData = await res.json();
-      renderGroupHeader(currentGroupData);
-      renderDrawerMembers(currentGroupData);
-    } catch (err) {
-      console.error('Failed to load group details:', err);
-    }
-  }
-
-  function renderGroupHeader(group) {
-    const titleEl = document.getElementById('header-gc-name');
-    const countEl = document.getElementById('header-gc-count');
-    if (titleEl) titleEl.textContent = group.name;
-    if (countEl) countEl.textContent = `${group.members ? group.members.length : 0} members`;
-  }
-
-  async function loadMessages() {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/messages`);
-      if (!res.ok) return;
-
-      const messages = await res.json();
-      if (messages.length === lastMessageCount && lastMessageCount !== 0) return;
-
-      lastMessageCount = messages.length;
-      renderMessages(messages);
-    } catch (err) {
-      console.error('Failed to load messages:', err);
-    }
-  }
-
-  function renderMessages(messages) {
-    const container = document.querySelector('.messages-list');
-    if (!container) return;
-
-    if (!messages || messages.length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; color: rgba(255,255,255,0.4); padding: 40px 20px; font-size: 0.85rem;">
-          No messages here yet. Say hello to start the chat!
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = messages.map(msg => {
-      const sender = (msg.sender || '').trim().replace('@', '');
-      const isSent = sender.toLowerCase() === activeUser.toLowerCase();
-      const time = new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      return `
-        <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
-          <div class="message-bubble">
-            ${!isSent ? `<div class="group-sender-name">${sender}</div>` : ''}
-            <div class="message-text">${escapeHtml(msg.content)}</div>
-            <div class="message-meta">
-              <span class="timer-clock">${time}</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // Scroll to bottom
-    const chatContainer = document.querySelector('.chat-container');
-    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const input = document.querySelector('.chat-input-bar .input-field');
-    const content = input.value.trim();
-    if (!content) return;
-
-    input.value = '';
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/groups/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          group_id: groupId,
-          sender: activeUser,
-          content: content
-        })
-      });
-
-      if (res.ok) {
-        loadMessages();
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!groupId) {
+        window.location.href = 'index.html';
+        return;
       }
-    } catch (err) {
-      console.error('Failed to send message:', err);
+      fetchGroupDetails();
+      setInterval(fetchGroupDetails, 4000); // Polling for sync
+    });
+
+    async function fetchGroupDetails() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}`);
+        if (!res.ok) return;
+        currentGroupData = await res.json();
+        
+        renderGroupHeader(currentGroupData);
+        renderDrawerMembers(currentGroupData);
+        renderMessages(currentGroupData.messages || []);
+      } catch (err) {
+        console.error('Failed to fetch group details:', err);
+      }
     }
-  }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function toggleSettingsDrawer(open) {
-    const drawer = document.getElementById('settings-drawer');
-    if (open) {
-      drawer.classList.add('active');
-      if (groupId) loadGroupDetails();
-    } else {
-      drawer.classList.remove('active');
+    function renderGroupHeader(group) {
+      document.getElementById('header-group-name').textContent = group.name;
+      document.getElementById('header-group-members').textContent = `${group.members.length} members`;
+      document.getElementById('header-avatar').textContent = group.name.charAt(0).toUpperCase();
     }
-  }
 
-  function renderDrawerMembers(group) {
-    const membersList = document.getElementById('drawer-members-list');
-    const membersCount = document.getElementById('drawer-members-count');
-    const nameInput = document.getElementById('drawer-gc-name-input');
-    
-    if (nameInput) nameInput.value = group.name;
-    if (membersCount) membersCount.textContent = group.members ? group.members.length : 0;
-
-    const isAdmin = (group.created_by || '').toLowerCase() === activeUser.toLowerCase();
-
-    if (!group.members) return;
-
-    membersList.innerHTML = group.members.map(member => {
-      const cleanName = member.trim().replace('@', '');
-      const isSelf = cleanName.toLowerCase() === activeUser.toLowerCase();
-      const isCreator = cleanName.toLowerCase() === (group.created_by || '').toLowerCase();
-
-      return `
+    function renderDrawerMembers(group) {
+      const container = document.getElementById('drawer-members-list');
+      container.innerHTML = group.members.map(member => `
         <div class="member-item">
           <div class="member-info">
-            <div class="member-avatar">${cleanName.charAt(0).toUpperCase()}</div>
-            <div class="member-name">${cleanName}</div>
-            ${isCreator ? '<span class="admin-badge">Admin</span>' : ''}
+            <div class="member-avatar">${member.charAt(0).toUpperCase()}</div>
+            <div class="member-name">${member}</div>
           </div>
-          ${(isAdmin && !isSelf && !isCreator) 
-            ? `<button class="remove-member-btn" onclick="removeMember('${cleanName}')">Remove</button>` 
-            : ''
-          }
+          ${member === group.created_by ? '<span class="admin-badge">Admin</span>' : ''}
         </div>
-      `;
-    }).join('');
-  }
+      `).join('');
+    }
 
-  async function removeMember(targetUsername) {
-    if (!confirm(`Are you sure you want to remove ${targetUsername} from the group?`)) return;
+    function renderMessages(messages) {
+      const container = document.getElementById('chat-container');
+      const isScrolledToBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
 
-    try {
-      const updatedMembers = currentGroupData.members.filter(
-        m => m.trim().replace('@', '').toLowerCase() !== targetUsername.toLowerCase()
-      );
+      container.innerHTML = messages.map(msg => {
+        const senderName = msg.sender_username || msg.sender || 'Anonymous';
+        const isOutgoing = senderName === activeUser;
+        const msgText = msg.text || msg.content || '';
+        
+        return `
+          <div class="message-wrapper ${isOutgoing ? 'sent' : 'received'}">
+            <div class="message-bubble">
+              ${!isOutgoing ? `<div class="group-sender-name">${senderName}</div>` : ''}
+              <div class="message-text">${msgText}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
 
-      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
-      });
-
-      if (res.ok) {
-        currentGroupData.members = updatedMembers;
-        renderDrawerMembers(currentGroupData);
-        renderGroupHeader(currentGroupData);
-      } else {
-        const errData = await res.json();
-        alert(errData.error || 'Failed to remove member.');
+      if (isScrolledToBottom) {
+        container.scrollTop = container.scrollHeight;
       }
-    } catch (err) {
-      console.error('Failed to remove member:', err);
-    }
-  }
-
-  async function addMember() {
-    const input = document.getElementById('add-member-input');
-    const errorEl = document.getElementById('add-member-error');
-    const newUsername = input.value.trim().replace('@', '');
-
-    errorEl.style.display = 'none';
-
-    if (!newUsername) return;
-
-    const alreadyMember = currentGroupData.members.some(
-      m => m.trim().replace('@', '').toLowerCase() === newUsername.toLowerCase()
-    );
-
-    if (alreadyMember) {
-      errorEl.textContent = 'That user is already in the group.';
-      errorEl.style.display = 'block';
-      return;
     }
 
-    try {
-      const updatedMembers = [...currentGroupData.members, newUsername];
+    async function sendMessage() {
+      const input = document.getElementById('message-input');
+      const text = input.value.trim();
+      if (!text) return;
 
-      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
-      });
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender: activeUser, content: text })
+        });
 
-      if (res.ok) {
-        currentGroupData.members = updatedMembers;
-        renderDrawerMembers(currentGroupData);
-        renderGroupHeader(currentGroupData);
-        input.value = '';
-      } else {
-        const errData = await res.json();
-        errorEl.textContent = errData.error || 'Failed to add member.';
-        errorEl.style.display = 'block';
+        if (res.ok) {
+          input.value = '';
+          fetchGroupDetails();
+        }
+      } catch (err) {
+        console.error('Failed to send message:', err);
       }
-    } catch (err) {
-      console.error('Failed to add member:', err);
-      errorEl.textContent = 'Network error while adding member.';
-      errorEl.style.display = 'block';
     }
-  }
 
-  function handlePfpChange(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const imageSrc = e.target.result;
-      document.getElementById('header-gc-avatar').innerHTML = `<img src="${imageSrc}" alt="Group Avatar">`;
-      document.getElementById('drawer-gc-avatar').innerHTML = `<img src="${imageSrc}" alt="Group Avatar">`;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async function leaveGroup() {
-    if (!confirm('Are you sure you want to leave this group?')) return;
-
-    try {
-      const updatedMembers = currentGroupData.members.filter(
-        m => m.trim().replace('@', '').toLowerCase() !== activeUser.toLowerCase()
-      );
-
-      const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
-      });
-
-      if (res.ok) {
-        window.location.href = 'index.html';
+    function toggleSettingsDrawer(open) {
+      const drawerOverlay = document.getElementById('settings-drawer-overlay');
+      if (open) {
+        drawerOverlay.classList.add('active');
+        loadDrawerDmContacts();
       } else {
-        const errData = await res.json();
-        alert(errData.error || 'Failed to leave group. Try again.');
+        drawerOverlay.classList.remove('active');
       }
-    } catch (err) {
-      console.error('Failed to leave group:', err);
-      alert('Network error while leaving group.');
     }
-  }
-</script>
 
+    async function loadDrawerDmContacts() {
+      const container = document.getElementById('drawer-dm-selection');
+      if (!container || !currentGroupData) return;
+
+      const lowerActive = activeUser.toLowerCase();
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+        if (!res.ok) return;
+        const messages = await res.json();
+        const contactsSet = new Set();
+
+        messages.forEach(msg => {
+          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '');
+          const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '');
+          if (sender && sender.toLowerCase() !== lowerActive) contactsSet.add(sender);
+          if (receiver && receiver.toLowerCase() !== lowerActive) contactsSet.add(receiver);
+        });
+
+        const existingMembers = new Set(currentGroupData.members.map(m => m.trim().replace('@', '').toLowerCase()));
+        const availableContacts = Array.from(contactsSet).filter(c => !existingMembers.has(c.toLowerCase()));
+
+        if (availableContacts.length === 0) {
+          container.innerHTML = `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">No new contacts available.</div>`;
+          return;
+        }
+
+        container.innerHTML = availableContacts.map(username => `
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; padding: 2px 0;">
+            <input type="checkbox" class="drawer-member-checkbox" value="${username}" style="accent-color: var(--accent-purple);">
+            <span>${username}</span>
+          </label>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to load contacts for drawer:', err);
+      }
+    }
+
+    async function addSelectedMembers() {
+      const checkedBoxes = document.querySelectorAll('.drawer-member-checkbox:checked');
+      const newMembers = Array.from(checkedBoxes).map(cb => cb.value);
+      const errorEl = document.getElementById('add-member-error');
+      
+      if (errorEl) errorEl.style.display = 'none';
+      if (newMembers.length === 0) return;
+
+      try {
+        const updatedMembers = [...currentGroupData.members, ...newMembers];
+        const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
+        });
+
+        if (res.ok) {
+          currentGroupData.members = updatedMembers;
+          renderDrawerMembers(currentGroupData);
+          renderGroupHeader(currentGroupData);
+          loadDrawerDmContacts();
+        } else {
+          const errData = await res.json();
+          if (errorEl) {
+            errorEl.textContent = errData.error || 'Failed to add members.';
+            errorEl.style.display = 'block';
+          }
+        }
+      } catch (err) {
+        console.error('Network error adding members:', err);
+      }
+    }
+
+    async function leaveOrDeleteGroup() {
+      if (!confirm('Are you sure you want to leave this group?')) return;
+      try {
+        const updatedMembers = currentGroupData.members.filter(m => m !== activeUser);
+        const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/members`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ members: updatedMembers, requested_by: activeUser })
+        });
+        if (res.ok) {
+          window.location.href = 'index.html';
+        }
+      } catch (err) {
+        console.error('Failed to leave group:', err);
+      }
+    }
+  </script>
 </body>
 </html>
