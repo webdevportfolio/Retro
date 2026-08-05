@@ -90,6 +90,9 @@ const uniqueConversations = messages.filter(msg => {
   return otherUser && otherUser !== active;
 });
 
+            
+        
+
             async function loadInbox() {
       const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
       const activeUser = rawActive.trim().replace('@', '').toLowerCase();
@@ -101,10 +104,21 @@ const uniqueConversations = messages.filter(msg => {
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${activeUser}`);
-        if (!response.ok) return;
+        if (!response.ok) {
+          console.error("Server error response:", response.status);
+          return;
+        }
         
         const messages = await response.json();
-        const inboxList = document.getElementById('inbox-list'); // Ensure this matches your HTML container ID
+        
+        // DEBUG: Check what your backend actually sent back
+        console.log("RAW MESSAGES FROM BACKEND:", messages);
+
+        const inboxList = document.getElementById('inbox-list');
+        if (!inboxList) {
+          console.error("Missing element with ID 'inbox-list' in your HTML!");
+          return;
+        }
 
         if (!messages || messages.length === 0) {
           inboxList.innerHTML = `<p style="color: rgba(255,255,255,0.4); text-align: center; margin-top: 40px;">No messages yet.</p>`;
@@ -114,14 +128,12 @@ const uniqueConversations = messages.filter(msg => {
         const conversationMap = {};
         
         messages.forEach(msg => {
-          // Support various property names depending on backend setup
           const senderRaw = msg.sender_username || msg.sender || '';
           const receiverRaw = msg.receiver_username || msg.receiver || '';
           
           const sender = senderRaw.trim().replace('@', '').toLowerCase();
           const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
           
-          // Determine the other user
           let otherUser = '';
           if (sender === activeUser) {
             otherUser = receiverRaw.trim().replace('@', '');
@@ -129,7 +141,6 @@ const uniqueConversations = messages.filter(msg => {
             otherUser = senderRaw.trim().replace('@', '');
           }
 
-          // Skip if it's yourself or empty
           if (!otherUser || otherUser.toLowerCase() === activeUser) return;
 
           const mapKey = otherUser.toLowerCase();
@@ -137,7 +148,7 @@ const uniqueConversations = messages.filter(msg => {
 
           if (!conversationMap[mapKey] || msgDate > new Date(conversationMap[mapKey].created_at)) {
             conversationMap[mapKey] = {
-              username: otherUser, // Clean name without '@'
+              username: otherUser,
               content: msg.content || '',
               created_at: msgDate
             };
@@ -167,6 +178,7 @@ const uniqueConversations = messages.filter(msg => {
         console.error('Failed to load inbox:', err);
       }
     }
+
 
 
 const displayUsername = otherUser.replace('@', '');
