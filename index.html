@@ -235,8 +235,15 @@
     }
 
     function openChat(username, timestamp) {
-      localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
-      window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+  localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
+
+  fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ other_user: username })
+  }).catch(err => console.error('Mark-read failed:', err));
+
+  window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
     }
 
     function updateHomeScreenBadge(count) {
