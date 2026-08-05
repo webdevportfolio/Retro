@@ -26,7 +26,6 @@
       box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
     }
   </style>
-  <!-- WhatsApp & Open Graph Meta Tags -->
   <meta property="og:title" content="RETRO">
   <meta property="og:description" content="Chat freely and securely.">
   <meta property="og:image" content="https://webdevportfolio.github.io/Retro/icon.png">
@@ -50,12 +49,21 @@
       <h2>Inbox</h2>
     </div>
 
+    <!-- Enter Private Chat Code Section -->
+    <div class="code-entry-card">
+      <div class="code-input-wrapper">
+        <input type="text" id="join-code-input" placeholder="Enter Chat Code (e.g. RETRO-X92A)" class="input-field code-join-field">
+        <button id="join-code-btn" class="auth-btn join-btn">Start Chat</button>
+      </div>
+      <div id="code-error" class="code-error-msg"></div>
+    </div>
+
     <!-- Container for active chats -->
     <div id="inbox-list" class="chat-list"></div>
 
     <div id="empty-state" class="empty-state" style="display: none;">
       <div class="empty-title">No Active Messages</div>
-      <div class="empty-sub">Share your profile link to receive messages.</div>
+      <div class="empty-sub">Enter a friend's Chat Code above to start messaging privately.</div>
     </div>
   </main>
 
@@ -64,7 +72,6 @@
     let lastKnownMsgCount = 0;
 
     window.addEventListener('DOMContentLoaded', async () => {
-      // 1. Explicitly Register Service Worker
       if ('serviceWorker' in navigator) {
         try {
           await navigator.serviceWorker.register('/sw.js');
@@ -73,16 +80,8 @@
         }
       }
 
-      // 2. Request Notification Permission
       if ('Notification' in window && Notification.permission === 'default') {
         await Notification.requestPermission();
-      }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const targetUser = urlParams.get('u') || urlParams.get('user') || urlParams.get('username');
-
-      if (targetUser) {
-        localStorage.setItem('pendingChatUser', targetUser.trim().replace('@', ''));
       }
 
       const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
@@ -98,14 +97,66 @@
         profileBtn.textContent = activeUser;
       }
 
-      // Trigger Push Subscription Registration
       registerPushSubscription(activeUser);
 
-      const pendingUser = localStorage.getItem('pendingChatUser');
-      if (pendingUser && pendingUser.toLowerCase() !== activeUser.toLowerCase()) {
-        localStorage.removeItem('pendingChatUser');
-        window.location.href = `chat.html?user=${encodeURIComponent(pendingUser)}`;
-        return;
+      // Chat Code Input Event Listeners
+      const joinCodeInput = document.getElementById('join-code-input');
+      const joinCodeBtn = document.getElementById('join-code-btn');
+      const codeError = document.getElementById('code-error');
+
+      async function handleCodeJoin() {
+        const inputCode = joinCodeInput.value.trim().toUpperCase();
+        if (!inputCode) return;
+
+        joinCodeBtn.disabled = true;
+        joinCodeBtn.textContent = 'Searching...';
+        codeError.style.display = 'none';
+
+        try {
+          // Resolve target username from API users
+          const res = await fetch(`${API_BASE_URL}/api/users`);
+          if (!res.ok) throw new Error('Failed to fetch users');
+          const users = await res.json();
+
+          const matchedUser = users.find(u => {
+            const username = (typeof u === 'string' ? u : u.username || '').trim().replace('@', '');
+            return getChatCode(username) === inputCode;
+          });
+
+          if (matchedUser) {
+            const targetUsername = typeof matchedUser === 'string' ? matchedUser : matchedUser.username;
+            window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
+          } else {
+            codeError.textContent = 'Invalid Chat Code. Please check and try again.';
+            codeError.style.display = 'block';
+            joinCodeBtn.disabled = false;
+            joinCodeBtn.textContent = 'Start Chat';
+          }
+        } catch (err) {
+          console.error('Error resolving code:', err);
+          codeError.textContent = 'Network error. Could not verify code.';
+          codeError.style.display = 'block';
+          joinCodeBtn.disabled = false;
+          joinCodeBtn.textContent = 'Start Chat';
+        }
+      }
+
+      function getChatCode(user) {
+        let hash = 0;
+        const str = user.toLowerCase() + "_retro_secret_salt";
+        for (let i = 0; i < str.length; i++) {
+          hash = (hash << 5) - hash + str.charCodeAt(i);
+          hash |= 0;
+        }
+        const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
+        return `RETRO-${cleanHash}`;
+      }
+
+      if (joinCodeBtn) joinCodeBtn.addEventListener('click', handleCodeJoin);
+      if (joinCodeInput) {
+        joinCodeInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') handleCodeJoin();
+        });
       }
 
       loadInbox();
@@ -139,12 +190,10 @@
 
       try {
         const registration = await navigator.serviceWorker.ready;
-        
         const res = await fetch(`${API_BASE_URL}/api/vapid-key`);
         if (!res.ok) return;
         const { publicKey } = await res.json();
 
-        // Check for existing subscription or create new
         let subscription = await registration.pushManager.getSubscription();
         if (!subscription) {
           subscription = await registration.pushManager.subscribe({
@@ -208,7 +257,6 @@
         }
 
         lastKnownMsgCount = messages.length;
-
         const conversationMap = {};
         
         messages.forEach(msg => {
@@ -283,15 +331,24 @@
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const hasUnread = conv.unreadCount > 0;
           const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
+          const avatarPfp = localStorage.getItem(`retro_pfp_${conv.username.toLowerCase()}`);
 
           return `
             <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
-              <div class="inbox-card-header">
-                <div class="inbox-card-username">${conv.username}</div>
-                ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
+              <div class="inbox-card-avatar">
+                ${avatarPfp 
+                  ? `<img src="${avatarPfp}" class="inbox-avatar-img">` 
+                  : `<span class="inbox-avatar-initial">${conv.username.charAt(0).toUpperCase()}</span>`
+                }
               </div>
-              <div class="inbox-card-preview">${conv.content}</div>
-              <div class="inbox-card-time">${time}</div>
+              <div class="inbox-card-content">
+                <div class="inbox-card-header">
+                  <div class="inbox-card-username">${conv.username}</div>
+                  ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
+                </div>
+                <div class="inbox-card-preview">${conv.content}</div>
+                <div class="inbox-card-time">${time}</div>
+              </div>
             </div>
           `;
         }).join('');
