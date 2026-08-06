@@ -346,28 +346,23 @@
       }
     }, { once: true });
 
-    // 2. Load Recipient Profile Picture
+    // 2. Load Recipient Profile Picture (Bypasses browser cache)
     async function loadTargetUserProfile() {
-      const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
-      const savedPfp = localStorage.getItem(cacheKey);
-
-      if (savedPfp && avatarImg && avatarInitial) {
-        avatarImg.src = savedPfp;
-        avatarImg.style.display = 'block';
-        avatarInitial.style.display = 'none';
-      }
+      if (!targetUser) return;
 
       try {
         let pfpUrl = null;
+        const timestamp = Date.now();
 
-        const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}`);
+        // Query backend directly with timestamp to bypass server/HTTP caching
+        const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`);
         if (userRes.ok) {
           const uData = await userRes.json();
           pfpUrl = uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
         }
 
         if (!pfpUrl) {
-          const res = await fetch(`${API_BASE_URL}/api/users`);
+          const res = await fetch(`${API_BASE_URL}/api/users?t=${timestamp}`);
           if (res.ok) {
             const users = await res.json();
             const targetLower = targetUser.toLowerCase();
@@ -384,10 +379,18 @@
         }
 
         if (pfpUrl && avatarImg && avatarInitial) {
-          avatarImg.src = pfpUrl;
+          // Append timestamp to force browser image element refresh
+          const cacheBustedUrl = pfpUrl.includes('?') 
+            ? `${pfpUrl}&t=${timestamp}` 
+            : `${pfpUrl}?t=${timestamp}`;
+
+          avatarImg.src = cacheBustedUrl;
           avatarImg.style.display = 'block';
           avatarInitial.style.display = 'none';
-          localStorage.setItem(cacheKey, pfpUrl);
+
+          // Update local cache with fresh image URL
+          const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
+          localStorage.setItem(cacheKey, cacheBustedUrl);
         }
       } catch (err) {
         console.error('Error fetching target avatar:', err);
@@ -814,8 +817,10 @@
     setInterval(sendHeartbeat, 15000);
     setInterval(checkTargetOnlineStatus, 5000);
 
+    // Refresh user profile picture periodically to keep in sync
     loadChat();
     setInterval(loadChat, 3000);
+    setInterval(loadTargetUserProfile, 10000);
   </script>
 </body>
 </html>
