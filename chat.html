@@ -74,7 +74,7 @@
       padding: 3px;
       background: var(--accent-purple);
       box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
-      pointer-events: none; /* Prevents touch/click interactions on avatar area */
+      pointer-events: none;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -274,6 +274,7 @@
     let activeReplyTo = null;
     let isUserScrolling = false;
     let previousMessageCount = 0;
+    let lastFetchedPfpUrl = null;
 
     // 1. Resolve Session & Recipient
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
@@ -308,6 +309,7 @@
         avatarImg.src = cachedUrl;
         avatarImg.style.display = 'block';
         avatarInitial.style.display = 'none';
+        lastFetchedPfpUrl = cachedUrl;
       }
 
       loadTargetUserProfile();
@@ -368,13 +370,13 @@
       }
     }, { once: true });
 
-    // Helper to render avatar safely without letting error triggers hide the element on click
+    // Helper to render avatar safely without redundant DOM updates
     function applyAvatar(imgElem, initialElem, url, username) {
       if (!imgElem || !initialElem) return;
 
       if (url) {
-        imgElem.onerror = null; // Clear previous listeners
-        
+        if (imgElem.src === url && imgElem.style.display === 'block') return; // Skip if identical
+
         imgElem.onerror = function() {
           this.style.display = 'none';
           if (initialElem) {
@@ -395,7 +397,7 @@
       }
     }
 
-    // 2. Load Recipient Profile Picture
+    // 2. Load Recipient Profile Picture (Checks changes before DOM re-renders)
     async function loadTargetUserProfile() {
       if (!targetUser) return;
 
@@ -426,20 +428,18 @@
           }
         }
 
-        if (pfpUrl) {
-          const cacheBustedUrl = pfpUrl.includes('?') 
-            ? `${pfpUrl}&t=${timestamp}` 
-            : `${pfpUrl}?t=${timestamp}`;
-
-          applyAvatar(avatarImg, avatarInitial, cacheBustedUrl, targetUser);
+        if (pfpUrl && pfpUrl !== lastFetchedPfpUrl) {
+          lastFetchedPfpUrl = pfpUrl;
+          applyAvatar(avatarImg, avatarInitial, pfpUrl, targetUser);
 
           const sheetImg = document.getElementById('sheet-avatar-img');
           const sheetInitial = document.getElementById('sheet-avatar-initial');
-          applyAvatar(sheetImg, sheetInitial, cacheBustedUrl, targetUser);
+          applyAvatar(sheetImg, sheetInitial, pfpUrl, targetUser);
 
           const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
-          localStorage.setItem(cacheKey, cacheBustedUrl);
-        } else {
+          localStorage.setItem(cacheKey, pfpUrl);
+        } else if (!pfpUrl && lastFetchedPfpUrl !== null) {
+          lastFetchedPfpUrl = null;
           applyAvatar(avatarImg, avatarInitial, null, targetUser);
         }
       } catch (err) {
