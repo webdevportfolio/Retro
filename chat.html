@@ -219,7 +219,21 @@
       <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
     </div>
 
+    <!-- Hidden file inputs -->
+    <input type="file" id="image-file-input" accept="image/*" style="display: none;" onchange="handleImageSelected(event)">
+    <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
+
     <form id="chat-form">
+      <!-- Sticker Toggle Button -->
+      <button type="button" id="sticker-btn" class="media-icon-btn" onclick="toggleStickerDrawer()" title="Stickers">
+        😀
+      </button>
+
+      <!-- Gallery Image Button -->
+      <button type="button" id="gallery-btn" class="media-icon-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
+        📎
+      </button>
+      
       <input 
         type="text" 
         id="message-input" 
@@ -227,9 +241,44 @@
         placeholder="Type a message..." 
         autocomplete="off"
       >
+
+      <!-- Voice Note Button -->
+      <button type="button" id="vn-btn" class="media-icon-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
+        🎙️
+      </button>
+
       <button type="submit" id="send-btn" class="send-btn">Send</button>
     </form>
   </footer>
+
+  <!-- Sticker Drawer Sheet -->
+  <div id="sticker-drawer" class="sticker-drawer">
+    <div class="sticker-drawer-header">
+      <span>Your Stickers (<span id="sticker-count">0</span>/10)</span>
+      <button type="button" class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button>
+    </div>
+    <div class="sticker-grid" id="sticker-grid">
+      <!-- Dynamically generated sticker list & '+' button -->
+    </div>
+  </div>
+
+  <!-- Image Preview Modal -->
+  <div id="image-preview-modal" class="image-preview-modal" style="display: none;">
+    <div class="image-preview-card">
+      <div class="sheet-header">
+        <div class="sheet-title">Preview Image</div>
+        <button type="button" class="close-reply-btn" onclick="closeImagePreview()">✕</button>
+      </div>
+      <div class="image-preview-container">
+        <img id="image-preview-elem" src="" alt="Selected Preview">
+      </div>
+      <div class="image-preview-actions">
+        <button type="button" class="nav-btn" onclick="closeImagePreview()">Cancel</button>
+        <button type="button" id="image-send-btn" class="send-btn image-send-btn" onclick="sendSelectedImage()">Send Image</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- In-Chat Partner Profile Sheet -->
   <div id="partner-profile-sheet" class="partner-profile-sheet">
