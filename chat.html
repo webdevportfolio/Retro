@@ -672,8 +672,21 @@
 
           let quotedHtml = '';
           let displayContent = msg.content || '';
+          let quotedHtml = '';
+          let displayContent = msg.content || '';
 
-          if (displayContent.startsWith('[reply:')) {
+          // 1. Check for media payloads first
+          if (displayContent.startsWith('[img]')) {
+            const base64Data = displayContent.substring(5);
+            displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image">`;
+          } else if (displayContent.startsWith('[sticker]')) {
+            const base64Data = displayContent.substring(9);
+            displayContent = `<img src="${base64Data}" class="msg-sticker" alt="Sticker">`;
+          } else if (displayContent.startsWith('[audio]')) {
+            const audioData = displayContent.substring(7);
+            displayContent = `<audio controls src="${audioData}"></audio>`;
+          } else if (displayContent.startsWith('[reply:')) {
+            // 2. Parse reply formatting if present
             const splitIdx = displayContent.indexOf(']');
             if (splitIdx !== -1) {
               const meta = displayContent.substring(7, splitIdx).split('|');
@@ -719,6 +732,7 @@
         console.error('Error loading chat:', err);
       }
     }
+
 
     // 4. Swipe-to-Reply Logic
     function attachSwipeListeners() {
