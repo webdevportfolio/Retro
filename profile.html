@@ -87,7 +87,7 @@
   </div>
 
   <script>
-document.addEventListener('DOMContentLoaded', () => {
+          document.addEventListener('DOMContentLoaded', () => {
   const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
   // 1. Session Auth Check
@@ -128,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Fetch avatar from remote backend if not stored in localStorage
     try {
       const res = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`);
       if (res.ok) {
@@ -154,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadSavedAvatar();
 
-  // Profile Picture Upload & Sync to Backend
+  // Profile Picture Upload & Sync
   if (pfpUpload) {
     pfpUpload.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -163,11 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = async (event) => {
           const base64Img = event.target.result;
           
-          // Save locally for instant preview
           localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`, base64Img);
           loadSavedAvatar();
 
-          // Sync with Render backend database using exact schema keys
           try {
             await fetch(`${API_BASE_URL}/api/users/profile`, {
               method: 'POST',
@@ -281,25 +278,17 @@ document.addEventListener('DOMContentLoaded', () => {
       confirmDeleteBtn.textContent = 'Deleting...';
 
       try {
+        // Delete user messages
+        await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(err => console.error('Failed to delete user messages:', err));
+
+        // Delete user account
         const response = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' }
         });
-// Add this right after successful upload response from backend:
-const currentUser = localStorage.getItem('username')?.trim().replace('@', '');
-if (currentUser) {
-  const cacheKey = `retro_pfp_${currentUser.toLowerCase()}`;
-  const freshPfpUrl = `${uploadedImageUrl}?t=${Date.now()}`;
-  
-  // Update local storage with cache-busting timestamp
-  localStorage.setItem(cacheKey, freshPfpUrl);
-  
-  // Force profile preview element update
-  const profileImgElem = document.getElementById('profile-img');
-  if (profileImgElem) {
-    profileImgElem.src = freshPfpUrl;
-  }
-}
 
         if (response.ok || response.status === 404) {
           localStorage.clear();
@@ -317,6 +306,8 @@ if (currentUser) {
     });
   }
 });
+
+
 </script>
 
 </body>
