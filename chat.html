@@ -24,15 +24,15 @@
     }
     .avatar-modal.active { display: flex; }
     .avatar-modal img {
-  width: 260px;
-  height: 260px;
-  max-width: 80vw;
-  max-height: 80vw;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 0 25px rgba(168, 85, 247, 0.5);
-}
+      width: 260px;
+      height: 260px;
+      max-width: 80vw;
+      max-height: 80vw;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.5);
+    }
 
     .avatar-modal-close {
       margin-top: 20px;
@@ -59,9 +59,7 @@
           <img id="header-avatar-img" src="" alt="Avatar" style="display: none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
           <span id="header-avatar-initial">?</span>
         </div>
-        <!-- Replace this element in your header -->
-<div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
-
+        <div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
       </div>
       <div>
         <div id="chat-with-user" class="chat-header-title">Loading...</div>
@@ -110,6 +108,7 @@
 
     let activeReplyTo = null;
     let isUserScrolling = false;
+    let previousMessageCount = 0;
 
     // 1. Resolve Session & Recipient
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
@@ -140,7 +139,64 @@
       loadTargetUserProfile();
     }
 
-    // 2. Load Recipient Profile Picture (Checks local cache first, then backend endpoints)
+    // --- NOTIFICATION HELPERS ---
+    async function updateAppBadge(count) {
+      if ('setAppBadge' in navigator) {
+        try {
+          if (count > 0) await navigator.setAppBadge(count);
+          else await navigator.clearAppBadge();
+        } catch (e) {
+          console.error('Badge error:', e);
+        }
+      }
+    }
+
+    window.addEventListener('focus', () => updateAppBadge(0));
+
+    function playNotificationSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch (err) {
+        console.error('Audio error:', err);
+      }
+    }
+
+    function showPopUpNotification(sender, messageText) {
+      if (Notification.permission === 'granted') {
+        const notification = new Notification(`New message from ${sender}`, {
+          body: messageText,
+          icon: 'icon.png',
+          vibrate: [200, 100, 200]
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          updateAppBadge(0);
+        };
+      }
+    }
+
+    // Request notification permission on first tap anywhere
+    document.addEventListener('click', () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }, { once: true });
+
+    // 2. Load Recipient Profile Picture
     async function loadTargetUserProfile() {
       const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
       const savedPfp = localStorage.getItem(cacheKey);
@@ -154,14 +210,12 @@
       try {
         let pfpUrl = null;
 
-        // Try single user fetch endpoint
         const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}`);
         if (userRes.ok) {
           const uData = await userRes.json();
           pfpUrl = uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
         }
 
-        // Fallback to global users list if single fetch is unavailable
         if (!pfpUrl) {
           const res = await fetch(`${API_BASE_URL}/api/users`);
           if (res.ok) {
@@ -235,6 +289,30 @@
             return (sender === activeLower && receiver === targetLower) || (sender === targetLower && receiver === activeLower);
           })
           .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
+
+        // --- NEW MESSAGE NOTIFICATION CHECK ---
+        if (messages && messages.length > 0) {
+          if (messages.length > previousMessageCount && previousMessageCount !== 0) {
+            const latestMsg = messages[messages.length - 1];
+            const sender = (latestMsg.sender_username || latestMsg.sender || '').trim().replace('@', '');
+
+            if (sender.toLowerCase() === targetLower) {
+              playNotificationSound();
+              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+              updateAppBadge(1);
+
+              if (document.hidden) {
+                let textSnippet = latestMsg.content || 'New message';
+                if (textSnippet.startsWith('[reply:')) {
+                  const closeIdx = textSnippet.indexOf(']');
+                  if (closeIdx !== -1) textSnippet = textSnippet.substring(closeIdx + 1).trim();
+                }
+                showPopUpNotification(targetUser, textSnippet);
+              }
+            }
+          }
+          previousMessageCount = messages.length;
+        }
 
         if (!messages || messages.length === 0) {
           messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
@@ -488,46 +566,44 @@
 
     setInterval(checkPartnerTyping, 2000);
 
-    loadChat();
-    setInterval(loadChat, 3000);
-    // 1. Ping server to state current user is active
-async function sendHeartbeat() {
-  if (!activeUser) return;
-  try {
-    await fetch(`${API_BASE_URL}/api/heartbeat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: activeUser })
-    });
-  } catch (err) {
-    console.error('Heartbeat error:', err);
-  }
-}
-
-// 2. Check if the target user is online and toggle the green dot
-async function checkTargetOnlineStatus() {
-  if (!targetUser) return;
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
-    if (res.ok) {
-      const data = await res.json();
-      const dot = document.getElementById('online-dot');
-      if (dot) {
-        dot.style.display = data.online ? 'block' : 'none';
+    // 7. Presence Heartbeats
+    async function sendHeartbeat() {
+      if (!activeUser) return;
+      try {
+        await fetch(`${API_BASE_URL}/api/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: activeUser })
+        });
+      } catch (err) {
+        console.error('Heartbeat error:', err);
       }
     }
-  } catch (err) {
-    console.error('Online status fetch error:', err);
-  }
-}
 
-// Start heartbeats & status polling
-sendHeartbeat();
-checkTargetOnlineStatus();
+    async function checkTargetOnlineStatus() {
+      if (!targetUser) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const dot = document.getElementById('online-dot');
+          if (dot) {
+            dot.style.display = data.online ? 'block' : 'none';
+          }
+        }
+      } catch (err) {
+        console.error('Online status fetch error:', err);
+      }
+    }
 
-setInterval(sendHeartbeat, 15000);        // Send heartbeat every 15 seconds
-setInterval(checkTargetOnlineStatus, 5000); // Check target status every 5 seconds
+    sendHeartbeat();
+    checkTargetOnlineStatus();
 
+    setInterval(sendHeartbeat, 15000);
+    setInterval(checkTargetOnlineStatus, 5000);
+
+    loadChat();
+    setInterval(loadChat, 3000);
   </script>
 </body>
 </html>
