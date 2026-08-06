@@ -280,11 +280,32 @@
       return outputArray;
     }
 
-    async function loadInbox() {
+        async function loadInbox() {
       const lowerActive = activeUser.toLowerCase();
       if (!activeUser) return;
 
       try {
+        // Fetch all users to resolve global profile pictures
+        let userAvatars = {};
+        try {
+          const usersRes = await fetch(`${API_BASE_URL}/api/users`);
+          if (usersRes.ok) {
+            const usersList = await usersRes.json();
+            usersList.forEach(u => {
+              if (typeof u === 'object') {
+                const uname = (u.username || u.name || '').trim().replace('@', '').toLowerCase();
+                const pfp = u.pfp || u.avatar || u.profile_picture || u.profilePic || u.image;
+                if (uname && pfp) {
+                  userAvatars[uname] = pfp;
+                  localStorage.setItem(`retro_pfp_${uname}`, pfp);
+                }
+              }
+            });
+          }
+        } catch (uErr) {
+          console.error('Error loading user avatars:', uErr);
+        }
+
         let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
         if (!response.ok) return;
         
@@ -385,13 +406,15 @@
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const hasUnread = conv.unreadCount > 0;
           const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
-          const avatarPfp = localStorage.getItem(`retro_pfp_${conv.username.toLowerCase()}`);
+          
+          const unameLower = conv.username.toLowerCase();
+          const avatarPfp = userAvatars[unameLower] || localStorage.getItem(`retro_pfp_${unameLower}`);
 
           return `
             <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
               <div class="inbox-card-avatar">
                 ${avatarPfp 
-                  ? `<img src="${avatarPfp}" class="inbox-avatar-img">` 
+                  ? `<img src="${avatarPfp}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
                   : `<span class="inbox-avatar-initial">${conv.username.charAt(0).toUpperCase()}</span>`
                 }
               </div>
@@ -411,6 +434,7 @@
         console.error('Failed to load inbox:', err);
       }
     }
+
   </script>
 </body>
 </html>
