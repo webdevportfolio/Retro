@@ -86,7 +86,8 @@
     </div>
   </div>
 
-<script>
+
+  <script>
 document.addEventListener('DOMContentLoaded', () => {
   const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
@@ -132,23 +133,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadSavedAvatar();
 
-  // Profile Picture Upload Listener
+  // Profile Picture Upload & Sync to Backend
   if (pfpUpload) {
     pfpUpload.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
           const base64Img = event.target.result;
+          
+          // Save locally for instant preview
           localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`, base64Img);
           loadSavedAvatar();
+
+          // Sync with Render backend DB so other accounts can see it
+          try {
+            await fetch(`${API_BASE_URL}/api/users/profile`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: currentUser,
+                pfp: base64Img,
+                avatar: base64Img
+              })
+            });
+          } catch (err) {
+            console.error('Failed to sync profile picture with backend:', err);
+          }
         };
         reader.readAsDataURL(file);
       }
     });
   }
 
-  // 4. Generate or Retrieve Deterministic Chat Code
+  // 4. Generate Chat Code
   function getChatCode(user) {
     let hash = 0;
     const str = user.toLowerCase() + "_retro_secret_salt";
@@ -226,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 8. Modal Control & Delete Account Logic
+  // 8. Delete Account Modal Logic
   if (openDeleteModalBtn && deleteModal) {
     openDeleteModalBtn.addEventListener('click', () => deleteModal.classList.add('active'));
   }
@@ -263,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
 
 </body>
 </html>
