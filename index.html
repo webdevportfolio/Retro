@@ -25,6 +25,35 @@
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
     }
+    .avatar-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .avatar-modal.active { display: flex; }
+    .avatar-modal img {
+      max-width: 85%;
+      max-height: 70vh;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.5);
+    }
+    .avatar-modal-close {
+      margin-top: 20px;
+      background: #a855f7;
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+    }
   </style>
   <meta property="og:title" content="RETRO">
   <meta property="og:description" content="Chat freely and securely.">
@@ -84,6 +113,12 @@
     </div>
   </div>
 
+  <!-- Fullscreen Avatar Modal -->
+  <div id="avatar-modal" class="avatar-modal">
+    <img id="modal-avatar-img" src="" alt="Profile Picture">
+    <button class="avatar-modal-close" onclick="closeAvatarModal()">Close</button>
+  </div>
+
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
     let lastKnownMsgCount = 0;
@@ -119,7 +154,6 @@
 
       registerPushSubscription(activeUser);
 
-      // Chat Code Input Event Listeners
       const joinCodeInput = document.getElementById('join-code-input');
       const joinCodeBtn = document.getElementById('join-code-btn');
       const codeError = document.getElementById('code-error');
@@ -188,10 +222,7 @@
       }
 
       loadInbox();
-
-      setInterval(() => {
-        loadInbox();
-      }, 4000);
+      setInterval(loadInbox, 4000);
     });
 
     function logout() {
@@ -229,6 +260,21 @@
       }).catch(err => console.error('Mark-read failed:', err));
 
       window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+    }
+
+    function viewInboxAvatar(event, imgSrc) {
+      event.stopPropagation(); // Prevents navigating to the chat room when clicking the avatar
+      const modal = document.getElementById('avatar-modal');
+      const modalImg = document.getElementById('modal-avatar-img');
+      if (modal && modalImg) {
+        modalImg.src = imgSrc;
+        modal.classList.add('active');
+      }
+    }
+
+    function closeAvatarModal() {
+      const modal = document.getElementById('avatar-modal');
+      if (modal) modal.classList.remove('active');
     }
 
     function updateHomeScreenBadge(count) {
@@ -280,12 +326,11 @@
       return outputArray;
     }
 
-        async function loadInbox() {
+    async function loadInbox() {
       const lowerActive = activeUser.toLowerCase();
       if (!activeUser) return;
 
       try {
-        // Fetch all users to resolve global profile pictures
         let userAvatars = {};
         try {
           const usersRes = await fetch(`${API_BASE_URL}/api/users`);
@@ -412,7 +457,7 @@
 
           return `
             <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
-              <div class="inbox-card-avatar">
+              <div class="inbox-card-avatar" ${avatarPfp ? `onclick="viewInboxAvatar(event, '${avatarPfp}')"` : ''}>
                 ${avatarPfp 
                   ? `<img src="${avatarPfp}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
                   : `<span class="inbox-avatar-initial">${conv.username.charAt(0).toUpperCase()}</span>`
@@ -434,7 +479,6 @@
         console.error('Failed to load inbox:', err);
       }
     }
-
   </script>
 </body>
 </html>
