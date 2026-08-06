@@ -48,7 +48,7 @@
       <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
     </div>
 
-    <form id="chat-form" action="javascript:void(0);" onsubmit="sendMessage(); return false;">
+    <form id="chat-form">
       <input 
         type="text" 
         id="message-input" 
@@ -56,7 +56,7 @@
         placeholder="Type a message..." 
         autocomplete="off"
       >
-      <button type="button" id="send-btn" class="send-btn" onclick="sendMessage()">Send</button>
+      <button type="submit" id="send-btn" class="send-btn">Send</button>
     </form>
   </footer>
 
@@ -64,17 +64,15 @@
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
     let activeReplyTo = null;
+    let isUserScrolling = false;
 
-    // 1. Session & Target Resolution
-    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || localStorage.getItem('retro_user') || '';
+    // 1. Resolve Session & Recipient
+    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
     const activeUser = rawActiveUser.trim().replace('@', '');
     
     const urlParams = new URLSearchParams(window.location.search);
-    let targetUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('u');
-
-    if (targetUser) {
-      targetUser = targetUser.trim().replace('@', '');
-    }
+    let targetUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('u') || '';
+    targetUser = targetUser.trim().replace('@', '');
 
     if (!activeUser) {
       window.location.href = 'auth.html';
@@ -84,18 +82,20 @@
       window.location.href = 'index.html';
     }
 
-    // Setup Header Title & Profile Picture
     const chatTitleElem = document.getElementById('chat-with-user');
     const avatarImg = document.getElementById('header-avatar-img');
     const avatarInitial = document.getElementById('header-avatar-initial');
+    const chatContainer = document.getElementById('chat-container');
+    const messagesList = document.getElementById('messages-list');
+    const chatForm = document.getElementById('chat-form');
 
     if (chatTitleElem && targetUser) {
       chatTitleElem.textContent = targetUser;
       if (avatarInitial) avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
-      
       loadTargetUserProfile();
     }
 
+    // 2. Load Recipient Profile Picture (Checks localStorage first, then backend fallback)
     async function loadTargetUserProfile() {
       const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
       const savedPfp = localStorage.getItem(cacheKey);
@@ -118,7 +118,7 @@
           });
 
           if (found && typeof found === 'object') {
-            const pfpUrl = found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image || found.avatar_url;
+            const pfpUrl = found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
             if (pfpUrl && avatarImg && avatarInitial) {
               avatarImg.src = pfpUrl;
               avatarImg.style.display = 'block';
@@ -132,11 +132,6 @@
       }
     }
 
-    // Scroll state tracking
-    let isUserScrolling = false;
-    const chatContainer = document.getElementById('chat-container');
-    const messagesList = document.getElementById('messages-list');
-
     if (chatContainer) {
       chatContainer.addEventListener('scroll', () => {
         const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
@@ -144,7 +139,7 @@
       });
     }
 
-    // 2. Fetch & Render Messages
+    // 3. Fetch & Render Messages
     async function loadChat() {
       if (!activeUser || !targetUser) return;
 
@@ -158,12 +153,11 @@
         const activeLower = activeUser.toLowerCase();
         const targetLower = targetUser.toLowerCase();
 
-        // Strict 1-on-1 filtering (prevents message bleed or missing messages)
+        // Strict 1-on-1 filter
         const messages = allMessages
           .filter(msg => {
             const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
             const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
-            
             return (sender === activeLower && receiver === targetLower) || (sender === targetLower && receiver === activeLower);
           })
           .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
@@ -186,7 +180,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ other_user: targetUser })
-          }).catch(err => console.error('Mark-read failed:', err));
+          }).catch(err => console.error('Mark-read error:', err));
         }
 
         messagesList.innerHTML = messages.map(msg => {
@@ -245,11 +239,11 @@
         }
         
       } catch (err) {
-        console.error('Error fetching chat messages:', err);
+        console.error('Error loading chat:', err);
       }
     }
 
-    // 3. Swipe-to-Reply Logic
+    // 4. Swipe-to-Reply Logic
     function attachSwipeListeners() {
       const wrappers = document.querySelectorAll('.message-wrapper');
       wrappers.forEach(wrapper => {
@@ -318,56 +312,58 @@
       if (bar) bar.style.display = 'none';
     }
 
-    // 4. Send Message Functionality
-    async function sendMessage() {
-      const input = document.getElementById('message-input');
-      const sendBtn = document.getElementById('send-btn');
-      if (!input) return;
+    // 5. Direct Message Form Submission
+    if (chatForm) {
+      chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const input = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        if (!input) return;
 
-      let content = input.value.trim();
+        let content = input.value.trim();
+        if (!content || !targetUser || !activeUser) return;
 
-      if (!content || !targetUser || !activeUser) return;
-      if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
-
-      if (activeReplyTo) {
-        const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
-        content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
-      }
-
-      if (sendBtn) sendBtn.disabled = true;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: activeUser,
-            receiver: targetUser,
-            sender_username: activeUser,
-            receiver_username: targetUser,
-            content: content
-          })
-        });
-
-        if (response.ok) {
-          input.value = '';
-          cancelReply();
-          isUserScrolling = false;
-          await loadChat();
-          setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          }, 50);
-        } else {
-          console.error('Server rejected message');
+        if (activeReplyTo) {
+          const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
+          content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
         }
-      } catch (err) {
-        console.error('Error sending message:', err);
-      } finally {
-        if (sendBtn) sendBtn.disabled = false;
-      }
+
+        if (sendBtn) sendBtn.disabled = true;
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sender: activeUser,
+              receiver: targetUser,
+              sender_username: activeUser,
+              receiver_username: targetUser,
+              content: content
+            })
+          });
+
+          if (response.ok) {
+            input.value = '';
+            cancelReply();
+            isUserScrolling = false;
+            await loadChat();
+            setTimeout(() => {
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 50);
+          } else {
+            console.error('Server failed to record message');
+          }
+        } catch (err) {
+          console.error('Network error sending message:', err);
+        } finally {
+          if (sendBtn) sendBtn.disabled = false;
+        }
+      });
     }
 
-    // 5. Typing Indicator Logic
+    // 6. Typing Indicator Logic
     const messageInput = document.getElementById('message-input');
     const typingIndicator = document.getElementById('typing-indicator');
     let typingTimeout;
@@ -375,7 +371,6 @@
     if (messageInput) {
       messageInput.addEventListener('input', () => {
         sendTypingStatus(true);
-        
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
           sendTypingStatus(false);
@@ -385,7 +380,6 @@
 
     async function sendTypingStatus(isTyping) {
       if (!activeUser || !targetUser) return;
-
       try {
         await fetch(`${API_BASE_URL}/api/typing`, {
           method: 'POST',
@@ -397,13 +391,12 @@
           })
         });
       } catch (err) {
-        console.error('Typing indicator error:', err);
+        console.error('Typing indicator status error:', err);
       }
     }
 
     async function checkPartnerTyping() {
       if (!activeUser || !targetUser) return;
-
       try {
         const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
         if (res.ok) {
@@ -415,12 +408,13 @@
           }
         }
       } catch (err) {
-        console.error('Check typing error:', err);
+        console.error('Typing poll error:', err);
       }
     }
 
     setInterval(checkPartnerTyping, 2000);
 
+    // Initial Load & Refresh Loop
     loadChat();
     setInterval(loadChat, 3000);
   </script>
