@@ -34,8 +34,13 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Serve Cached Assets
+// 3. Serve Cached Assets (Skip API calls & non-GET requests)
 self.addEventListener('fetch', (event) => {
+  // Do not intercept or cache non-GET requests or API calls
+  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => response || fetch(event.request))
   );
@@ -60,18 +65,21 @@ self.addEventListener('push', (event) => {
     icon: '/icon.png',
     badge: '/icon.png',
     vibrate: [200, 100, 200],
-    tag: 'retro-message', // Replaces old popups with fresh ones
+    tag: 'retro-message',
     renotify: true,
     data: { url: data.url || '/index.html' }
   };
 
-  // Update App Icon Badge on phone home screen with the REAL unread count
+  const notificationPromise = self.registration.showNotification(title, options);
+
+  let badgePromise = Promise.resolve();
   if ('setAppBadge' in navigator) {
-    navigator.setAppBadge(badgeCount).catch(() => {});
+    badgePromise = navigator.setAppBadge(badgeCount).catch(() => {});
   }
 
+  // Ensure worker stays alive until both notification and badge updates finish
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    Promise.all([notificationPromise, badgePromise])
   );
 });
 
@@ -79,24 +87,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  // Clear App Icon Badge on notification click
+  const targetUrl = event.notification.data ? event.notification.data.url : '/index.html';
+
+  let clearBadgePromise = Promise.resolve();
   if ('clearAppBadge' in navigator) {
-    navigator.clearAppBadge().catch(() => {});
+    clearBadgePromise = navigator.clearAppBadge().catch(() => {});
   }
 
-  const targetUrl = event.notification.data.url || '/index.html';
+  const focusWindowPromise = clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    for (const client of clientList) {
+      if (client.url.includes(self.location.origin)) {
+        client.focus();
+        return client.navigate(targetUrl);
+      }
+    }
+    if (clients.openWindow) {
+      return clients.openWindow(targetUrl);
+    }
+  });
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes('index.html') || client.url.includes('chat.html')) {
-          client.focus();
-          return client.navigate(targetUrl);
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
+    Promise.all([clearBadgePromise, focusWindowPromise])
   );
 });
