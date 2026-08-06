@@ -285,6 +285,21 @@ document.addEventListener('DOMContentLoaded', () => {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' }
         });
+// Add this right after successful upload response from backend:
+const currentUser = localStorage.getItem('username')?.trim().replace('@', '');
+if (currentUser) {
+  const cacheKey = `retro_pfp_${currentUser.toLowerCase()}`;
+  const freshPfpUrl = `${uploadedImageUrl}?t=${Date.now()}`;
+  
+  // Update local storage with cache-busting timestamp
+  localStorage.setItem(cacheKey, freshPfpUrl);
+  
+  // Force profile preview element update
+  const profileImgElem = document.getElementById('profile-img');
+  if (profileImgElem) {
+    profileImgElem.src = freshPfpUrl;
+  }
+}
 
         if (response.ok || response.status === 404) {
           localStorage.clear();
