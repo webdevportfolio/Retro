@@ -931,6 +931,76 @@
     loadChat();
     setInterval(loadChat, 3000);
     setInterval(loadTargetUserProfile, 10000);
+      // Image Upload Logic
+  let selectedImageFile = null;
+
+  function handleImageSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    selectedImageFile = file;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('image-preview-elem').src = e.target.result;
+      document.getElementById('image-preview-modal').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function closeImagePreview() {
+    document.getElementById('image-preview-modal').style.display = 'none';
+    document.getElementById('image-file-input').value = '';
+    selectedImageFile = null;
+  }
+
+  async function sendSelectedImage() {
+    if (!selectedImageFile || !targetUser || !activeUser) return;
+    const sendBtn = document.getElementById('image-send-btn');
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const payload = `[img]${e.target.result}`;
+      await postMessagePayload(payload);
+      closeImagePreview();
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Image';
+      }
+    };
+    reader.readAsDataURL(selectedImageFile);
+  }
+
+  // Generic Media Dispatcher
+  async function postMessagePayload(contentPayload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: activeUser,
+          receiver: targetUser,
+          sender_username: activeUser,
+          receiver_username: targetUser,
+          content: contentPayload
+        })
+      });
+
+      if (response.ok) {
+        isUserScrolling = false;
+        await loadChat();
+        setTimeout(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 50);
+      }
+    } catch (err) {
+      console.error('Error sending media:', err);
+    }
+  }
+
   </script>
 </body>
 </html>
