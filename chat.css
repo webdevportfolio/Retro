@@ -339,6 +339,161 @@ body {
   border-radius: 50%;
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
+/* --- In-Chat Partner Profile Sheet --- */
+.partner-profile-sheet {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  justify-content: flex-end;
+  align-items: center;
+  flex-direction: column;
+}
+
+.partner-profile-sheet.active {
+  display: flex;
+}
+
+.partner-profile-card {
+  width: 100%;
+  max-width: 520px;
+  background: #09090b;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border: 1px solid var(--glass-border);
+  border-bottom: none;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.sheet-title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.sheet-avatar-wrapper {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  padding: 3px;
+  background: var(--accent-purple);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+.sheet-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #18181b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent-purple);
+  overflow: hidden;
+}
+
+/* Same font size/style as inbox direct messages */
+.sheet-username {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-main);
+  letter-spacing: 0.5px;
+}
+
+.sheet-code-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sheet-code-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+}
+
+.sheet-code-box {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.sheet-code-box input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--accent-purple);
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.sheet-code-box button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 0 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sheet-code-box button:hover {
+  background: var(--accent-purple);
+  color: #000000;
+}
+
+.sheet-clear-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s ease;
+}
+
+.sheet-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
 
 /* Balanced Top Nav Spacer */
 .nav-spacer {
