@@ -86,7 +86,6 @@
     </div>
   </div>
 
-
   <script>
 document.addEventListener('DOMContentLoaded', () => {
   const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
@@ -118,17 +117,39 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Render Profile Details & Avatar
   if (usernameDisplay) usernameDisplay.textContent = currentUser;
 
-  function loadSavedAvatar() {
-    const savedPfp = localStorage.getItem(`retro_pfp_${currentUser.toLowerCase()}`);
+  async function loadSavedAvatar() {
+    const cacheKey = `retro_pfp_${currentUser.toLowerCase()}`;
+    const savedPfp = localStorage.getItem(cacheKey);
+
     if (savedPfp) {
       avatarImg.src = savedPfp;
       avatarImg.style.display = 'block';
       avatarLetter.style.display = 'none';
-    } else {
-      avatarImg.style.display = 'none';
-      avatarLetter.style.display = 'block';
-      avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
+      return;
     }
+
+    // Fetch avatar from remote backend if not stored in localStorage
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`);
+      if (res.ok) {
+        const userData = await res.json();
+        const remotePfp = userData['profile picture'] || userData.pfp || userData.avatar || userData.profilePic;
+
+        if (remotePfp) {
+          avatarImg.src = remotePfp;
+          avatarImg.style.display = 'block';
+          avatarLetter.style.display = 'none';
+          localStorage.setItem(cacheKey, remotePfp);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load profile picture from server:', err);
+    }
+
+    avatarImg.style.display = 'none';
+    avatarLetter.style.display = 'block';
+    avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
   }
 
   loadSavedAvatar();
@@ -146,13 +167,14 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`, base64Img);
           loadSavedAvatar();
 
-          // Sync with Render backend DB so other accounts can see it
+          // Sync with Render backend database using exact schema keys
           try {
             await fetch(`${API_BASE_URL}/api/users/profile`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 username: currentUser,
+                'profile picture': base64Img,
                 pfp: base64Img,
                 avatar: base64Img
               })
@@ -281,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
-
 
 </body>
 </html>
