@@ -288,6 +288,16 @@
     if (chatTitleElem && targetUser) {
       chatTitleElem.textContent = targetUser;
       if (avatarInitial) avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
+
+      // Check cache first for instant profile rendering
+      const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
+      const cachedUrl = localStorage.getItem(cacheKey);
+      if (cachedUrl && avatarImg && avatarInitial) {
+        avatarImg.src = cachedUrl;
+        avatarImg.style.display = 'block';
+        avatarInitial.style.display = 'none';
+      }
+
       loadTargetUserProfile();
     }
 
@@ -346,7 +356,28 @@
       }
     }, { once: true });
 
-    // 2. Load Recipient Profile Picture (Bypasses browser cache)
+    // Helper to render avatar or fall back gracefully
+    function applyAvatar(imgElem, initialElem, url, username) {
+      if (!imgElem || !initialElem) return;
+
+      if (url) {
+        imgElem.src = url;
+        imgElem.style.display = 'block';
+        initialElem.style.display = 'none';
+
+        imgElem.onerror = () => {
+          imgElem.style.display = 'none';
+          initialElem.style.display = 'block';
+          initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+        };
+      } else {
+        imgElem.style.display = 'none';
+        initialElem.style.display = 'block';
+        initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+      }
+    }
+
+    // 2. Load Recipient Profile Picture (Checks all schema variants & updates UI elements)
     async function loadTargetUserProfile() {
       if (!targetUser) return;
 
@@ -354,13 +385,14 @@
         let pfpUrl = null;
         const timestamp = Date.now();
 
-        // Query backend directly with timestamp to bypass server/HTTP caching
+        // 1. Check direct user endpoint
         const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`);
         if (userRes.ok) {
           const uData = await userRes.json();
-          pfpUrl = uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
+          pfpUrl = uData.pfpUrl || uData.photoURL || uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
         }
 
+        // 2. Check full users list if direct query returned null
         if (!pfpUrl) {
           const res = await fetch(`${API_BASE_URL}/api/users?t=${timestamp}`);
           if (res.ok) {
@@ -373,24 +405,29 @@
             });
 
             if (found && typeof found === 'object') {
-              pfpUrl = found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
+              pfpUrl = found.pfpUrl || found.photoURL || found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
             }
           }
         }
 
-        if (pfpUrl && avatarImg && avatarInitial) {
-          // Append timestamp to force browser image element refresh
+        if (pfpUrl) {
           const cacheBustedUrl = pfpUrl.includes('?') 
             ? `${pfpUrl}&t=${timestamp}` 
             : `${pfpUrl}?t=${timestamp}`;
 
-          avatarImg.src = cacheBustedUrl;
-          avatarImg.style.display = 'block';
-          avatarInitial.style.display = 'none';
+          // Update header avatar
+          applyAvatar(avatarImg, avatarInitial, cacheBustedUrl, targetUser);
 
-          // Update local cache with fresh image URL
+          // Update profile sheet avatar if open
+          const sheetImg = document.getElementById('sheet-avatar-img');
+          const sheetInitial = document.getElementById('sheet-avatar-initial');
+          applyAvatar(sheetImg, sheetInitial, cacheBustedUrl, targetUser);
+
+          // Store in cache
           const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
           localStorage.setItem(cacheKey, cacheBustedUrl);
+        } else {
+          applyAvatar(avatarImg, avatarInitial, null, targetUser);
         }
       } catch (err) {
         console.error('Error fetching target avatar:', err);
@@ -421,16 +458,10 @@
       if (sheetUsername) sheetUsername.textContent = targetUser;
       if (sheetCodeInput) sheetCodeInput.value = getChatCode(targetUser);
 
-      const currentSrc = avatarImg ? avatarImg.src : null;
-      if (currentSrc && avatarImg.style.display !== 'none') {
-        sheetImg.src = currentSrc;
-        sheetImg.style.display = 'block';
-        sheetInitial.style.display = 'none';
-      } else {
-        sheetImg.style.display = 'none';
-        sheetInitial.style.display = 'block';
-        sheetInitial.textContent = targetUser.charAt(0).toUpperCase();
-      }
+      const cachedUrl = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
+      const currentSrc = (avatarImg && avatarImg.style.display !== 'none') ? avatarImg.src : cachedUrl;
+      
+      applyAvatar(sheetImg, sheetInitial, currentSrc, targetUser);
 
       sheet.classList.add('active');
     }
@@ -817,7 +848,7 @@
     setInterval(sendHeartbeat, 15000);
     setInterval(checkTargetOnlineStatus, 5000);
 
-    // Refresh user profile picture periodically to keep in sync
+    // Initial executions & periodic refreshing
     loadChat();
     setInterval(loadChat, 3000);
     setInterval(loadTargetUserProfile, 10000);
