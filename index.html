@@ -448,6 +448,55 @@
           document.title = 'RETRO | Inbox';
           updateHomeScreenBadge(0);
         }
+// Utility to convert VAPID public key
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Register Push Subscription to Backend
+async function initPushSubscription(username) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    
+    // 1. Fetch VAPID Key from backend
+    const keyRes = await fetch(`${API_BASE_URL}/api/vapid-key`);
+    const { publicKey } = await keyRes.json();
+
+    // 2. Subscribe device via Service Worker
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    // 3. Save subscription in Supabase database via backend
+    await fetch(`${API_BASE_URL}/api/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username,
+        subscription: subscription
+      })
+    });
+    console.log('Push subscription active for:', username);
+  } catch (err) {
+    console.error('Push subscription failed:', err);
+  }
+}
+
+// Call this when user logs in or lands on index.html
+const currentUser = localStorage.getItem('username');
+if (currentUser) {
+  initPushSubscription(currentUser);
+}
 
         inboxList.innerHTML = conversations.map(conv => {
           const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
