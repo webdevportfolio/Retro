@@ -30,7 +30,6 @@
       </div>
     </div>
 
-    <!-- Balanced Spacer replacing Profile button -->
     <div class="nav-spacer"></div>
   </header>
 
@@ -41,7 +40,6 @@
 
   <!-- Fixed Bottom Message Input Bar -->
   <footer class="chat-input-bar">
-    <!-- Reply Preview Container -->
     <div id="reply-preview-bar" class="reply-preview-bar">
       <div>
         <div id="reply-user-label" class="reply-preview-user">Replying to</div>
@@ -50,7 +48,7 @@
       <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
     </div>
 
-    <form id="chat-form" action="javascript:void(0);" onsubmit="sendMessage(); return false;">
+    <form id="chat-form" onsubmit="handleFormSubmit(event)">
       <input 
         type="text" 
         id="message-input" 
@@ -58,19 +56,18 @@
         placeholder="Type a message..." 
         autocomplete="off"
       >
-      <button type="button" id="send-btn" class="send-btn" onclick="sendMessage()">Send</button>
+      <button type="submit" id="send-btn" class="send-btn">Send</button>
     </form>
   </footer>
 
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
-    // Active reply tracking variable
     let activeReplyTo = null;
 
     // 1. Session & Target Resolution
-    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session');
-    const activeUser = rawActiveUser ? rawActiveUser.trim().replace('@', '') : '';
+    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || localStorage.getItem('retro_user') || '';
+    const activeUser = rawActiveUser.trim().replace('@', '');
     
     const urlParams = new URLSearchParams(window.location.search);
     let targetUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('u');
@@ -88,21 +85,43 @@
       window.location.href = 'index.html';
     }
 
-    // Header title and avatar setup
+    // Setup Header & Fetch Avatar
     const chatTitleElem = document.getElementById('chat-with-user');
     const avatarImg = document.getElementById('header-avatar-img');
     const avatarInitial = document.getElementById('header-avatar-initial');
 
     if (chatTitleElem && targetUser) {
       chatTitleElem.textContent = targetUser;
+      if (avatarInitial) avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
       
-      const savedPfp = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
+      loadTargetUserProfile();
+    }
+
+    async function loadTargetUserProfile() {
+      const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
+      const savedPfp = localStorage.getItem(cacheKey);
+
       if (savedPfp && avatarImg && avatarInitial) {
         avatarImg.src = savedPfp;
         avatarImg.style.display = 'block';
         avatarInitial.style.display = 'none';
-      } else if (avatarInitial) {
-        avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}`);
+        if (res.ok) {
+          const userData = await res.json();
+          const pfpUrl = userData.pfp || userData.avatar || userData.profile_picture;
+          if (pfpUrl && avatarImg && avatarInitial) {
+            avatarImg.src = pfpUrl;
+            avatarImg.style.display = 'block';
+            avatarInitial.style.display = 'none';
+            localStorage.setItem(cacheKey, pfpUrl);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching target avatar:', err);
       }
     }
 
@@ -129,7 +148,6 @@
         const allMessages = await response.json();
         if (!messagesList) return;
 
-        // Filter AND sort chronologically
         const messages = allMessages
           .filter(msg => {
             const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
@@ -145,7 +163,6 @@
           return;
         }
 
-        // Mark incoming messages as read in localStorage
         const latestIncoming = [...messages].reverse().find(msg => {
           const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
           return sender === targetUser.toLowerCase();
@@ -155,7 +172,6 @@
           const msgTime = latestIncoming.created_at || latestIncoming.timestamp || new Date().toISOString();
           localStorage.setItem(`read_${targetUser.toLowerCase()}`, msgTime);
 
-          // Tell the backend these messages are read too, so badgeCount stays accurate
           fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -173,9 +189,8 @@
           const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
           const isRead = msg.is_read || (lastReadByTarget && new Date(lastReadByTarget) >= msgDate);
 
-          // Parse quoted reply if embedded in content
           let quotedHtml = '';
-          let displayContent = msg.content;
+          let displayContent = msg.content || '';
 
           if (displayContent.startsWith('[reply:')) {
             const splitIdx = displayContent.indexOf(']');
@@ -193,10 +208,12 @@
             }
           }
 
+          const safeContent = (msg.content || '').replace(/"/g, '&quot;');
+
           return `
             <div class="message-wrapper ${isSent ? 'sent' : 'received'}" 
                  data-sender="${senderClean}" 
-                 data-content="${msg.content.replace(/"/g, '&quot;')}">
+                 data-content="${safeContent}">
               <div class="message-bubble">
                 ${quotedHtml}
                 <div class="message-text">${displayContent}</div>
@@ -240,7 +257,6 @@
           if (!isSwiping) return;
           currentX = e.touches[0].clientX - startX;
 
-          // Allow swiping to the right up to 90px max
           if (currentX > 0 && currentX < 90) {
             wrapper.style.transform = `translateX(${currentX}px)`;
           }
@@ -255,14 +271,12 @@
             const sender = wrapper.getAttribute('data-sender');
             let content = wrapper.getAttribute('data-content');
 
-            // Strip nested reply metadata if replying to a reply
             if (content.startsWith('[reply:')) {
               const closeIdx = content.indexOf(']');
               if (closeIdx !== -1) content = content.substring(closeIdx + 1).trim();
             }
 
             triggerReplyUI(sender, content);
-
             if (navigator.vibrate) navigator.vibrate(25);
           }
 
@@ -295,6 +309,11 @@
     }
 
     // 4. Send Message Functionality
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      sendMessage();
+    }
+
     async function sendMessage() {
       const input = document.getElementById('message-input');
       const sendBtn = document.getElementById('send-btn');
@@ -305,7 +324,6 @@
       if (!content || !targetUser || !activeUser) return;
       if (targetUser.toLowerCase() === activeUser.toLowerCase()) return;
 
-      // Attach reply meta tag if replying
       if (activeReplyTo) {
         const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
         content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
@@ -398,13 +416,6 @@
     }
 
     setInterval(checkPartnerTyping, 2000);
-
-    document.getElementById('message-input')?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
 
     loadChat();
     setInterval(loadChat, 3000);
