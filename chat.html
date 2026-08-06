@@ -10,13 +10,6 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
   <style>
-    .sheet-avatar img,
-.chat-header-avatar img {
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
     /* In-Chat Partner Profile Sheet Styles */
     .partner-profile-sheet {
       display: none;
@@ -81,6 +74,9 @@
       padding: 3px;
       background: var(--accent-purple);
       box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+      pointer-events: none; /* Prevents touch/click interactions on avatar area */
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .sheet-avatar {
@@ -95,6 +91,16 @@
       font-weight: 800;
       color: var(--accent-purple);
       overflow: hidden;
+      pointer-events: none;
+    }
+
+    .sheet-avatar img,
+    .chat-header-avatar img {
+      pointer-events: none !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
+      -webkit-user-drag: none !important;
     }
 
     .sheet-username {
@@ -226,8 +232,8 @@
   </footer>
 
   <!-- In-Chat Partner Profile Sheet -->
-  <div id="partner-profile-sheet" class="partner-profile-sheet" onclick="closeAvatarView(event)">
-    <div class="partner-profile-card" onclick="event.stopPropagation()">
+  <div id="partner-profile-sheet" class="partner-profile-sheet">
+    <div class="partner-profile-card" id="partner-profile-card">
       
       <!-- Top Header Navigation -->
       <div class="sheet-header">
@@ -296,7 +302,6 @@
       chatTitleElem.textContent = targetUser;
       if (avatarInitial) avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
 
-      // Check cache first for instant profile rendering
       const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
       const cachedUrl = localStorage.getItem(cacheKey);
       if (cachedUrl && avatarImg && avatarInitial) {
@@ -363,57 +368,34 @@
       }
     }, { once: true });
 
-    // Updated helper to prevent taps from hiding the image unexpectedly
-function applyAvatar(imgElem, initialElem, url, username) {
-  if (!imgElem || !initialElem) return;
+    // Helper to render avatar safely without letting error triggers hide the element on click
+    function applyAvatar(imgElem, initialElem, url, username) {
+      if (!imgElem || !initialElem) return;
 
-  if (url) {
-    // Reset handlers to avoid stacked error triggers
-    imgElem.onerror = null; 
-    
-    imgElem.onerror = () => {
-      imgElem.style.display = 'none';
-      if (initialElem) {
-        initialElem.style.display = 'block';
-        initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+      if (url) {
+        imgElem.onerror = null; // Clear previous listeners
+        
+        imgElem.onerror = function() {
+          this.style.display = 'none';
+          if (initialElem) {
+            initialElem.style.display = 'block';
+            initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+          }
+        };
+
+        imgElem.src = url;
+        imgElem.style.display = 'block';
+        if (initialElem) initialElem.style.display = 'none';
+      } else {
+        imgElem.style.display = 'none';
+        if (initialElem) {
+          initialElem.style.display = 'block';
+          initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+        }
       }
-    };
-
-    imgElem.src = url;
-    imgElem.style.display = 'block';
-    if (initialElem) initialElem.style.display = 'none';
-  } else {
-    imgElem.style.display = 'none';
-    if (initialElem) {
-      initialElem.style.display = 'block';
-      initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
     }
-  }
-}
 
-// Updated Profile Sheet Opener
-function openAvatarView() {
-  const sheet = document.getElementById('partner-profile-sheet');
-  const sheetImg = document.getElementById('sheet-avatar-img');
-  const sheetInitial = document.getElementById('sheet-avatar-initial');
-  const sheetUsername = document.getElementById('sheet-username');
-  const sheetCodeInput = document.getElementById('sheet-chat-code');
-
-  if (!sheet) return;
-
-  if (sheetUsername) sheetUsername.textContent = targetUser;
-  if (sheetCodeInput) sheetCodeInput.value = getChatCode(targetUser);
-
-  // Get current avatar source from header or local cache
-  const cachedUrl = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
-  const currentSrc = (avatarImg && avatarImg.style.display !== 'none' && avatarImg.src) ? avatarImg.src : cachedUrl;
-  
-  applyAvatar(sheetImg, sheetInitial, currentSrc, targetUser);
-
-  sheet.classList.add('active');
-}
-
-    // 2. Load Recipient Profile Picture (Checks all schema variants & updates UI elements)
+    // 2. Load Recipient Profile Picture
     async function loadTargetUserProfile() {
       if (!targetUser) return;
 
@@ -421,14 +403,12 @@ function openAvatarView() {
         let pfpUrl = null;
         const timestamp = Date.now();
 
-        // 1. Check direct user endpoint
         const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`);
         if (userRes.ok) {
           const uData = await userRes.json();
           pfpUrl = uData.pfpUrl || uData.photoURL || uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
         }
 
-        // 2. Check full users list if direct query returned null
         if (!pfpUrl) {
           const res = await fetch(`${API_BASE_URL}/api/users?t=${timestamp}`);
           if (res.ok) {
@@ -451,15 +431,12 @@ function openAvatarView() {
             ? `${pfpUrl}&t=${timestamp}` 
             : `${pfpUrl}?t=${timestamp}`;
 
-          // Update header avatar
           applyAvatar(avatarImg, avatarInitial, cacheBustedUrl, targetUser);
 
-          // Update profile sheet avatar if open
           const sheetImg = document.getElementById('sheet-avatar-img');
           const sheetInitial = document.getElementById('sheet-avatar-initial');
           applyAvatar(sheetImg, sheetInitial, cacheBustedUrl, targetUser);
 
-          // Store in cache
           const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
           localStorage.setItem(cacheKey, cacheBustedUrl);
         } else {
@@ -495,17 +472,34 @@ function openAvatarView() {
       if (sheetCodeInput) sheetCodeInput.value = getChatCode(targetUser);
 
       const cachedUrl = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
-      const currentSrc = (avatarImg && avatarImg.style.display !== 'none') ? avatarImg.src : cachedUrl;
+      const currentSrc = (avatarImg && avatarImg.style.display !== 'none' && avatarImg.src) ? avatarImg.src : cachedUrl;
       
       applyAvatar(sheetImg, sheetInitial, currentSrc, targetUser);
 
       sheet.classList.add('active');
     }
 
-    function closeAvatarView(event) {
-      if (event && event.target !== event.currentTarget) return;
+    function closeAvatarView() {
       const sheet = document.getElementById('partner-profile-sheet');
       if (sheet) sheet.classList.remove('active');
+    }
+
+    // Bind sheet click handlers explicitly
+    const sheetOverlay = document.getElementById('partner-profile-sheet');
+    const sheetCard = document.getElementById('partner-profile-card');
+
+    if (sheetOverlay) {
+      sheetOverlay.addEventListener('click', (e) => {
+        if (e.target === sheetOverlay) {
+          closeAvatarView();
+        }
+      });
+    }
+
+    if (sheetCard) {
+      sheetCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
     }
 
     async function copyPartnerCode() {
