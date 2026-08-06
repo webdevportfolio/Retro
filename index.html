@@ -47,7 +47,6 @@
   <main class="main-container">
     <div class="inbox-header">
       <h2>Inbox</h2>
-      <button class="nav-btn" onclick="toggleGroupModal(true)" style="border-color: var(--accent-purple); color: var(--accent-purple);">+ Group</button>
     </div>
 
     <!-- Enter Private Chat Code Section -->
@@ -57,12 +56,6 @@
         <button id="join-code-btn" class="auth-btn join-btn">Search</button>
       </div>
       <div id="code-error" class="code-error-msg"></div>
-    </div>
-
-    <!-- Container for Active Group Chats -->
-    <div style="margin-bottom: 24px;">
-      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; margin-bottom: 8px;">Groups</div>
-      <div id="groups-feed" class="chat-list"></div>
     </div>
 
     <!-- Container for Direct Messages -->
@@ -76,32 +69,6 @@
       <div class="empty-sub">Enter a friend's Chat Code above to start messaging privately.</div>
     </div>
   </main>
-
-  <!-- Create Group Modal -->
-  <div class="modal-overlay" id="create-group-modal" onclick="if(event.target === this) toggleGroupModal(false)">
-    <div class="modal-box" style="text-align: left; border-color: var(--glass-border); max-height: 85vh; overflow-y: auto;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="font-weight: 800; font-size: 1.1rem;">Create New Group</h3>
-        <button onclick="toggleGroupModal(false)" style="background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer;">&times;</button>
-      </div>
-
-      <form onsubmit="handleCreateGroup(event)" style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Group Name</label>
-          <input type="text" id="new-group-name" class="input-field" placeholder="Enter group name..." required>
-        </div>
-
-        <div>
-          <label style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-bottom: 6px;">Select Members from DMs</label>
-          <div id="dm-members-selection" style="max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">Loading contacts...</div>
-          </div>
-        </div>
-
-        <button type="submit" class="auth-btn" style="margin-top: 8px;">Create Group</button>
-      </form>
-    </div>
-  </div>
 
   <!-- Enable Notifications Modal -->
   <div class="modal-overlay" id="notif-modal">
@@ -144,8 +111,6 @@
         profileBtn.textContent = activeUser;
       }
 
-      // Notification permission is gated behind a user gesture (required on iOS,
-      // and best practice everywhere else). Shown as a popup instead of a nav button.
       if ('Notification' in window && Notification.permission === 'default') {
         setTimeout(() => {
           document.getElementById('notif-modal').classList.add('active');
@@ -223,11 +188,9 @@
       }
 
       loadInbox();
-      fetchUserGroups();
 
       setInterval(() => {
         loadInbox();
-        fetchUserGroups();
       }, 4000);
     });
 
@@ -315,131 +278,6 @@
         outputArray[i] = rawData.charCodeAt(i);
       }
       return outputArray;
-    }
-
-    async function toggleGroupModal(open) {
-      const modal = document.getElementById('create-group-modal');
-      if (!modal) return;
-
-      if (open) {
-        modal.classList.add('active');
-        document.getElementById('new-group-name').value = '';
-        await loadDmContactsForGroup();
-      } else {
-        modal.classList.remove('active');
-      }
-    }
-
-    async function loadDmContactsForGroup() {
-      const container = document.getElementById('dm-members-selection');
-      if (!container) return;
-
-      const lowerActive = activeUser.toLowerCase();
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
-        if (!res.ok) throw new Error('Failed to fetch messages');
-        
-        const messages = await res.json();
-        const contactsSet = new Set();
-
-        messages.forEach(msg => {
-          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '');
-          const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '');
-
-          if (sender && sender.toLowerCase() !== lowerActive) contactsSet.add(sender);
-          if (receiver && receiver.toLowerCase() !== lowerActive) contactsSet.add(receiver);
-        });
-
-        const contacts = Array.from(contactsSet);
-
-        if (contacts.length === 0) {
-          container.innerHTML = `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">No DM contacts found yet.</div>`;
-          return;
-        }
-
-        container.innerHTML = contacts.map(username => `
-          <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; padding: 4px 0;">
-            <input type="checkbox" class="group-member-checkbox" value="${username}" style="accent-color: var(--accent-purple); width: 16px; height: 16px;">
-            <span>${username}</span>
-          </label>
-        `).join('');
-
-      } catch (err) {
-        console.error('Failed to load DM contacts:', err);
-        container.innerHTML = `<div style="font-size: 0.8rem; color: #ef4444;">Error loading contacts.</div>`;
-      }
-    }
-
-    async function handleCreateGroup(event) {
-      event.preventDefault();
-
-      const nameInput = document.getElementById('new-group-name');
-      const groupName = nameInput.value.trim();
-
-      const checkedBoxes = document.querySelectorAll('.group-member-checkbox:checked');
-      const selectedMembers = Array.from(checkedBoxes).map(cb => cb.value);
-
-      if (!groupName) return;
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/groups`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: groupName,
-            created_by: activeUser,
-            members: selectedMembers
-          })
-        });
-
-        if (res.ok) {
-          const newGroup = await res.json();
-          toggleGroupModal(false);
-          window.location.href = `groupchat.html?id=${newGroup.id}`;
-        } else {
-          alert('Failed to create group. Check server connection.');
-        }
-      } catch (err) {
-        console.error('Error creating group:', err);
-      }
-    }
-
-    async function fetchUserGroups() {
-      if (!activeUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/users/${activeUser}/groups`);
-        if (!res.ok) return;
-
-        const groups = await res.json();
-        renderGroupsList(groups);
-      } catch (err) {
-        console.error('Failed to fetch groups:', err);
-      }
-    }
-
-    function renderGroupsList(groups) {
-      const container = document.getElementById('groups-feed');
-      if (!container) return;
-
-      if (!groups || groups.length === 0) {
-        container.innerHTML = `<div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); padding: 8px 0;">No group chats joined yet.</div>`;
-        return;
-      }
-
-      container.innerHTML = groups.map(g => `
-        <div class="chat-card" onclick="window.location.href='groupchat.html?id=${g.id}'">
-          <div class="inbox-card-avatar">
-            <span class="inbox-avatar-initial">👥</span>
-          </div>
-          <div class="inbox-card-content">
-            <div class="inbox-card-header">
-              <div class="inbox-card-username">${g.name}</div>
-            </div>
-            <div class="inbox-card-preview">${g.members ? g.members.length : 0} members</div>
-          </div>
-        </div>
-      `).join('');
     }
 
     async function loadInbox() {
@@ -559,7 +397,6 @@
               </div>
               <div class="inbox-card-content">
                 <div class="inbox-card-header">
-
                   <div class="inbox-card-username">${conv.username}</div>
                   ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
                 </div>
