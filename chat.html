@@ -279,7 +279,6 @@
     </div>
   </div>
 
-
   <!-- In-Chat Partner Profile Sheet -->
   <div id="partner-profile-sheet" class="partner-profile-sheet">
     <div class="partner-profile-card" id="partner-profile-card">
@@ -424,7 +423,7 @@
       if (!imgElem || !initialElem) return;
 
       if (url) {
-        if (imgElem.src === url && imgElem.style.display === 'block') return; // Skip if identical
+        if (imgElem.src === url && imgElem.style.display === 'block') return;
 
         imgElem.onerror = function() {
           this.style.display = 'none';
@@ -672,10 +671,8 @@
 
           let quotedHtml = '';
           let displayContent = msg.content || '';
-          let quotedHtml = '';
-          let displayContent = msg.content || '';
 
-          // 1. Check for media payloads first
+          // 1. Media payload check
           if (displayContent.startsWith('[img]')) {
             const base64Data = displayContent.substring(5);
             displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image">`;
@@ -686,7 +683,7 @@
             const audioData = displayContent.substring(7);
             displayContent = `<audio controls src="${audioData}"></audio>`;
           } else if (displayContent.startsWith('[reply:')) {
-            // 2. Parse reply formatting if present
+            // 2. Reply format check
             const splitIdx = displayContent.indexOf(']');
             if (splitIdx !== -1) {
               const meta = displayContent.substring(7, splitIdx).split('|');
@@ -732,7 +729,6 @@
         console.error('Error loading chat:', err);
       }
     }
-
 
     // 4. Swipe-to-Reply Logic
     function attachSwipeListeners() {
@@ -945,76 +941,196 @@
     loadChat();
     setInterval(loadChat, 3000);
     setInterval(loadTargetUserProfile, 10000);
-      // Image Upload Logic
-  let selectedImageFile = null;
 
-  function handleImageSelected(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    // ==========================================
+    // 8. IMAGE SHARING LOGIC
+    // ==========================================
+    let selectedImageFile = null;
 
-    selectedImageFile = file;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('image-preview-elem').src = e.target.result;
-      document.getElementById('image-preview-modal').style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
-  }
+    function handleImageSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-  function closeImagePreview() {
-    document.getElementById('image-preview-modal').style.display = 'none';
-    document.getElementById('image-file-input').value = '';
-    selectedImageFile = null;
-  }
-
-  async function sendSelectedImage() {
-    if (!selectedImageFile || !targetUser || !activeUser) return;
-    const sendBtn = document.getElementById('image-send-btn');
-    if (sendBtn) {
-      sendBtn.disabled = true;
-      sendBtn.textContent = 'Sending...';
+      selectedImageFile = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('image-preview-elem').src = e.target.result;
+        document.getElementById('image-preview-modal').style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
     }
 
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-      const payload = `[img]${e.target.result}`;
-      await postMessagePayload(payload);
-      closeImagePreview();
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.textContent = 'Send Image';
-      }
-    };
-    reader.readAsDataURL(selectedImageFile);
-  }
+    function closeImagePreview() {
+      document.getElementById('image-preview-modal').style.display = 'none';
+      document.getElementById('image-file-input').value = '';
+      selectedImageFile = null;
+    }
 
-  // Generic Media Dispatcher
-  async function postMessagePayload(contentPayload) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sender: activeUser,
-          receiver: targetUser,
-          sender_username: activeUser,
-          receiver_username: targetUser,
-          content: contentPayload
-        })
+    async function sendSelectedImage() {
+      if (!selectedImageFile || !targetUser || !activeUser) return;
+      const sendBtn = document.getElementById('image-send-btn');
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending...';
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const payload = `[img]${e.target.result}`;
+        await postMessagePayload(payload);
+        closeImagePreview();
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send Image';
+        }
+      };
+      reader.readAsDataURL(selectedImageFile);
+    }
+
+    // ==========================================
+    // 9. STICKER LOGIC (Compress & Limit 10)
+    // ==========================================
+    function getSavedStickers() {
+      return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
+    }
+
+    function toggleStickerDrawer() {
+      const drawer = document.getElementById('sticker-drawer');
+      if (!drawer) return;
+      drawer.classList.toggle('active');
+      if (drawer.classList.contains('active')) {
+        renderStickerDrawer();
+      }
+    }
+
+    function renderStickerDrawer() {
+      const grid = document.getElementById('sticker-grid');
+      const stickers = getSavedStickers();
+      const countElem = document.getElementById('sticker-count');
+      if (countElem) countElem.textContent = stickers.length;
+      if (!grid) return;
+
+      grid.innerHTML = '';
+
+      stickers.forEach((dataUrl, idx) => {
+        const item = document.createElement('div');
+        item.className = 'sticker-item';
+        item.innerHTML = `<img src="${dataUrl}" alt="Sticker ${idx+1}">`;
+        item.onclick = () => sendSticker(dataUrl);
+        grid.appendChild(item);
       });
 
-      if (response.ok) {
-        isUserScrolling = false;
-        await loadChat();
-        setTimeout(() => {
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-        }, 50);
+      if (stickers.length < 10) {
+        const addBtn = document.createElement('div');
+        addBtn.className = 'add-sticker-btn';
+        addBtn.textContent = '+';
+        addBtn.onclick = () => document.getElementById('sticker-file-input').click();
+        grid.appendChild(addBtn);
       }
-    } catch (err) {
-      console.error('Error sending media:', err);
     }
-  }
 
+    function handleStickerSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        compressImage(e.target.result, 150, 150, (compressedBase64) => {
+          const stickers = getSavedStickers();
+          if (stickers.length >= 10) return alert('Maximum 10 stickers allowed.');
+          stickers.push(compressedBase64);
+          localStorage.setItem('retro_stickers', JSON.stringify(stickers));
+          renderStickerDrawer();
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function compressImage(base64Str, maxWidth, maxHeight, callback) {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = maxWidth;
+        canvas.height = maxHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, maxWidth, maxHeight);
+        callback(canvas.toDataURL('image/webp', 0.7));
+      };
+    }
+
+    async function sendSticker(dataUrl) {
+      toggleStickerDrawer();
+      await postMessagePayload(`[sticker]${dataUrl}`);
+    }
+
+    // ==========================================
+    // 10. VOICE NOTE LOGIC
+    // ==========================================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleVoiceRecording() {
+      const vnBtn = document.getElementById('vn-btn');
+      
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              await postMessagePayload(`[audio]${reader.result}`);
+            };
+            reader.readAsDataURL(audioBlob);
+            
+            stream.getTracks().forEach(track => track.stop());
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          if (vnBtn) vnBtn.classList.add('recording');
+        } catch (err) {
+          alert('Microphone access is required to record voice notes.');
+        }
+      } else {
+        if (mediaRecorder) mediaRecorder.stop();
+        isRecording = false;
+        if (vnBtn) vnBtn.classList.remove('recording');
+      }
+    }
+
+    // Generic Media Dispatcher
+    async function postMessagePayload(contentPayload) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: activeUser,
+            receiver: targetUser,
+            sender_username: activeUser,
+            receiver_username: targetUser,
+            content: contentPayload
+          })
+        });
+
+        if (response.ok) {
+          isUserScrolling = false;
+          await loadChat();
+          setTimeout(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }, 50);
+        }
+      } catch (err) {
+        console.error('Error dispatching payload:', err);
+      }
+    }
   </script>
 </body>
 </html>
