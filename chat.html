@@ -490,6 +490,44 @@
 
     loadChat();
     setInterval(loadChat, 3000);
+    // 1. Ping server to state current user is active
+async function sendHeartbeat() {
+  if (!activeUser) return;
+  try {
+    await fetch(`${API_BASE_URL}/api/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: activeUser })
+    });
+  } catch (err) {
+    console.error('Heartbeat error:', err);
+  }
+}
+
+// 2. Check if the target user is online and toggle the green dot
+async function checkTargetOnlineStatus() {
+  if (!targetUser) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const dot = document.getElementById('online-dot');
+      if (dot) {
+        dot.style.display = data.online ? 'block' : 'none';
+      }
+    }
+  } catch (err) {
+    console.error('Online status fetch error:', err);
+  }
+}
+
+// Start heartbeats & status polling
+sendHeartbeat();
+checkTargetOnlineStatus();
+
+setInterval(sendHeartbeat, 9000);        // Send heartbeat every 15 seconds
+setInterval(checkTargetOnlineStatus, 3000); // Check target status every 5 seconds
+
   </script>
 </body>
 </html>
