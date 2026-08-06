@@ -9,6 +9,39 @@
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
+  <style>
+    /* Fullscreen Avatar Modal Style */
+    .avatar-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .avatar-modal.active { display: flex; }
+    .avatar-modal img {
+      max-width: 85%;
+      max-height: 70vh;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.5);
+    }
+    .avatar-modal-close {
+      margin-top: 20px;
+      background: #a855f7;
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .chat-header-avatar-wrapper { cursor: pointer; }
+  </style>
 </head>
 <body>
 
@@ -17,9 +50,9 @@
     <a href="index.html" class="nav-btn">← Back</a>
     
     <div class="chat-header-user">
-      <div class="chat-header-avatar-wrapper">
+      <div class="chat-header-avatar-wrapper" onclick="openAvatarView()">
         <div class="chat-header-avatar" id="header-avatar-container">
-          <img id="header-avatar-img" src="" alt="Avatar" style="display: none;">
+          <img id="header-avatar-img" src="" alt="Avatar" style="display: none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
           <span id="header-avatar-initial">?</span>
         </div>
         <div class="online-dot" title="Active"></div>
@@ -60,6 +93,12 @@
     </form>
   </footer>
 
+  <!-- Avatar Viewer Modal -->
+  <div id="avatar-modal" class="avatar-modal">
+    <img id="modal-avatar-img" src="" alt="Profile Picture">
+    <button class="avatar-modal-close" onclick="closeAvatarView()">Close</button>
+  </div>
+
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
@@ -95,7 +134,7 @@
       loadTargetUserProfile();
     }
 
-    // 2. Load Recipient Profile Picture (Checks localStorage first, then backend fallback)
+    // 2. Load Recipient Profile Picture (Checks local cache first, then backend endpoints)
     async function loadTargetUserProfile() {
       const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
       const savedPfp = localStorage.getItem(cacheKey);
@@ -107,29 +146,59 @@
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/api/users`);
-        if (res.ok) {
-          const users = await res.json();
-          const targetLower = targetUser.toLowerCase();
-          
-          const found = users.find(u => {
-            const uname = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '').toLowerCase();
-            return uname === targetLower;
-          });
+        let pfpUrl = null;
 
-          if (found && typeof found === 'object') {
-            const pfpUrl = found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
-            if (pfpUrl && avatarImg && avatarInitial) {
-              avatarImg.src = pfpUrl;
-              avatarImg.style.display = 'block';
-              avatarInitial.style.display = 'none';
-              localStorage.setItem(cacheKey, pfpUrl);
+        // Try single user fetch endpoint
+        const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}`);
+        if (userRes.ok) {
+          const uData = await userRes.json();
+          pfpUrl = uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
+        }
+
+        // Fallback to global users list if single fetch is unavailable
+        if (!pfpUrl) {
+          const res = await fetch(`${API_BASE_URL}/api/users`);
+          if (res.ok) {
+            const users = await res.json();
+            const targetLower = targetUser.toLowerCase();
+            
+            const found = users.find(u => {
+              const uname = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '').toLowerCase();
+              return uname === targetLower;
+            });
+
+            if (found && typeof found === 'object') {
+              pfpUrl = found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
             }
           }
+        }
+
+        if (pfpUrl && avatarImg && avatarInitial) {
+          avatarImg.src = pfpUrl;
+          avatarImg.style.display = 'block';
+          avatarInitial.style.display = 'none';
+          localStorage.setItem(cacheKey, pfpUrl);
         }
       } catch (err) {
         console.error('Error fetching target avatar:', err);
       }
+    }
+
+    function openAvatarView() {
+      const currentSrc = avatarImg ? avatarImg.src : null;
+      if (currentSrc && avatarImg.style.display !== 'none') {
+        const modal = document.getElementById('avatar-modal');
+        const modalImg = document.getElementById('modal-avatar-img');
+        if (modal && modalImg) {
+          modalImg.src = currentSrc;
+          modal.classList.add('active');
+        }
+      }
+    }
+
+    function closeAvatarView() {
+      const modal = document.getElementById('avatar-modal');
+      if (modal) modal.classList.remove('active');
     }
 
     if (chatContainer) {
@@ -153,7 +222,6 @@
         const activeLower = activeUser.toLowerCase();
         const targetLower = targetUser.toLowerCase();
 
-        // Strict 1-on-1 filter
         const messages = allMessages
           .filter(msg => {
             const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
@@ -312,7 +380,7 @@
       if (bar) bar.style.display = 'none';
     }
 
-    // 5. Direct Message Form Submission
+    // 5. Message Submission
     if (chatForm) {
       chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -363,7 +431,7 @@
       });
     }
 
-    // 6. Typing Indicator Logic
+    // 6. Typing Indicator
     const messageInput = document.getElementById('message-input');
     const typingIndicator = document.getElementById('typing-indicator');
     let typingTimeout;
@@ -414,7 +482,6 @@
 
     setInterval(checkPartnerTyping, 2000);
 
-    // Initial Load & Refresh Loop
     loadChat();
     setInterval(loadChat, 3000);
   </script>
