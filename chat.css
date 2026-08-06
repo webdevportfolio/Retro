@@ -662,6 +662,21 @@ body {
   max-width: 240px;
   margin-top: 4px;
 }
+/* Isolated styles for in-chat media so header & sheet avatars stay unaffected */
+.message-bubble img.msg-image {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 4px;
+  display: block;
+  cursor: pointer;
+}
+
+.message-bubble img.msg-sticker {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  display: block;
+}
 
 /* Balanced Top Nav Spacer */
 .nav-spacer {
