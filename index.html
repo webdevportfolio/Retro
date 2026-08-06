@@ -26,36 +26,27 @@
       box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
     }
     .avatar-modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 9999;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-    }
-    .avatar-modal.active { display: flex; }
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  justify-content: flex-start;
+  align-items: center;
+  flex-direction: column;
+  padding-top: 18vh;
+}
+.avatar-modal.active { display: flex; }
 
-    .avatar-modal img {
-      width: 260px;
-      height: 260px;
-      aspect-ratio: 1 / 1;
-      border-radius: 50%;
-      object-fit: cover;
-    }
+.avatar-modal img {
+  width: 260px;
+  height: 260px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
-    .avatar-modal-close {
-      margin-top: 20px;
-      background: #a855f7;
-      color: #fff;
-      border: none;
-      padding: 8px 20px;
-      border-radius: 20px;
-      font-weight: 600;
-      cursor: pointer;
-    }
   </style>
   <meta property="og:title" content="RETRO">
   <meta property="og:description" content="Chat freely and securely.">
@@ -116,10 +107,10 @@
   </div>
 
   <!-- Fullscreen Avatar Modal -->
-  <div id="avatar-modal" class="avatar-modal">
-    <img id="modal-avatar-img" src="" alt="Profile Picture">
-    <button class="avatar-modal-close" onclick="closeAvatarModal()">Close</button>
-  </div>
+<div id="avatar-modal" class="avatar-modal" onclick="closeAvatarModal()">
+  <img id="modal-avatar-img" src="" alt="Profile Picture">
+</div>
+
 
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
