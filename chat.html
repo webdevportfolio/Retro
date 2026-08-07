@@ -10,7 +10,6 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
 </head>
 <body>
 
@@ -156,8 +155,7 @@
   <!-- Custom Demure Toast Container -->
   <div id="demure-toast" class="demure-toast"></div>
 
-
-         <script>
+  <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
     const socket = io(API_BASE_URL);
 
@@ -490,6 +488,7 @@
 
     function formatSnippetText(content) {
       if (!content) return '';
+      if (content.includes('data:image/') || content.startsWith('data:image')) return '🎨 Sticker';
       if (content.startsWith('[img]')) return '📷 Photo';
       if (content.startsWith('[sticker]')) return '🏷️ Sticker';
       if (content.startsWith('[audio]')) return '🎤 Voice note';
@@ -588,7 +587,7 @@
               const meta = displayContent.substring(7, splitIdx).split('|');
               const replyUser = meta[0] || 'User';
               let replySnippet = meta.slice(1).join('|');
-              replySnippet = formatSnippetText(replySnippet);
+              replySnippet = sanitizeMessageContent(replySnippet);
               quotedHtml = `
                 <div class="quoted-reply-box">
                   <div class="quoted-reply-user">${replyUser}</div>
@@ -599,7 +598,15 @@
             }
           }
 
-          if (displayContent.startsWith('[img]')) {
+          if (displayContent.startsWith('data:image/')) {
+            const stickerId = `stk_${Math.random().toString(36).substr(2, 9)}`;
+            displayContent = `
+              <div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event, '${stickerId}')">
+                <img src="${displayContent}" class="msg-sticker" alt="Sticker">
+                <div class="add-to-pack-tooltip" id="${stickerId}" onclick="saveStickerToDrawer(event, '${displayContent}')">Add to stickerpack</div>
+              </div>
+            `;
+          } else if (displayContent.startsWith('[img]')) {
             const base64Data = displayContent.substring(5);
             displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image" onclick="openChatImageViewer('${base64Data}')">`;
           } else if (displayContent.startsWith('[sticker]')) {
@@ -1122,18 +1129,26 @@
         console.error('Error dispatching payload:', err);
       }
     }
-           function sanitizeMessageContent(content) {
-  if (!content) return '';
-  let text = content.trim();
 
-  // If the text contains raw base64 data, mask it as a sticker/photo
-  if (text.includes('data:image/')) {
-    return '🎨 Sticker';
-  }
+    function sanitizeMessageContent(content) {
+      if (!content) return '';
+      let text = content.trim();
 
-  return text;
-}
+      if (text.startsWith('[reply:')) {
+        const splitIdx = text.indexOf(']');
+        if (splitIdx !== -1) text = text.substring(splitIdx + 1).trim();
+      }
 
+      if (text.includes('data:image/') || text.startsWith('data:image')) {
+        return '🎨 Sticker';
+      }
+
+      if (text.startsWith('[img]')) return '📷 Photo';
+      if (text.startsWith('[sticker]')) return '🎨 Sticker';
+      if (text.startsWith('[audio]')) return '🎙️ Voice note';
+
+      return text;
+    }
   </script>        
 </body>
 </html>
