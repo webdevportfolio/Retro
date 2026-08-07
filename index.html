@@ -636,22 +636,34 @@
     }
 
     async function registerPushSubscription(username) {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-      if (Notification.permission !== 'granted') return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission !== 'granted') return;
 
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const res = await fetch(`${API_BASE_URL}/api/vapid-key`);
-        if (!res.ok) return;
-        const { publicKey } = await res.json();
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    // Updated route path to match server.js: /api/vapid-public-key
+    const res = await fetch(`${API_BASE_URL}/api/vapid-public-key`); 
+    if (!res.ok) return;
+    const { publicKey } = await res.json();
 
-        let subscription = await registration.pushManager.getSubscription();
-        if (!subscription) {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey)
-          });
-        }
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+
+    await fetch(`${API_BASE_URL}/api/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, subscription })
+    });
+  } catch (err) {
+    console.error('Push subscription failed:', err);
+  }
+}
+
 
         await fetch(`${API_BASE_URL}/api/subscribe`, {
           method: 'POST',
