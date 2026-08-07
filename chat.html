@@ -1122,6 +1122,18 @@
         console.error('Error dispatching payload:', err);
       }
     }
+           function sanitizeMessageContent(content) {
+  if (!content) return '';
+  let text = content.trim();
+
+  // If the text contains raw base64 data, mask it as a sticker/photo
+  if (text.includes('data:image/')) {
+    return '🎨 Sticker';
+  }
+
+  return text;
+}
+
   </script>        
 </body>
 </html>
