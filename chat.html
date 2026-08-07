@@ -151,6 +151,9 @@
     </div>
   </div>
 
+  <!-- Custom Demure Toast Container -->
+  <div id="demure-toast" class="demure-toast"></div>
+
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
 
@@ -196,6 +199,18 @@
       }
 
       loadTargetUserProfile();
+    }
+
+    // --- SLEEK CUSTOM TOAST NOTIFICATION ---
+    function showToast(message) {
+      const toast = document.getElementById('demure-toast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2400);
     }
 
     // --- NOTIFICATION HELPERS ---
@@ -988,9 +1003,11 @@
 
       stickers.forEach((dataUrl, idx) => {
         const item = document.createElement('div');
-        item.className = 'sticker-item';
-        item.innerHTML = `<img src="${dataUrl}" alt="Sticker ${idx+1}">`;
-        item.onclick = () => sendSticker(dataUrl);
+        item.className = 'sticker-item-wrapper';
+        item.innerHTML = `
+          <img src="${dataUrl}" alt="Sticker ${idx+1}" onclick="sendSticker('${dataUrl}')">
+          <button type="button" class="remove-sticker-btn" onclick="removeSticker(event, ${idx})" title="Remove sticker">✕</button>
+        `;
         grid.appendChild(item);
       });
 
@@ -1001,6 +1018,15 @@
         addBtn.onclick = () => document.getElementById('sticker-file-input').click();
         grid.appendChild(addBtn);
       }
+    }
+
+    function removeSticker(event, index) {
+      event.stopPropagation();
+      let stickers = getSavedStickers();
+      stickers.splice(index, 1);
+      localStorage.setItem('retro_stickers', JSON.stringify(stickers));
+      renderStickerDrawer();
+      showToast('Removed from stickerpack');
     }
 
     function handleStickerSelected(event) {
@@ -1020,10 +1046,11 @@
           const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
 
           const stickers = getSavedStickers();
-          if (stickers.length >= 10) return alert('Maximum 10 stickers allowed.');
+          if (stickers.length >= 10) return showToast('Stickerpack is full (max 10)');
           stickers.push(compressedBase64);
           localStorage.setItem('retro_stickers', JSON.stringify(stickers));
           renderStickerDrawer();
+          showToast('Sticker added');
         };
       };
       reader.readAsDataURL(file);
@@ -1044,18 +1071,20 @@
       event.stopPropagation();
       const stickers = getSavedStickers();
       if (stickers.includes(dataUrl)) {
-        alert('Sticker is already in your pack!');
+        showToast('Already in your stickerpack');
         return;
       }
       if (stickers.length >= 10) {
-        alert('Your sticker pack is full (max 10).');
+        showToast('Stickerpack full (max 10)');
         return;
       }
       stickers.push(dataUrl);
       localStorage.setItem('retro_stickers', JSON.stringify(stickers));
-      alert('Added to your stickerpack!');
+      showToast('Added to stickerpack ✨');
       
-      event.target.classList.remove('active');
+      if (event.target && event.target.classList) {
+        event.target.classList.remove('active');
+      }
     }
 
     async function sendSticker(dataUrl) {
@@ -1101,7 +1130,7 @@
           isRecording = true;
           if (vnBtn) vnBtn.classList.add('recording');
         } catch (err) {
-          alert('Microphone access is required to record voice notes.');
+          showToast('Microphone access required');
         }
       } else {
         if (mediaRecorder) mediaRecorder.stop();
