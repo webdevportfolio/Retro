@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Chat</title>
 <link rel="stylesheet" href="chat.css">
 <link rel="manifest" href="manifest.json">
@@ -10,6 +10,20 @@
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="theme-color" content="#000">
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+  /* Mobile 100vh fix */
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    margin: 0;
+  }
+  .chat-app-container {
+    height: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
 </head>
 <body>
 <div class="chat-app-container">
@@ -105,9 +119,18 @@
 <div id="demure-toast" class="demure-toast"></div>
 
 <script>
+// XSS Sanitization Utility
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
+}
+
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
 const socket=io(API_BASE_URL);
 let activeReplyTo=null,isUserScrolling=false,previousMessageCount=0,lastFetchedPfpUrl=null;
+let globalAudioCtx=null; // Fix for Audio Context leak
 
 const activeUser=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
 const urlParams=new URLSearchParams(location.search);
@@ -130,7 +153,7 @@ loadTargetUserProfile();
 
 socket.on('connect',()=>{if(activeUser)socket.emit('register_user',activeUser);if(activeUser&&targetUser){socket.emit('join_room',{sender:activeUser,receiver:targetUser});socket.emit('check_online',targetUser)}});
 socket.on('receive_message',loadChat);
-socket.on('user_typing',({sender,isTyping})=>{if(sender?.toLowerCase()===targetUser.toLowerCase())document.getElementById('typing-indicator').textContent=isTyping?`${targetUser} is typing...`:''});
+socket.on('user_typing',({sender,isTyping})=>{if(sender?.toLowerCase()===targetUser.toLowerCase())document.getElementById('typing-indicator').textContent=isTyping?`${escapeHTML(targetUser)} is typing...`:''});
 socket.on('online_status',({username,online})=>{if(username?.toLowerCase()===targetUser.toLowerCase())updateOnlineDot(online)});
 socket.on('user_presence',({username,online})=>{if(username?.toLowerCase()===targetUser.toLowerCase())updateOnlineDot(online)});
 
@@ -139,7 +162,21 @@ function showToast(msg){const t=document.getElementById('demure-toast');t.textCo
 async function updateAppBadge(n){if('setAppBadge'in navigator)try{n>0?await navigator.setAppBadge(n):await navigator.clearAppBadge()}catch{}}
 window.addEventListener('focus',()=>updateAppBadge(0));
 
-function playNotificationSound(){try{const a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(587.33,a.currentTime);g.gain.setValueAtTime(.15,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.35);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+.35)}catch{}}
+function playNotificationSound(){
+    try {
+        if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+        const o = globalAudioCtx.createOscillator(), g = globalAudioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(587.33, globalAudioCtx.currentTime);
+        g.gain.setValueAtTime(0.15, globalAudioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, globalAudioCtx.currentTime + 0.35);
+        o.connect(g).connect(globalAudioCtx.destination);
+        o.start();
+        o.stop(globalAudioCtx.currentTime + 0.35);
+    } catch(e) {}
+}
+
 function showPopUpNotification(sender,msg){if(Notification.permission==='granted'&&'serviceWorker'in navigator)navigator.serviceWorker.ready.then(r=>r.showNotification(`New message from ${sender}`,{body:formatSnippetText(msg),icon:'icon.png',badge:'icon.png',vibrate:[200,100,200],data:{url:`chat.html?user=${encodeURIComponent(sender)}`}}))}
 document.addEventListener('click',()=>{if(Notification.permission==='default')Notification.requestPermission()},{once:true});
 
@@ -157,7 +194,7 @@ else if(!url&&lastFetchedPfpUrl!==null){lastFetchedPfpUrl=null;applyAvatar(avata
 }
 
 function getChatCode(u){let h=0;const s=u.toLowerCase()+'_retro_secret_salt';for(let i=0;i<s.length;i++)h=(h<<5)-h+s.charCodeAt(i),h|=0;return`RETRO-${Math.abs(h).toString(36).toUpperCase().slice(0,5)}`}
-function openAvatarView(){const s=document.getElementById('partner-profile-sheet');document.getElementById('sheet-username').textContent=targetUser;document.getElementById('sheet-chat-code').value=getChatCode(targetUser);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),avatarImg.src||localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`),targetUser);s.classList.add('active')}
+function openAvatarView(){const s=document.getElementById('partner-profile-sheet');document.getElementById('sheet-username').textContent=escapeHTML(targetUser);document.getElementById('sheet-chat-code').value=getChatCode(targetUser);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),avatarImg.src||localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`),targetUser);s.classList.add('active')}
 function closeAvatarView(){document.getElementById('partner-profile-sheet').classList.remove('active')}
 document.getElementById('partner-profile-sheet').onclick=e=>{if(e.target.id==='partner-profile-sheet')closeAvatarView()};
 document.getElementById('partner-profile-card').onclick=e=>e.stopPropagation();
@@ -168,7 +205,14 @@ chatContainer.onscroll=()=>{isUserScrolling=chatContainer.scrollHeight-chatConta
 
 function formatSnippetText(c){if(!c)return'';if(c.startsWith('data:image/')||c.startsWith('[sticker]'))return'[sticker]';if(c.startsWith('[img]'))return'📷 Photo';if(c.startsWith('[audio]'))return'🎤 Voice note';return c}
 function formatAudioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`}
-function parseReplyContent(c){if(!c?.startsWith('[reply:'))return null;let m=c.match(/^\[reply:([^|]+)\|\[sticker\]\s?(.*)$/s);if(m)return{replyUser:m[1],replySnippet:'[sticker]',messageText:m[2]};m=c.match(/^\[reply:([^|]+)\|([\s\S]*?)\]\s?(.*)$/);return m?{replyUser:m[1],replySnippet:m[2],messageText:m[3]}:null}
+
+// Safer regex parsing
+function parseReplyContent(c){
+    if(!c?.startsWith('[reply:')) return null;
+    let m = c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);
+    if(m) return {replyUser: m[1], replySnippet: m[2], messageText: m[3]};
+    return null;
+}
 
 async function loadChat(){
 if(!activeUser||!targetUser)return;
@@ -180,12 +224,39 @@ previousMessageCount=msgs.length;
 if(!msgs.length){messagesList.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">No messages yet. Say hi!</div>';return}
 const lastIn=msgs.toReversed().find(m=>(m.sender_username||m.sender).toLowerCase()===t);if(lastIn){localStorage.setItem(`read_${t}`,lastIn.created_at);fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({other_user:targetUser})}).catch()}
 
-messagesList.innerHTML=msgs.map(m=>{const s=(m.sender_username||m.sender).trim(),sent=s.toLowerCase()===a,time=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read=m.is_read||new Date(localStorage.getItem(`read_${t}`)||0)>=new Date(m.created_at);let q='',c=m.content||'';const p=parseReplyContent(c);if(p){q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${p.replyUser}</div><div>${p.replySnippet==='[sticker]'?'[sticker]':sanitizeMessageContent(p.replySnippet)}</div></div>`;c=p.messageText}
-if(c.startsWith('data:image/')){const id=`stk_${Math.random().toString(36).slice(2,9)}`;c=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${c}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${c}')">Add to stickerpack</div></div>`}
-else if(c.startsWith('[img]'))c=`<img src="${c.slice(5)}" class="msg-image" onclick="openChatImageViewer('${c.slice(5)}')">`;
-else if(c.startsWith('[sticker]')){const id=`stk_${Math.random().toString(36).slice(2,9)}`,d=c.slice(9);c=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${d}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${d}')">Add to stickerpack</div></div>`}
-else if(c.startsWith('[audio]')){const id=`vn_${m.id||Math.random().toString(36).slice(2,9)}`;c=`<div class="custom-audio-player" id="player_${id}"><button class="play-btn" onclick="toggleCustomAudio('${id}')">▶</button><div class="audio-track"><div id="progress_${id}" class="audio-progress"></div></div><span id="time_${id}" class="audio-time">0:00</span><audio id="${id}" src="${c.slice(7)}" onloadedmetadata="initAudioDuration('${id}')" ontimeupdate="updateAudioProgress('${id}')" onended="resetAudioPlayer('${id}')"></audio></div>`}
-return`<div class="message-wrapper ${sent?'sent':'received'}" data-sender="${s}" data-content="${(m.content||'').replace(/"/g,'&quot;')}"><div class="message-bubble">${q}<div class="message-text">${c}</div><div class="message-meta"><span class="timer-clock">${time}</span>${sent?`<span class="read-status ${read?'read':''}">${read?'✓✓':'✓'}</span>`:''}</div></div></div>`}).join('');
+messagesList.innerHTML=msgs.map(m=>{
+    const s=(m.sender_username||m.sender).trim(),sent=s.toLowerCase()===a,time=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read=m.is_read||new Date(localStorage.getItem(`read_${t}`)||0)>=new Date(m.created_at);
+    let q='',c=m.content||'';
+    const p=parseReplyContent(c);
+    
+    if(p){
+        // Safe string interpolation with escapeHTML
+        q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${escapeHTML(p.replyUser)}</div><div>${p.replySnippet==='[sticker]'?'[sticker]':escapeHTML(sanitizeMessageContent(p.replySnippet))}</div></div>`;
+        c=p.messageText;
+    }
+    
+    let renderedContent = '';
+    if(c.startsWith('data:image/')){
+        const id=`stk_${Math.random().toString(36).slice(2,9)}`;
+        renderedContent=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${escapeHTML(c)}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${escapeHTML(c)}')">Add to stickerpack</div></div>`;
+    }
+    else if(c.startsWith('[img]')){
+        renderedContent=`<img src="${escapeHTML(c.slice(5))}" class="msg-image" onclick="openChatImageViewer('${escapeHTML(c.slice(5))}')">`;
+    }
+    else if(c.startsWith('[sticker]')){
+        const id=`stk_${Math.random().toString(36).slice(2,9)}`,d=c.slice(9);
+        renderedContent=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${escapeHTML(d)}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${escapeHTML(d)}')">Add to stickerpack</div></div>`;
+    }
+    else if(c.startsWith('[audio]')){
+        const id=`vn_${m.id||Math.random().toString(36).slice(2,9)}`;
+        renderedContent=`<div class="custom-audio-player" id="player_${id}"><button class="play-btn" onclick="toggleCustomAudio('${id}')">▶</button><div class="audio-track"><div id="progress_${id}" class="audio-progress"></div></div><span id="time_${id}" class="audio-time">0:00</span><audio id="${id}" src="${escapeHTML(c.slice(7))}" onloadedmetadata="initAudioDuration('${id}')" ontimeupdate="updateAudioProgress('${id}')" onended="resetAudioPlayer('${id}')"></audio></div>`;
+    } else {
+        renderedContent = escapeHTML(c);
+    }
+    
+    return`<div class="message-wrapper ${sent?'sent':'received'}" data-sender="${escapeHTML(s)}" data-content="${escapeHTML(m.content||'')}"><div class="message-bubble">${q}<div class="message-text">${renderedContent}</div><div class="message-meta"><span class="timer-clock">${time}</span>${sent?`<span class="read-status ${read?'read':''}">${read?'✓✓':'✓'}</span>`:''}</div></div></div>`;
+}).join('');
+
 attachSwipeListeners();if(!isUserScrolling)setTimeout(()=>chatContainer.scrollTop=chatContainer.scrollHeight,50)
 }
 
@@ -196,14 +267,21 @@ function resetAudioPlayer(id){document.querySelector(`#player_${id}.play-btn`).t
 
 function attachSwipeListeners(){document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0,sw=false;w.ontouchstart=e=>{sx=e.touches[0].clientX;sw=true;w.style.transition='none'};w.ontouchmove=e=>{if(!sw)return;cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{if(!sw)return;sw=false;w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender;const p=parseReplyContent(c);if(p)c=p.messageText;if(c.startsWith('[sticker]')||c.includes('data:image/'))c='[sticker]';triggerReplyUI(s,c);navigator.vibrate?.(25)}w.style.transform='translateX(0)';cx=0}})}
 
-function triggerReplyUI(sender,text){text=text||'';if(text.startsWith('[sticker]')||text.includes('data:image/'))text='[sticker]';activeReplyTo={sender,text};document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;document.getElementById('reply-text-label').textContent=text==='[sticker]'?'[sticker]':formatSnippetText(text);document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()}
+function triggerReplyUI(sender,text){text=text||'';if(text.startsWith('[sticker]')||text.includes('data:image/'))text='[sticker]';activeReplyTo={sender,text};document.getElementById('reply-user-label').textContent=`Replying to ${escapeHTML(sender)}`;document.getElementById('reply-text-label').textContent=text==='[sticker]'?'[sticker]':escapeHTML(formatSnippetText(text));document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()}
 function cancelReply(){activeReplyTo=null;document.getElementById('reply-preview-bar').style.display='none'}
 
 chatForm.onsubmit=async e=>{e.preventDefault();const i=document.getElementById('message-input'),btn=document.getElementById('send-btn');let c=i.value.trim();if(!c||!targetUser||!activeUser)return;if(activeReplyTo){let s=activeReplyTo.text||'';s=s.startsWith('[sticker]')||s.includes('data:image/')?'[sticker]':s.slice(0,40).replace(/\|/g,' ');c=`[reply:${activeReplyTo.sender}|${s}] ${c}`}btn.disabled=true;await postMessagePayload(c);i.value='';cancelReply();btn.disabled=false}
 
 let typingTimeout;document.getElementById('message-input').oninput=()=>{socket.emit('typing',{sender:activeUser,receiver:targetUser,isTyping:true});clearTimeout(typingTimeout);typingTimeout=setTimeout(()=>socket.emit('typing',{sender:activeUser,receiver:targetUser,isTyping:false}),2000)}
 
-loadChat();setInterval(loadTargetUserProfile,10000);
+loadChat();
+
+// Smart Polling - only fetch if tab is active
+setInterval(() => {
+    if (document.visibilityState === 'visible') {
+        loadTargetUserProfile();
+    }
+}, 10000);
 
 let selectedCompressedImage=null;
 function handleImageSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader;r.onload=ev=>{const img=new Image;img.src=ev.target.result;img.onload=()=>{let w=img.width,h=img.height;const max=1200;if(w>h){if(w>max){h=h*max/w;w=max}}else{if(h>max){w=w*max/h;h=max}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);selectedCompressedImage=c.toDataURL('image/jpeg',.75);document.getElementById('preview-modal-title').textContent='Preview Image';document.getElementById('image-preview-elem').src=selectedCompressedImage;document.getElementById('preview-modal-actions').style.display='flex';document.getElementById('image-preview-modal').style.display='flex'}};r.readAsDataURL(f)}
@@ -213,7 +291,7 @@ async function sendSelectedImage(){if(!selectedCompressedImage)return;document.g
 
 const getSavedStickers=()=>JSON.parse(localStorage.getItem('retro_stickers')||'[]');
 function toggleStickerDrawer(){const d=document.getElementById('sticker-drawer');d.classList.toggle('active');if(d.classList.contains('active'))renderStickerDrawer()}
-function renderStickerDrawer(){const g=document.getElementById('sticker-grid'),s=getSavedStickers();document.getElementById('sticker-count').textContent=s.length;g.innerHTML='';s.forEach((d,i)=>g.innerHTML+=`<div class="sticker-item-wrapper"><img src="${d}" onclick="sendSticker('${d}')"><button class="remove-sticker-btn" onclick="removeSticker(event,${i})">✕</button></div>`);if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`}
+function renderStickerDrawer(){const g=document.getElementById('sticker-grid'),s=getSavedStickers();document.getElementById('sticker-count').textContent=s.length;g.innerHTML='';s.forEach((d,i)=>g.innerHTML+=`<div class="sticker-item-wrapper"><img src="${escapeHTML(d)}" onclick="sendSticker('${escapeHTML(d)}')"><button class="remove-sticker-btn" onclick="removeSticker(event,${i})">✕</button></div>`);if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`}
 function removeSticker(e,i){e.stopPropagation();const s=getSavedStickers();s.splice(i,1);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickerDrawer();showToast('Removed')}
 function handleStickerSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader;r.onload=ev=>{const img=new Image;img.src=ev.target.result;img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=150;c.getContext('2d').drawImage(img,0,0,150,150);const d=c.toDataURL('image/webp',.7),s=getSavedStickers();if(s.length>=10)return showToast('Full');s.push(d);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickerDrawer();showToast('Added')}};r.readAsDataURL(f)}
 function toggleStickerSaveTooltip(e,id){e.stopPropagation();document.querySelectorAll('.add-to-pack-tooltip').forEach(t=>t.id!==id&&t.classList.remove('active'));document.getElementById(id).classList.toggle('active')}
@@ -228,4 +306,4 @@ async function postMessagePayload(content){const data={sender:activeUser,receive
 function sanitizeMessageContent(c){if(!c)return'';let t=c.trim();const p=parseReplyContent(t);if(p)t=p.replySnippet;return t==='[sticker]'||t.includes('data:image/')?'[sticker]':t.startsWith('[img]')?'📷 Photo':t.startsWith('[audio]')?'🎙️ Voice note':t}
 </script>
 </body>
-  </html>
+</html>
