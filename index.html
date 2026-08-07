@@ -207,22 +207,53 @@
 
     async function loadInbox() {
       const lowerActive = activeUser.toLowerCase();
-      if (!activeUser) return;
+    async function loadInbox() {
+  if (!activeUser) return;
+  const lowerActive = activeUser.toLowerCase();
 
-      const inboxList = document.getElementById('inbox-list');
-      const emptyNoticeHtml = '<div class="empty-state">No direct messages yet.</div>';
-      if (!inboxList) return;
+  const inboxList = document.getElementById('inbox-list');
+  const emptyNoticeHtml = '<div class="empty-state">No conversations yet</div>';
+  if (!inboxList) return;
 
-      try {
-        let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
-        if (!response.ok) return;
-        
-        let messages = await response.json();
+  try {
+    let response = await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
+    if (!response.ok) return;
 
-        if (!messages || messages.length === 0) {
-          inboxList.innerHTML = emptyNoticeHtml;
-          return;
-        }
+    let data = await response.json();
+    let conversations = data.conversations || [];
+
+    if (!conversations || conversations.length === 0) {
+      inboxList.innerHTML = emptyNoticeHtml;
+      return;
+    }
+
+    inboxList.innerHTML = conversations.map(conv => {
+      const otherUser = conv.other_user;
+      const cachedPfp = localStorage.getItem(`retro_pfp_${otherUser.toLowerCase()}`);
+      
+      return `
+        <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'">
+          <div class="inbox-card-avatar">
+            ${cachedPfp 
+              ? `<img src="${cachedPfp}" class="inbox-avatar-img" alt="${otherUser}">` 
+              : `<span>${otherUser.charAt(0).toUpperCase()}</span>`
+            }
+          </div>
+          <div class="inbox-card-content">
+            <div class="inbox-card-header">
+              <div class="inbox-card-username">@${otherUser}</div>
+            </div>
+            <div class="inbox-card-preview">${conv.last_message || ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Error loading inbox:', err);
+  }
+}
+
 
         const conversationMap = {};
         
