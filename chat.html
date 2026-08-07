@@ -9,294 +9,95 @@
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
-  <style>
-    /* In-Chat Partner Profile Sheet Styles */
-    .partner-profile-sheet {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 9999;
-      justify-content: flex-end;
-      align-items: center;
-      flex-direction: column;
-    }
-
-    .partner-profile-sheet.active {
-      display: flex;
-    }
-
-    .partner-profile-card {
-      width: 100%;
-      max-width: 520px;
-      background: #09090b;
-      border-top-left-radius: 20px;
-      border-top-right-radius: 20px;
-      border: 1px solid var(--glass-border);
-      border-bottom: none;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
-      animation: slideUp 0.25s ease-out;
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-
-    .sheet-header {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-
-    .sheet-title {
-      font-weight: 800;
-      font-size: 1rem;
-      color: var(--text-main);
-    }
-
-    .sheet-avatar-wrapper {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      padding: 3px;
-      background: var(--accent-purple);
-      box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
-      pointer-events: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .sheet-avatar {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: #18181b;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--accent-purple);
-      overflow: hidden;
-      pointer-events: none;
-    }
-
-    .sheet-avatar img,
-    .chat-header-avatar img {
-      pointer-events: none !important;
-      user-select: none !important;
-      -webkit-user-select: none !important;
-      -webkit-touch-callout: none !important;
-      -webkit-user-drag: none !important;
-    }
-
-    .sheet-username {
-      font-weight: 800;
-      font-size: 1.1rem;
-      color: var(--text-main);
-      letter-spacing: 0.5px;
-    }
-
-    .sheet-code-container {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .sheet-code-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.5);
-      letter-spacing: 0.5px;
-    }
-
-    .sheet-code-box {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-    }
-
-    .sheet-code-box input {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: var(--accent-purple);
-      font-weight: 700;
-      font-family: monospace;
-      font-size: 0.95rem;
-      outline: none;
-    }
-
-    .sheet-code-box button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: #ffffff;
-      padding: 0 14px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .sheet-code-box button:hover {
-      background: var(--accent-purple);
-      color: #000000;
-    }
-
-    .sheet-clear-btn {
-      width: 100%;
-      padding: 12px;
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 8px;
-      color: #ef4444;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: background 0.2s ease;
-    }
-
-    .sheet-clear-btn:hover {
-      background: rgba(239, 68, 68, 0.2);
-    }
-
-    .chat-header-avatar-wrapper { cursor: pointer; }
-
-    /* Sticker Save Popover Tooltip */
-    .sticker-wrapper-container {
-      position: relative;
-      display: inline-block;
-    }
-
-    .add-to-pack-tooltip {
-      display: none;
-      position: absolute;
-      bottom: 105%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #18181b;
-      border: 1px solid var(--accent-purple);
-      color: #ffffff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 5px 10px;
-      border-radius: 8px;
-      white-space: nowrap;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
-      z-index: 50;
-    }
-
-    .add-to-pack-tooltip.active {
-      display: block;
-    }
-  </style>
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
-  <header class="nav-bar">
-    <a href="index.html" class="nav-btn">← Back</a>
-    
-    <div class="chat-header-user">
-      <div class="chat-header-avatar-wrapper" onclick="openAvatarView()">
-        <div class="chat-header-avatar" id="header-avatar-container">
-          <img id="header-avatar-img" src="" alt="Avatar" style="display: none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
-          <span id="header-avatar-initial">?</span>
+  <div class="chat-app-container">
+    <!-- Top Navigation Header -->
+    <header class="nav-bar">
+      <a href="index.html" class="nav-btn">← Back</a>
+      
+      <div class="chat-header-user" onclick="openAvatarView()">
+        <div class="chat-header-avatar-wrapper">
+          <div class="chat-header-avatar" id="header-avatar-container">
+            <img id="header-avatar-img" src="" alt="Avatar" style="display: none;">
+            <span id="header-avatar-initial">?</span>
+          </div>
+          <div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
         </div>
-        <div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
+        <div>
+          <div id="chat-with-user" class="chat-header-title">Loading...</div>
+          <div id="typing-indicator" class="typing-indicator"></div>
+        </div>
       </div>
-      <div>
-        <div id="chat-with-user" class="chat-header-title">Loading...</div>
-        <div id="typing-indicator" style="font-size: 0.72rem; color: #a855f7; height: 12px; font-weight: 500;"></div>
+
+      <!-- 3-Dots Profile Modal Toggle -->
+      <button type="button" class="three-dots-btn" onclick="openAvatarView()" title="User Profile">⋮</button>
+    </header>
+
+    <!-- Chat Messages Stream -->
+    <main class="chat-container" id="chat-container">
+      <div id="messages-list" class="messages-list"></div>
+    </main>
+
+    <!-- Sticker Drawer Sheet -->
+    <div id="sticker-drawer" class="sticker-drawer">
+      <div class="sticker-drawer-header">
+        <span>Your Stickers (<span id="sticker-count">0</span>/10)</span>
+        <button type="button" class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button>
       </div>
+      <div class="sticker-grid" id="sticker-grid"></div>
     </div>
 
-    <div class="nav-spacer"></div>
-  </header>
-
-  <!-- Chat Messages Stream -->
-  <main class="chat-container" id="chat-container">
-    <div id="messages-list" class="messages-list"></div>
-  </main>
-
-  <!-- Fixed Bottom Message Input Footer Bar -->
-  <footer class="chat-input-bar">
-    <div id="reply-preview-bar" class="reply-preview-bar">
-      <div>
-        <div id="reply-user-label" class="reply-preview-user">Replying to</div>
-        <div id="reply-text-label" class="reply-preview-content"></div>
+    <!-- Fixed Bottom Message Input Footer Bar -->
+    <footer class="chat-input-bar">
+      <div id="reply-preview-bar" class="reply-preview-bar" style="display: none;">
+        <div>
+          <div id="reply-user-label" class="reply-preview-user">Replying to</div>
+          <div id="reply-text-label" class="reply-preview-content"></div>
+        </div>
+        <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
       </div>
-      <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
-    </div>
 
-    <!-- Hidden file inputs -->
-    <input type="file" id="image-file-input" accept="image/*" style="display: none;" onchange="handleImageSelected(event)">
-    <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
+      <!-- Hidden file inputs -->
+      <input type="file" id="image-file-input" accept="image/*" style="display: none;" onchange="handleImageSelected(event)">
+      <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
 
-    <form id="chat-form">
-      <div class="pill-input-container">
-        <!-- Sticker Toggle Button -->
-        <button type="button" id="sticker-btn" class="pill-btn" onclick="toggleStickerDrawer()" title="Stickers">
-          😀
-        </button>
+      <form id="chat-form">
+        <div class="pill-input-container">
+          <!-- Gallery Image Button -->
+          <button type="button" id="gallery-btn" class="pill-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
+            📎
+          </button>
 
-        <!-- Gallery Image Button -->
-        <button type="button" id="gallery-btn" class="pill-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
-          📎
-        </button>
-        
-        <input 
-          type="text" 
-          id="message-input" 
-          class="pill-input" 
-          placeholder="Message..." 
-          autocomplete="off"
-        >
+          <!-- Sticker Toggle Button -->
+          <button type="button" id="sticker-btn" class="pill-btn" onclick="toggleStickerDrawer()" title="Stickers">
+            😀
+          </button>
+          
+          <input 
+            type="text" 
+            id="message-input" 
+            class="pill-input" 
+            placeholder="Message..." 
+            autocomplete="off"
+          >
 
-        <!-- Voice Note Button -->
-        <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
-          🎙️
-        </button>
+          <!-- Voice Note Button -->
+          <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
+            🎙️
+          </button>
 
-        <!-- Circular Send Button -->
-        <button type="submit" id="send-btn" class="circular-send-btn" title="Send">
-          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
-      </div>
-    </form>
-  </footer>
-
-  <!-- Sticker Drawer Sheet -->
-  <div id="sticker-drawer" class="sticker-drawer">
-    <div class="sticker-drawer-header">
-      <span>Your Stickers (<span id="sticker-count">0</span>/10)</span>
-      <button type="button" class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button>
-    </div>
-    <div class="sticker-grid" id="sticker-grid">
-      <!-- Dynamically generated sticker list & '+' button -->
-    </div>
+          <!-- Circular Send Button -->
+          <button type="submit" id="send-btn" class="circular-send-btn" title="Send">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+          </button>
+        </div>
+      </form>
+    </footer>
   </div>
 
-  <!-- Demure Image Preview & Lightbox Modal -->
+  <!-- Image Preview & Lightbox Modal -->
   <div id="image-preview-modal" class="image-preview-modal" style="display: none;">
     <div class="image-preview-card">
       <div class="sheet-header">
@@ -313,21 +114,21 @@
     </div>
   </div>
 
-  <!-- In-Chat Partner Profile Sheet -->
+  <!-- In-Chat Partner Profile Modal Sheet -->
   <div id="partner-profile-sheet" class="partner-profile-sheet">
     <div class="partner-profile-card" id="partner-profile-card">
       
       <!-- Top Header Navigation -->
       <div class="sheet-header">
-        <button class="nav-btn" onclick="closeAvatarView()">← Back</button>
+        <button type="button" class="nav-btn" onclick="closeAvatarView()">← Back</button>
         <div class="sheet-title">Profile</div>
-        <div style="width: 50px;"></div>
+        <div style="width: 32px;"></div>
       </div>
 
       <!-- Avatar Section -->
       <div class="sheet-avatar-wrapper">
         <div class="sheet-avatar">
-          <img id="sheet-avatar-img" src="" alt="Profile Picture" style="display: none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
+          <img id="sheet-avatar-img" src="" alt="Profile Picture" style="display: none;">
           <span id="sheet-avatar-initial">?</span>
         </div>
       </div>
@@ -340,12 +141,12 @@
         <div class="sheet-code-label">PRIVATE CHAT CODE</div>
         <div class="sheet-code-box">
           <input type="text" id="sheet-chat-code" readonly value="Generating...">
-          <button id="sheet-copy-btn" onclick="copyPartnerCode()">Copy Code</button>
+          <button type="button" id="sheet-copy-btn" onclick="copyPartnerCode()">Copy Code</button>
         </div>
       </div>
 
       <!-- Single Action Item -->
-      <button class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
+      <button type="button" class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
 
     </div>
   </div>
@@ -847,7 +648,6 @@
         const percent = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
         progress.style.width = `${percent}%`;
         if (timeLabel && audio.duration) {
-          // Show countdown or current playback time
           timeLabel.textContent = formatAudioTime(audio.currentTime);
         }
       }
@@ -1133,7 +933,6 @@
     function openChatImageViewer(base64Url) {
       document.getElementById('preview-modal-title').textContent = 'View Photo';
       document.getElementById('image-preview-elem').src = base64Url;
-      // Hide send buttons when simply viewing an already sent image
       document.getElementById('preview-modal-actions').style.display = 'none';
       document.getElementById('image-preview-modal').style.display = 'flex';
     }
@@ -1232,7 +1031,6 @@
 
     function toggleStickerSaveTooltip(event, stickerId) {
       event.stopPropagation();
-      // Hide all other tooltips first
       document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
         if (tip.id !== stickerId) tip.classList.remove('active');
       });
@@ -1257,7 +1055,6 @@
       localStorage.setItem('retro_stickers', JSON.stringify(stickers));
       alert('Added to your stickerpack!');
       
-      // Hide tooltip
       event.target.classList.remove('active');
     }
 
@@ -1266,7 +1063,6 @@
       await postMessagePayload(`[sticker]${dataUrl}`);
     }
 
-    // Close sticker tooltips when clicking anywhere else
     document.addEventListener('click', () => {
       document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
         tip.classList.remove('active');
