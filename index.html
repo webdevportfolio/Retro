@@ -77,17 +77,27 @@
     }
 
     function cleanPreviewText(text) {
-      if (!text) return '';
-      let clean = text;
-      if (clean.startsWith('[reply:')) {
-        const splitIdx = clean.indexOf(']');
-        if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
-      }
-      if (clean.startsWith('[img]')) return '📷 Photo';
-      if (clean.startsWith('[sticker]')) return '🎨 Sticker';
-      if (clean.startsWith('[audio]')) return '🎙️ Voice note';
-      return clean;
-    }
+  if (!text) return '';
+  let clean = text.trim();
+
+  // Strip reply prefixes if present
+  if (clean.startsWith('[reply:')) {
+    const splitIdx = clean.indexOf(']');
+    if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
+  }
+
+  // Catch raw base64 image/sticker data strings
+  if (clean.includes('data:image/') || clean.startsWith('data:image')) {
+    return '🎨 Sticker';
+  }
+
+  if (clean.startsWith('[img]')) return '📷 Photo';
+  if (clean.startsWith('[sticker]')) return '🎨 Sticker';
+  if (clean.startsWith('[audio]')) return '🎙️ Voice note';
+
+  return clean;
+}
+
 
     async function fetchWithRetry(url, options = {}, retries = 2, delay = 1500) {
       for (let i = 0; i <= retries; i++) {
@@ -126,7 +136,7 @@
       const profileBtn = document.getElementById('profile-btn');
       const logoutBtn = document.getElementById('logout-btn');
       if (profileBtn) {
-        profileBtn.textContent = `@${activeUser}`;
+        profileBtn.textContent = `${activeUser}`;
         profileBtn.addEventListener('click', () => window.location.href = 'profile.html');
       }
       if (logoutBtn) {
@@ -151,7 +161,7 @@
           const users = await res.json();
 
           const matchedUser = users.find(u => {
-            const username = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '');
+            const username = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace( '');
             return getChatCode(username) === inputCode;
           });
 
@@ -237,7 +247,7 @@
               </div>
               <div class="inbox-card-content">
                 <div class="inbox-card-header">
-                  <div class="inbox-card-username">@${otherUser}</div>
+                  <div class="inbox-card-username">${otherUser}</div>
                 </div>
                 <div class="inbox-card-preview">${cleanPreviewText(conv.last_message)}</div>
               </div>
