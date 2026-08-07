@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inbox</title>
+  <title>RETRO | Inbox</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon.png">
@@ -188,7 +188,7 @@
     <!-- Enter Private Chat Code Section -->
     <div class="code-entry-card">
       <div class="code-input-wrapper">
-        <input type="text" id="join-code-input" class="input-field code-join-field">
+        <input type="text" id="join-code-input" class="input-field code-join-field" placeholder="Enter Chat Code...">
         <button id="join-code-btn" class="auth-btn join-btn">Search</button>
       </div>
       <div id="code-error" class="code-error-msg"></div>
@@ -273,7 +273,16 @@
 
     function cleanPreviewText(text) {
       if (!text) return '';
-      return text.replace(/\[reply:[^\]]+\]\s*/g, '').trim();
+      let clean = text;
+      // Strip reply metadata: [reply:username|snippet]
+      if (clean.startsWith('[reply:')) {
+        const splitIdx = clean.indexOf(']');
+        if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
+      }
+      if (clean.startsWith('[img]')) return '📷 Photo';
+      if (clean.startsWith('[sticker]')) return '🎨 Sticker';
+      if (clean.startsWith('[audio]')) return '🎙️ Voice note';
+      return clean;
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
@@ -443,9 +452,6 @@
       if (modal) modal.classList.remove('active');
     }
 
-    // ==========================================
-    // GROUP CREATION MODAL LOGIC
-    // ==========================================
     function previewGroupAvatar(event) {
       const file = event.target.files[0];
       const previewImg = document.getElementById('avatar-preview-img');
@@ -576,7 +582,8 @@
       try {
         const res = await fetch(`${API_BASE_URL}/api/groups/user/${encodeURIComponent(activeUser)}`);
         if (!res.ok) return;
-        const { groups } = await res.json();
+        const data = await res.json();
+        const groups = Array.isArray(data) ? data : (data.groups || []);
 
         const groupListContainer = document.getElementById('group-list');
         if (!groupListContainer) return;
