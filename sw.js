@@ -62,7 +62,7 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || 'You received a new message.',
-    icon: '/icon.png',
+    icon: data.icon || '/icon.png', // Supports dynamic avatars passed from server
     badge: '/icon.png',
     vibrate: [200, 100, 200],
     tag: 'retro-message',
