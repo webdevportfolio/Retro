@@ -215,50 +215,133 @@
     });
 
     async function loadInbox() {
-      if (!activeUser) return;
+  if (!activeUser) return;
 
-      const inboxList = document.getElementById('inbox-list');
-      const emptyNoticeHtml = '<div class="empty-state">No direct messages yet.</div>';
-      if (!inboxList) return;
+  const inboxList = document.getElementById('inbox-list');
+  const emptyNoticeHtml =
+    '<div class="empty-state">No direct messages yet.</div>';
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
-        if (!response.ok) return;
+  if (!inboxList) return;
 
-        const data = await response.json();
-        const conversations = data.conversations || [];
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`
+    );
 
-        if (!conversations || conversations.length === 0) {
-          inboxList.innerHTML = emptyNoticeHtml;
-          return;
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const conversations = data.conversations || [];
+
+    if (!conversations || conversations.length === 0) {
+      inboxList.innerHTML = emptyNoticeHtml;
+      return;
+    }
+
+    /*
+      Fetch profile pictures for all conversation users.
+      This makes the inbox independent from the chat page
+      having already been opened.
+    */
+
+    const conversationData = await Promise.all(
+      conversations.map(async conv => {
+        const otherUser = conv.other_user;
+
+        let pfpUrl = localStorage.getItem(
+          `retro_pfp_${otherUser.toLowerCase()}`
+        );
+
+        try {
+          const userRes = await fetch(
+            `${API_BASE_URL}/api/users/${encodeURIComponent(otherUser)}?t=${Date.now()}`
+          );
+
+          if (userRes.ok) {
+            const userData = await userRes.json();
+
+            const freshPfp =
+              userData.pfpUrl ||
+              userData.photoURL ||
+              userData.pfp ||
+              userData.avatar ||
+              userData.profile_picture ||
+              userData.profilePic ||
+              userData.image;
+
+            if (freshPfp) {
+              pfpUrl = freshPfp;
+
+              localStorage.setItem(
+                `retro_pfp_${otherUser.toLowerCase()}`,
+                freshPfp
+              );
+            }
+          }
+        } catch (profileErr) {
+          console.error(
+            `Error loading avatar for ${otherUser}:`,
+            profileErr
+          );
         }
 
-        inboxList.innerHTML = conversations.map(conv => {
-          const otherUser = conv.other_user;
-          const cachedPfp = localStorage.getItem(`retro_pfp_${otherUser.toLowerCase()}`);
+        return {
+          ...conv,
+          pfpUrl
+        };
+      })
+    );
 
-          return `
-            <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'">
-              <div class="inbox-card-avatar">
-                ${cachedPfp 
-                  ? `<img src="${cachedPfp}" class="inbox-avatar-img" alt="${otherUser}">` 
-                  : `<span>${otherUser.charAt(0).toUpperCase()}</span>`
-                }
-              </div>
-              <div class="inbox-card-content">
-                <div class="inbox-card-header">
-                  <div class="inbox-card-username">${otherUser}</div>
-                </div>
-                <div class="inbox-card-preview">${cleanPreviewText(conv.last_message)}</div>
+    inboxList.innerHTML = conversationData.map(conv => {
+      const otherUser = conv.other_user;
+      const cachedPfp = conv.pfpUrl;
+
+      return `
+        <div
+          class="chat-card"
+          onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'"
+        >
+          <div class="inbox-card-avatar">
+            ${
+              cachedPfp
+                ? `
+                  <img
+                    src="${cachedPfp}"
+                    class="inbox-avatar-img"
+                    alt="${otherUser}"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  >
+                  <span style="display:none;">
+                    ${otherUser.charAt(0).toUpperCase()}
+                  </span>
+                `
+                : `
+                  <span>
+                    ${otherUser.charAt(0).toUpperCase()}
+                  </span>
+                `
+            }
+          </div>
+
+          <div class="inbox-card-content">
+            <div class="inbox-card-header">
+              <div class="inbox-card-username">
+                ${otherUser}
               </div>
             </div>
-          `;
-        }).join('');
 
-      } catch (err) {
-        console.error('Error loading inbox:', err);
-      }
-    }
+            <div class="inbox-card-preview">
+              ${cleanPreviewText(conv.last_message)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Error loading inbox:', err);
+  }
+            }
   </script>
 </body>
 </html>
