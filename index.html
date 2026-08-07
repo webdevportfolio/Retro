@@ -264,9 +264,7 @@
   <div id="avatar-modal" class="avatar-modal" onclick="closeAvatarModal()">
     <img id="modal-avatar-img" src="" alt="Profile Picture">
   </div>
-
-
-      <script>
+<script>
   const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
   let lastKnownMsgCount = 0;
   let activeUser = '';
@@ -703,13 +701,12 @@
       }
 
       const inboxList = document.getElementById('inbox-list');
-      const emptyState = document.getElementById('empty-state');
+      const emptyStateHtml = '<div id="empty-state" style="font-size:0.8rem; color:rgba(255,255,255,0.4); font-style:italic;">No direct messages yet.</div>';
       
       if (!inboxList) return;
 
       if (!messages || messages.length === 0) {
-        inboxList.innerHTML = '';
-        if (emptyState) emptyState.style.display = 'block';
+        inboxList.innerHTML = emptyStateHtml;
         document.title = 'RETRO | Inbox';
         updateHomeScreenBadge(0);
         return;
@@ -769,14 +766,11 @@
       });
 
       if (conversations.length === 0) {
-        inboxList.innerHTML = '';
-        if (emptyState) emptyState.style.display = 'block';
+        inboxList.innerHTML = emptyStateHtml;
         document.title = 'RETRO | Inbox';
         updateHomeScreenBadge(0);
         return;
       }
-
-      if (emptyState) emptyState.style.display = 'none';
 
       const totalUnread = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
 
@@ -821,11 +815,6 @@
     }
   }
 </script>
-
-
-    
-      
-    
-        
+ 
 </body>
 </html>
