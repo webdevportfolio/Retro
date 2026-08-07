@@ -254,42 +254,135 @@
     </section>
   </div>
 
-  <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-    let activeUser = '';
-    let knownDmContacts = new Set();
 
-    function logout() {
-      localStorage.removeItem('username');
-      localStorage.removeItem('retro_session');
+        
+        
+        
+<script>
+  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+  let lastKnownMsgCount = 0;
+  let activeUser = '';
+  let knownDmContacts = new Set();
+
+  function logout() {
+    localStorage.removeItem('username');
+    localStorage.removeItem('retro_session');
+    window.location.href = 'auth.html';
+  }
+
+  function cleanPreviewText(text) {
+    if (!text) return '';
+    let clean = text;
+    if (clean.startsWith('[reply:')) {
+      const splitIdx = clean.indexOf(']');
+      if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
+    }
+    if (clean.startsWith('[img]')) return '📷 Photo';
+    if (clean.startsWith('[sticker]')) return '🎨 Sticker';
+    if (clean.startsWith('[audio]')) return '🎙️ Voice note';
+    return clean;
+  }
+
+  // Fetch helper with retry for handling Render backend cold-starts
+  async function fetchWithRetry(url, options = {}, retries = 2, delay = 1500) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetch(url, options);
+        if (res.ok) return res;
+      } catch (err) {
+        if (i === retries) throw err;
+      }
+      await new Promise(res => setTimeout(res, delay));
+    }
+    throw new Error('Network request failed');
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/sw.js');
+      } catch (swErr) {
+        console.error('Service Worker Registration Failed:', swErr);
+      }
+    }
+
+    const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+    activeUser = rawActive.trim().replace('@', '');
+
+    if (!activeUser) {
       window.location.href = 'auth.html';
+      return;
     }
 
-    function cleanPreviewText(text) {
-      if (!text) return '';
-      let clean = text;
-      if (clean.startsWith('[reply:')) {
-        const splitIdx = clean.indexOf(']');
-        if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
-      }
-      if (clean.startsWith('[img]')) return '📷 Photo';
-      if (clean.startsWith('[sticker]')) return '🎨 Sticker';
-      if (clean.startsWith('[audio]')) return '🎙️ Voice note';
-      return clean;
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) {
+      profileBtn.textContent = activeUser;
+      profileBtn.addEventListener('click', () => {
+        window.location.href = 'profile.html';
+      });
     }
 
-    // Helper for Render backend spin-up delay
-    async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1500) {
-      for (let i = 0; i <= retries; i++) {
-        try {
-          const res = await fetch(url, options);
-          if (res.ok) return res;
-        } catch (err) {
-          if (i === retries) throw err;
+    if ('Notification' in window && Notification.permission === 'default') {
+      setTimeout(() => {
+        const notifModal = document.getElementById('notif-modal');
+        if (notifModal) notifModal.classList.add('active');
+      }, 800);
+    }
+
+    registerPushSubscription(activeUser);
+
+    const joinCodeInput = document.getElementById('join-code-input');
+    const joinCodeBtn = document.getElementById('join-code-btn');
+    const codeError = document.getElementById('code-error');
+
+    async function handleCodeJoin() {
+      const inputCode = joinCodeInput.value.trim().toUpperCase();
+      if (!inputCode) return;
+
+      joinCodeBtn.disabled = true;
+      joinCodeBtn.textContent = 'Searching...';
+      if (codeError) codeError.style.display = 'none';
+
+      try {
+        const res = await fetchWithRetry(`${API_BASE_URL}/api/users`);
+        const users = await res.json();
+
+        const matchedUser = users.find(u => {
+          const username = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '');
+          return getChatCode(username) === inputCode;
+        });
+
+        if (matchedUser) {
+          const targetUsername = typeof matchedUser === 'string' ? matchedUser : (matchedUser.username || matchedUser.name);
+
+          if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
+            if (codeError) {
+              codeError.textContent = 'You cannot chat with yourself!';
+              codeError.style.display = 'block';
+            }
+            joinCodeBtn.disabled = false;
+            joinCodeBtn.textContent = 'Search';
+            return;
+          }
+
+          window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
+        } else {
+          if (codeError) {
+            codeError.textContent = 'Invalid Chat Code. Please check and try again.';
+            codeError.style.display = 'block';
+          }
+          joinCodeBtn.disabled = false;
+          joinCodeBtn.textContent = 'Search';
         }
-        await new Promise(r => setTimeout(r, delayMs));
+      } catch (err) {
+        console.error('Error resolving code:', err);
+        if (codeError) {
+          codeError.textContent = 'Server waking up... Try clicking Search again in a moment.';
+          codeError.style.display = 'block';
+        }
+        joinCodeBtn.disabled = false;
+        joinCodeBtn.textContent = 'Search';
       }
-      throw new Error('Fetch failed after retries');
     }
 
     function getChatCode(user) {
@@ -303,232 +396,457 @@
       return `RETRO-${cleanHash}`;
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      activeUser = rawActive.trim().replace('@', '');
+    if (joinCodeBtn) joinCodeBtn.addEventListener('click', handleCodeJoin);
+    if (joinCodeInput) {
+      joinCodeInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleCodeJoin();
+      });
+    }
 
-      if (!activeUser) {
-        window.location.href = 'auth.html';
-        return;
-      }
+    const openGroupBtn = document.getElementById('open-create-group-btn');
+    const submitGroupBtn = document.getElementById('submit-create-group-btn');
 
-      const profileBtn = document.getElementById('profile-btn');
-      if (profileBtn) profileBtn.textContent = activeUser;
+    if (openGroupBtn) openGroupBtn.addEventListener('click', openCreateGroupModal);
+    if (submitGroupBtn) submitGroupBtn.addEventListener('click', handleCreateGroupSubmit);
 
-      const joinCodeInput = document.getElementById('join-code-input');
-      const joinCodeBtn = document.getElementById('join-code-btn');
-      const codeError = document.getElementById('code-error');
-
-      async function handleCodeJoin() {
-        const inputCode = joinCodeInput.value.trim().toUpperCase();
-        if (!inputCode) return;
-
-        joinCodeBtn.disabled = true;
-        joinCodeBtn.textContent = 'Searching...';
-        codeError.style.display = 'none';
-
-        try {
-          const res = await fetchWithRetry(`${API_BASE_URL}/api/users`);
-          const users = await res.json();
-
-          const matchedUser = users.find(u => {
-            const username = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '');
-            return getChatCode(username) === inputCode;
-          });
-
-          if (matchedUser) {
-            const targetUsername = typeof matchedUser === 'string' ? matchedUser : (matchedUser.username || matchedUser.name);
-
-            if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
-              codeError.textContent = 'You cannot chat with yourself!';
-              codeError.style.display = 'block';
-              joinCodeBtn.disabled = false;
-              joinCodeBtn.textContent = 'Search';
-              return;
-            }
-
-            window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
-          } else {
-            codeError.textContent = 'Invalid Chat Code. Please check and try again.';
-            codeError.style.display = 'block';
-            joinCodeBtn.disabled = false;
-            joinCodeBtn.textContent = 'Search';
-          }
-        } catch (err) {
-          console.error('Error resolving code:', err);
-          codeError.textContent = 'Server connecting... Please try clicking Search again in a few seconds.';
-          codeError.style.display = 'block';
-          joinCodeBtn.disabled = false;
-          joinCodeBtn.textContent = 'Search';
-        }
-      }
-
-      if (joinCodeBtn) joinCodeBtn.addEventListener('click', handleCodeJoin);
-      if (joinCodeInput) {
-        joinCodeInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') handleCodeJoin();
-        });
-      }
-
+    loadInbox();
+    loadUserGroups();
+    setInterval(() => {
       loadInbox();
       loadUserGroups();
-      setInterval(() => {
-        loadInbox();
-        loadUserGroups();
-      }, 5000);
-    });
+    }, 4000);
+  });
 
-    async function loadInbox() {
-      const lowerActive = activeUser.toLowerCase();
-      if (!activeUser) return;
+  function dismissNotifModal() {
+    const modal = document.getElementById('notif-modal');
+    if (modal) modal.classList.remove('active');
+  }
 
-      const inboxList = document.getElementById('inbox-list');
-      if (!inboxList) return;
+  async function handleEnableNotifsClick() {
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        registerPushSubscription(activeUser);
+      }
+    } catch (err) {
+      console.error('Notification permission error:', err);
+    } finally {
+      dismissNotifModal();
+    }
+  }
 
-      try {
-        let userAvatars = {};
-        try {
-          const usersRes = await fetch(`${API_BASE_URL}/api/users`);
-          if (usersRes.ok) {
-            const usersList = await usersRes.json();
-            usersList.forEach(u => {
-              if (typeof u === 'object') {
-                const uname = (u.username || u.name || '').trim().replace('@', '').toLowerCase();
-                const pfp = u.pfp || u.avatar || u.profile_picture || u.profilePic || u.image;
-                if (uname && pfp) userAvatars[uname] = pfp;
-              }
-            });
-          }
-        } catch (uErr) {
-          console.error('Error loading user avatars:', uErr);
+  function openChat(username, timestamp) {
+    localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
+
+    fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ other_user: username })
+    }).catch(err => console.error('Mark-read failed:', err));
+
+    window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+  }
+
+  function openGroupChat(groupId) {
+    window.location.href = `groupchat.html?groupId=${groupId}`;
+  }
+
+  function viewInboxAvatar(event, imgSrc) {
+    event.stopPropagation();
+    const modal = document.getElementById('avatar-modal');
+    const modalImg = document.getElementById('modal-avatar-img');
+    if (modal && modalImg) {
+      modalImg.src = imgSrc;
+      modal.classList.add('active');
+    }
+  }
+
+  function closeAvatarModal() {
+    const modal = document.getElementById('avatar-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function previewGroupAvatar(event) {
+    const file = event.target.files[0];
+    const previewImg = document.getElementById('avatar-preview-img');
+    const icon = document.getElementById('avatar-picker-icon');
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        if (previewImg) {
+          previewImg.src = e.target.result;
+          previewImg.style.display = 'block';
         }
+        if (icon) icon.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
 
-        let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
-        if (!response.ok) {
-          response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
-        }
+  function showGroupModalError(msg) {
+    const errBox = document.getElementById('group-modal-error');
+    if (errBox) {
+      errBox.textContent = msg;
+      errBox.style.display = 'block';
+    }
+  }
 
-        if (!response.ok) {
-          inboxList.innerHTML = '<div class="empty-notice">No direct messages yet.</div>';
-          return;
-        }
+  function hideGroupModalError() {
+    const errBox = document.getElementById('group-modal-error');
+    if (errBox) {
+      errBox.style.display = 'none';
+      errBox.textContent = '';
+    }
+  }
 
-        let messages = await response.json();
+  function openCreateGroupModal() {
+    hideGroupModalError();
+    const modal = document.getElementById('create-group-modal');
+    const contactsContainer = document.getElementById('dm-contacts-checklist');
+    if (!modal) return;
+    
+    const sortedContacts = Array.from(knownDmContacts).sort((a, b) => a.localeCompare(b));
 
-        if (!messages || !Array.isArray(messages) || messages.length === 0) {
-          inboxList.innerHTML = '<div class="empty-notice">No direct messages yet.</div>';
-          return;
-        }
-
-        const conversationMap = {};
-
-        messages.forEach(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const receiverRaw = msg.receiver_username || msg.receiver || '';
-
-          const sender = senderRaw.trim().replace('@', '').toLowerCase();
-          const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
-
-          let otherUserDisplay = '';
-          if (sender === lowerActive) {
-            otherUserDisplay = receiverRaw.trim().replace('@', '');
-          } else if (receiver === lowerActive) {
-            otherUserDisplay = senderRaw.trim().replace('@', '');
-          }
-
-          if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
-
-          knownDmContacts.add(otherUserDisplay);
-
-          const mapKey = otherUserDisplay.toLowerCase();
-          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
-
-          if (!conversationMap[mapKey] || msgDate >= new Date(conversationMap[mapKey].created_at)) {
-            conversationMap[mapKey] = {
-              username: otherUserDisplay,
-              sender: sender,
-              content: msg.content || '',
-              created_at: msgDate
-            };
-          }
-        });
-
-        const conversations = Object.values(conversationMap).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-        if (conversations.length === 0) {
-          inboxList.innerHTML = '<div class="empty-notice">No direct messages yet.</div>';
-          return;
-        }
-
-        inboxList.innerHTML = conversations.map(conv => {
-          const unameLower = conv.username.toLowerCase();
-          const avatarPfp = userAvatars[unameLower];
-
-          return `
-            <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
-              <div class="inbox-card-avatar">
-                ${avatarPfp 
-                  ? `<img src="${avatarPfp}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
-                  : `<span>${conv.username.charAt(0).toUpperCase()}</span>`
-                }
-              </div>
-              <div class="inbox-card-content">
-                <div class="inbox-card-header">
-                  <div class="inbox-card-username">${conv.username}</div>
-                </div>
-                <div class="inbox-card-preview">${cleanPreviewText(conv.content)}</div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-      } catch (err) {
-        console.error('Failed to load inbox:', err);
-        inboxList.innerHTML = '<div class="empty-notice">No direct messages yet.</div>';
+    if (contactsContainer) {
+      if (sortedContacts.length === 0) {
+        contactsContainer.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.3); font-style:italic;">No DM contacts available</div>';
+      } else {
+        contactsContainer.innerHTML = sortedContacts.map(contact => `
+          <div class="contact-select-item" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0;">
+            <span style="font-size:0.85rem; font-weight:600;">@${contact}</span>
+            <input type="checkbox" value="${contact}" class="group-member-checkbox">
+          </div>
+        `).join('');
       }
     }
 
-    async function loadUserGroups() {
-      if (!activeUser) return;
-      const groupListContainer = document.getElementById('group-list');
-      if (!groupListContainer) return;
+    modal.classList.add('active');
+  }
 
+  function closeCreateGroupModal() {
+    const modal = document.getElementById('create-group-modal');
+    if (modal) modal.classList.remove('active');
+    
+    const nameInput = document.getElementById('group-name-input');
+    const fileInput = document.getElementById('group-avatar-input');
+    if (nameInput) nameInput.value = '';
+    if (fileInput) fileInput.value = '';
+    hideGroupModalError();
+    
+    const previewImg = document.getElementById('avatar-preview-img');
+    const icon = document.getElementById('avatar-picker-icon');
+    if (previewImg) {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+    }
+    if (icon) icon.style.display = 'inline';
+  }
+
+  async function handleCreateGroupSubmit() {
+    hideGroupModalError();
+    const nameInput = document.getElementById('group-name-input');
+    const fileInput = document.getElementById('group-avatar-input');
+    const submitBtn = document.getElementById('submit-create-group-btn');
+
+    if (!nameInput) return;
+    const groupName = nameInput.value.trim();
+    if (!groupName) {
+      showGroupModalError('Please enter a group name.');
+      return;
+    }
+
+    const checkedMembers = Array.from(document.querySelectorAll('.group-member-checkbox:checked')).map(cb => cb.value);
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating...';
+    }
+
+    let avatarBase64 = null;
+    if (fileInput && fileInput.files[0]) {
+      avatarBase64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(fileInput.files[0]);
+      });
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: groupName,
+          avatar: avatarBase64,
+          created_by: activeUser,
+          members: checkedMembers || []
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.group) {
+        closeCreateGroupModal();
+        window.location.href = `groupchat.html?groupId=${data.group.id}`;
+      } else {
+        showGroupModalError(data.error || 'Failed to create group.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Group';
+        }
+      }
+    } catch (err) {
+      console.error('Error creating group:', err);
+      showGroupModalError('Network error while creating group.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Group';
+      }
+    }
+  }
+
+  async function loadUserGroups() {
+    if (!activeUser) return;
+    const groupListContainer = document.getElementById('group-list');
+    if (!groupListContainer) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/groups/user/${encodeURIComponent(activeUser)}`);
+      if (!res.ok) {
+        groupListContainer.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.3); font-style:italic; padding:0.2rem 0;">No group chats yet.</div>';
+        return;
+      }
+      const data = await res.json();
+      const groups = Array.isArray(data) ? data : (data.groups || []);
+
+      if (!groups || groups.length === 0) {
+        groupListContainer.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.3); font-style:italic; padding:0.2rem 0;">No group chats yet.</div>';
+        return;
+      }
+
+      groupListContainer.innerHTML = groups.map(g => `
+        <div class="chat-card" onclick="openGroupChat('${g.id}')">
+          <div class="inbox-card-avatar" ${g.avatar ? `onclick="viewInboxAvatar(event, '${g.avatar}')"` : ''}>
+            ${g.avatar 
+              ? `<img src="${g.avatar}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
+              : `<span class="inbox-avatar-initial">${g.name.charAt(0).toUpperCase()}</span>`
+            }
+          </div>
+          <div class="inbox-card-content">
+            <div class="inbox-card-header">
+              <div class="inbox-card-username">${g.name}</div>
+            </div>
+            <div class="inbox-card-preview">Tap to enter group chat</div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      console.error('Failed to load user groups:', err);
+      groupListContainer.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.3); font-style:italic; padding:0.2rem 0;">No group chats yet.</div>';
+    }
+  }
+
+  function updateHomeScreenBadge(count) {
+    if ('setAppBadge' in navigator) {
+      if (count > 0) {
+        navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
+      } else {
+        navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
+      }
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  async function registerPushSubscription(username) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const res = await fetch(`${API_BASE_URL}/api/vapid-public-key`); 
+      if (!res.ok) return;
+      const { publicKey } = await res.json();
+
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+      }
+
+      await fetch(`${API_BASE_URL}/api/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, subscription })
+      });
+    } catch (err) {
+      console.error('Push subscription failed:', err);
+    }
+  }
+
+  async function loadInbox() {
+    const lowerActive = activeUser.toLowerCase();
+    if (!activeUser) return;
+
+    const inboxList = document.getElementById('inbox-list');
+    const emptyNoticeHtml = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.3); font-style:italic; padding:0.2rem 0;">No direct messages yet.</div>';
+    if (!inboxList) return;
+
+    try {
+      let userAvatars = {};
       try {
-        const res = await fetch(`${API_BASE_URL}/api/groups/user/${encodeURIComponent(activeUser)}`);
-        if (!res.ok) {
-          groupListContainer.innerHTML = '<div class="empty-notice">No group chats yet.</div>';
-          return;
+        const usersRes = await fetch(`${API_BASE_URL}/api/users`);
+        if (usersRes.ok) {
+          const usersList = await usersRes.json();
+          usersList.forEach(u => {
+            if (typeof u === 'object') {
+              const uname = (u.username || u.name || '').trim().replace('@', '').toLowerCase();
+              const pfp = u.pfp || u.avatar || u.profile_picture || u.profilePic || u.image;
+              if (uname && pfp) {
+                userAvatars[uname] = pfp;
+                localStorage.setItem(`retro_pfp_${uname}`, pfp);
+              }
+            }
+          });
         }
+      } catch (uErr) {
+        console.error('Error loading user avatars:', uErr);
+      }
+
+      let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+      if (!response.ok) return;
+      
+      let messages = await response.json();
+
+      if ((!messages || messages.length === 0) && activeUser !== lowerActive) {
+        const fallbackRes = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
+        if (fallbackRes.ok) {
+          messages = await fallbackRes.json();
+        }
+      }
+
+      if (!messages || messages.length === 0) {
+        inboxList.innerHTML = emptyNoticeHtml;
+        document.title = 'RETRO | Inbox';
+        updateHomeScreenBadge(0);
+        return;
+      }
+
+      lastKnownMsgCount = messages.length;
+      const conversationMap = {};
+      
+      messages.forEach(msg => {
+        const senderRaw = msg.sender_username || msg.sender || '';
+        const receiverRaw = msg.receiver_username || msg.receiver || '';
         
-        const data = await res.json();
-        const groups = Array.isArray(data) ? data : (data.groups || []);
-
-        if (!groups || groups.length === 0) {
-          groupListContainer.innerHTML = '<div class="empty-notice">No group chats yet.</div>';
-          return;
+        const sender = senderRaw.trim().replace('@', '').toLowerCase();
+        const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
+        
+        let otherUserDisplay = '';
+        if (sender === lowerActive) {
+          otherUserDisplay = receiverRaw.trim().replace('@', '');
+        } else if (receiver === lowerActive) {
+          otherUserDisplay = senderRaw.trim().replace('@', '');
         }
 
-        groupListContainer.innerHTML = groups.map(g => `
-          <div class="chat-card" onclick="window.location.href='groupchat.html?groupId=${g.id}'">
-            <div class="inbox-card-avatar">
-              ${g.avatar 
-                ? `<img src="${g.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
-                : `<span>${g.name.charAt(0).toUpperCase()}</span>`
+        if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
+
+        knownDmContacts.add(otherUserDisplay);
+
+        const mapKey = otherUserDisplay.toLowerCase();
+        const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
+
+        if (!conversationMap[mapKey]) {
+          conversationMap[mapKey] = {
+            username: otherUserDisplay,
+            sender: sender,
+            content: msg.content || '',
+            created_at: msgDate,
+            unreadCount: 0
+          };
+        }
+
+        const lastReadTime = localStorage.getItem(`read_${mapKey}`);
+        const isIncoming = sender !== lowerActive;
+        const isUnread = isIncoming && (!lastReadTime || msgDate > new Date(lastReadTime));
+
+        if (isUnread) {
+          conversationMap[mapKey].unreadCount++;
+        }
+
+        if (msgDate >= new Date(conversationMap[mapKey].created_at)) {
+          conversationMap[mapKey].created_at = msgDate;
+          conversationMap[mapKey].content = msg.content || '';
+          conversationMap[mapKey].sender = sender;
+        }
+      });
+
+      const conversations = Object.values(conversationMap).sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      if (conversations.length === 0) {
+        inboxList.innerHTML = emptyNoticeHtml;
+        document.title = 'RETRO | Inbox';
+        updateHomeScreenBadge(0);
+        return;
+      }
+
+      const totalUnread = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
+
+      if (totalUnread > 0) {
+        document.title = `(${totalUnread}) RETRO | Inbox`;
+        updateHomeScreenBadge(totalUnread);
+      } else {
+        document.title = 'RETRO | Inbox';
+        updateHomeScreenBadge(0);
+      }
+
+      inboxList.innerHTML = conversations.map(conv => {
+        const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const hasUnread = conv.unreadCount > 0;
+        const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
+        
+        const unameLower = conv.username.toLowerCase();
+        const avatarPfp = userAvatars[unameLower] || localStorage.getItem(`retro_pfp_${unameLower}`);
+
+        return `
+          <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
+            <div class="inbox-card-avatar" ${avatarPfp ? `onclick="viewInboxAvatar(event, '${avatarPfp}')"` : ''}>
+              ${avatarPfp 
+                ? `<img src="${avatarPfp}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
+                : `<span class="inbox-avatar-initial">${conv.username.charAt(0).toUpperCase()}</span>`
               }
             </div>
             <div class="inbox-card-content">
               <div class="inbox-card-header">
-                <div class="inbox-card-username">${g.name}</div>
+                <div class="inbox-card-username">${conv.username}</div>
+                ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
               </div>
-              <div class="inbox-card-preview">Tap to enter group chat</div>
+              <div class="inbox-card-preview">${cleanPreviewText(conv.content)}</div>
+              <div class="inbox-card-time">${time}</div>
             </div>
           </div>
-        `).join('');
-      } catch (err) {
-        console.error('Failed to load user groups:', err);
-        groupListContainer.innerHTML = '<div class="empty-notice">No group chats yet.</div>';
-      }
+        `;
+      }).join('');
+
+    } catch (err) {
+      console.error('Failed to load inbox:', err);
+      inboxList.innerHTML = emptyNoticeHtml;
     }
-  </script>
+  }
+</script>
+
 </body>
 </html>
