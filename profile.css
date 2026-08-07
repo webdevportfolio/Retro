@@ -1,5 +1,5 @@
 /* ==========================================
-   PROFILE PAGE STYLES (profile.css)
+   PROFILE PAGE STYLES (profile.css) - PURPLE THEME
    ========================================== */
 
 * {
@@ -32,7 +32,7 @@ body.inbox-body {
 }
 
 .nav-btn {
-  color: #3b82f6;
+  color: #a855f7;
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 500;
@@ -78,7 +78,7 @@ body.inbox-body {
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(135deg, #a855f7, #6b21a8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,7 +149,7 @@ body.inbox-body {
 .stat-value {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #3b82f6;
+  color: #c084fc;
   margin-bottom: 4px;
 }
 
@@ -193,7 +193,7 @@ body.inbox-body {
 }
 
 .copy-btn {
-  background: #3b82f6;
+  background: #9333ea;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -205,7 +205,7 @@ body.inbox-body {
 }
 
 .copy-btn:hover {
-  background: #2563eb;
+  background: #7e22ce;
 }
 
 /* Meta Box (Password) */
