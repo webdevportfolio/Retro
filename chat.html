@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat</title>
   <link rel="stylesheet" href="chat.css">
   <link rel="manifest" href="manifest.json">
@@ -23,12 +23,10 @@
             <img id="header-avatar-img" src="" alt="Avatar" style="display: none;">
             <span id="header-avatar-initial">?</span>
           </div>
+          <div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
         </div>
-        <div class="chat-header-meta">
-          <div class="chat-header-title-row">
-            <span id="chat-with-user" class="chat-header-title">Loading...</span>
-            <div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
-          </div>
+        <div>
+          <div id="chat-with-user" class="chat-header-title">Loading...</div>
           <div id="typing-indicator" class="typing-indicator"></div>
         </div>
       </div>
@@ -67,10 +65,12 @@
 
       <form id="chat-form">
         <div class="pill-input-container">
+          <!-- Gallery Image Button -->
           <button type="button" id="gallery-btn" class="pill-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
             📎
           </button>
 
+          <!-- Sticker Toggle Button -->
           <button type="button" id="sticker-btn" class="pill-btn" onclick="toggleStickerDrawer()" title="Stickers">
             😀
           </button>
@@ -83,10 +83,12 @@
             autocomplete="off"
           >
 
+          <!-- Voice Note Button -->
           <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
             🎙️
           </button>
 
+          <!-- Circular Send Button -->
           <button type="submit" id="send-btn" class="circular-send-btn" title="Send">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
           </button>
@@ -112,15 +114,18 @@
     </div>
   </div>
 
-  <!-- Partner Profile Sheet -->
+  <!-- In-Chat Partner Profile Modal Sheet -->
   <div id="partner-profile-sheet" class="partner-profile-sheet">
     <div class="partner-profile-card" id="partner-profile-card">
+      
+      <!-- Top Header Navigation -->
       <div class="sheet-header">
         <button type="button" class="nav-btn" onclick="closeAvatarView()">← Back</button>
         <div class="sheet-title">Profile</div>
         <div style="width: 32px;"></div>
       </div>
 
+      <!-- Avatar Section -->
       <div class="sheet-avatar-wrapper">
         <div class="sheet-avatar">
           <img id="sheet-avatar-img" src="" alt="Profile Picture" style="display: none;">
@@ -128,8 +133,10 @@
         </div>
       </div>
 
+      <!-- Display Name -->
       <div id="sheet-username" class="sheet-username">User</div>
 
+      <!-- Private Code Container -->
       <div class="sheet-code-container">
         <div class="sheet-code-label">PRIVATE CHAT CODE</div>
         <div class="sheet-code-box">
@@ -138,7 +145,9 @@
         </div>
       </div>
 
+      <!-- Single Action Item -->
       <button type="button" class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
+
     </div>
   </div>
 
@@ -150,6 +159,7 @@
     let previousMessageCount = 0;
     let lastFetchedPfpUrl = null;
 
+    // 1. Resolve Session & Recipient
     const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
     const activeUser = rawActiveUser.trim().replace('@', '');
     
@@ -157,8 +167,13 @@
     let targetUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('u') || '';
     targetUser = targetUser.trim().replace('@', '');
 
-    if (!activeUser) window.location.href = 'auth.html';
-    if (!targetUser || targetUser.toLowerCase() === activeUser.toLowerCase()) window.location.href = 'index.html';
+    if (!activeUser) {
+      window.location.href = 'auth.html';
+    }
+
+    if (!targetUser || targetUser.toLowerCase() === activeUser.toLowerCase()) {
+      window.location.href = 'index.html';
+    }
 
     const chatTitleElem = document.getElementById('chat-with-user');
     const avatarImg = document.getElementById('header-avatar-img');
@@ -179,13 +194,71 @@
         avatarInitial.style.display = 'none';
         lastFetchedPfpUrl = cachedUrl;
       }
+
       loadTargetUserProfile();
     }
 
+    // --- NOTIFICATION HELPERS ---
+    async function updateAppBadge(count) {
+      if ('setAppBadge' in navigator) {
+        try {
+          if (count > 0) await navigator.setAppBadge(count);
+          else await navigator.clearAppBadge();
+        } catch (e) {
+          console.error('Badge error:', e);
+        }
+      }
+    }
+
+    window.addEventListener('focus', () => updateAppBadge(0));
+
+    function playNotificationSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch (err) {
+        console.error('Audio error:', err);
+      }
+    }
+
+    function showPopUpNotification(sender, messageText) {
+      if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(`New message from ${sender}`, {
+            body: formatSnippetText(messageText),
+            icon: 'icon.png',
+            badge: 'icon.png',
+            vibrate: [200, 100, 200],
+            data: { url: `chat.html?user=${encodeURIComponent(sender)}` }
+          });
+        });
+      }
+    }
+
+    document.addEventListener('click', () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }, { once: true });
+
     function applyAvatar(imgElem, initialElem, url, username) {
       if (!imgElem || !initialElem) return;
+
       if (url) {
         if (imgElem.src === url && imgElem.style.display === 'block') return;
+
         imgElem.onerror = function() {
           this.style.display = 'none';
           if (initialElem) {
@@ -193,6 +266,7 @@
             initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
           }
         };
+
         imgElem.src = url;
         imgElem.style.display = 'block';
         if (initialElem) initialElem.style.display = 'none';
@@ -205,28 +279,66 @@
       }
     }
 
+    // 2. Load Recipient Profile Picture
     async function loadTargetUserProfile() {
       if (!targetUser) return;
+
       try {
         let pfpUrl = null;
         const timestamp = Date.now();
+
         const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`);
         if (userRes.ok) {
           const uData = await userRes.json();
           pfpUrl = uData.pfpUrl || uData.photoURL || uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
         }
 
+        if (!pfpUrl) {
+          const res = await fetch(`${API_BASE_URL}/api/users?t=${timestamp}`);
+          if (res.ok) {
+            const users = await res.json();
+            const targetLower = targetUser.toLowerCase();
+            
+            const found = users.find(u => {
+              const uname = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '').toLowerCase();
+              return uname === targetLower;
+            });
+
+            if (found && typeof found === 'object') {
+              pfpUrl = found.pfpUrl || found.photoURL || found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
+            }
+          }
+        }
+
         if (pfpUrl && pfpUrl !== lastFetchedPfpUrl) {
           lastFetchedPfpUrl = pfpUrl;
           applyAvatar(avatarImg, avatarInitial, pfpUrl, targetUser);
+
           const sheetImg = document.getElementById('sheet-avatar-img');
           const sheetInitial = document.getElementById('sheet-avatar-initial');
           applyAvatar(sheetImg, sheetInitial, pfpUrl, targetUser);
-          localStorage.setItem(`retro_pfp_${targetUser.toLowerCase()}`, pfpUrl);
+
+          const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
+          localStorage.setItem(cacheKey, pfpUrl);
+        } else if (!pfpUrl && lastFetchedPfpUrl !== null) {
+          lastFetchedPfpUrl = null;
+          applyAvatar(avatarImg, avatarInitial, null, targetUser);
         }
       } catch (err) {
         console.error('Error fetching target avatar:', err);
       }
+    }
+
+    // --- PROFILE SHEET LOGIC ---
+    function getChatCode(user) {
+      let hash = 0;
+      const str = user.toLowerCase() + "_retro_secret_salt";
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
+      return `RETRO-${cleanHash}`;
     }
 
     function openAvatarView() {
@@ -237,11 +349,15 @@
       const sheetCodeInput = document.getElementById('sheet-chat-code');
 
       if (!sheet) return;
+
       if (sheetUsername) sheetUsername.textContent = targetUser;
-      if (sheetCodeInput) sheetCodeInput.value = `RETRO-${Math.abs(targetUser.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a|0},0)).toString(36).toUpperCase().substring(0,5)}`;
+      if (sheetCodeInput) sheetCodeInput.value = getChatCode(targetUser);
 
       const cachedUrl = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
-      applyAvatar(sheetImg, sheetInitial, cachedUrl, targetUser);
+      const currentSrc = (avatarImg && avatarImg.style.display !== 'none' && avatarImg.src) ? avatarImg.src : cachedUrl;
+      
+      applyAvatar(sheetImg, sheetInitial, currentSrc, targetUser);
+
       sheet.classList.add('active');
     }
 
@@ -250,6 +366,67 @@
       if (sheet) sheet.classList.remove('active');
     }
 
+    const sheetOverlay = document.getElementById('partner-profile-sheet');
+    const sheetCard = document.getElementById('partner-profile-card');
+
+    if (sheetOverlay) {
+      sheetOverlay.addEventListener('click', (e) => {
+        if (e.target === sheetOverlay) {
+          closeAvatarView();
+        }
+      });
+    }
+
+    if (sheetCard) {
+      sheetCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    async function copyPartnerCode() {
+      const codeInput = document.getElementById('sheet-chat-code');
+      const btn = document.getElementById('sheet-copy-btn');
+      if (!codeInput) return;
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(codeInput.value);
+        } else {
+          codeInput.select();
+          document.execCommand('copy');
+        }
+
+        if (btn) {
+          const origText = btn.innerText;
+          btn.innerText = 'Copied!';
+          setTimeout(() => btn.innerText = origText, 2000);
+        }
+      } catch (err) {
+        console.error('Copy error:', err);
+      }
+    }
+
+    async function clearCurrentChat() {
+      if (!confirm(`Are you sure you want to clear your chat with ${targetUser}?`)) return;
+
+      try {
+        if (messagesList) {
+          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">Chat cleared.</div>';
+        }
+        closeAvatarView();
+      } catch (err) {
+        console.error('Clear chat error:', err);
+      }
+    }
+
+    if (chatContainer) {
+      chatContainer.addEventListener('scroll', () => {
+        const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
+        isUserScrolling = !isAtBottom;
+      });
+    }
+
+    // Helper: Truncates raw media payloads into human-readable text
     function formatSnippetText(content) {
       if (!content) return '';
       if (content.startsWith('[img]')) return '📷 Photo';
@@ -258,8 +435,18 @@
       return content;
     }
 
+    // Helper: Formats seconds to mm:ss
+    function formatAudioTime(seconds) {
+      if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // 3. Fetch & Render Messages
     async function loadChat() {
       if (!activeUser || !targetUser) return;
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
         if (!response.ok) return;
@@ -278,9 +465,48 @@
           })
           .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
 
+        if (messages && messages.length > 0) {
+          if (messages.length > previousMessageCount && previousMessageCount !== 0) {
+            const latestMsg = messages[messages.length - 1];
+            const sender = (latestMsg.sender_username || latestMsg.sender || '').trim().replace('@', '');
+
+            if (sender.toLowerCase() === targetLower) {
+              playNotificationSound();
+              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+              updateAppBadge(1);
+
+              if (document.hidden) {
+                let textSnippet = latestMsg.content || 'New message';
+                if (textSnippet.startsWith('[reply:')) {
+                  const closeIdx = textSnippet.indexOf(']');
+                  if (closeIdx !== -1) textSnippet = textSnippet.substring(closeIdx + 1).trim();
+                }
+                showPopUpNotification(targetUser, textSnippet);
+              }
+            }
+          }
+          previousMessageCount = messages.length;
+        }
+
         if (!messages || messages.length === 0) {
           messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
           return;
+        }
+
+        const latestIncoming = [...messages].reverse().find(msg => {
+          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
+          return sender === targetLower;
+        });
+
+        if (latestIncoming) {
+          const msgTime = latestIncoming.created_at || latestIncoming.timestamp || new Date().toISOString();
+          localStorage.setItem(`read_${targetLower}`, msgTime);
+
+          fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ other_user: targetUser })
+          }).catch(err => console.error('Mark-read error:', err));
         }
 
         messagesList.innerHTML = messages.map(msg => {
@@ -289,8 +515,32 @@
           const isSent = senderClean.toLowerCase() === activeLower;
           const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+          const lastReadByTarget = localStorage.getItem(`read_${targetLower}`);
+          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
+          const isRead = msg.is_read || (lastReadByTarget && new Date(lastReadByTarget) >= msgDate);
+
+          let quotedHtml = '';
           let displayContent = msg.content || '';
 
+          // Quoted reply check
+          if (displayContent.startsWith('[reply:')) {
+            const splitIdx = displayContent.indexOf(']');
+            if (splitIdx !== -1) {
+              const meta = displayContent.substring(7, splitIdx).split('|');
+              const replyUser = meta[0] || 'User';
+              let replySnippet = meta.slice(1).join('|');
+              replySnippet = formatSnippetText(replySnippet);
+              quotedHtml = `
+                <div class="quoted-reply-box">
+                  <div class="quoted-reply-user">${replyUser}</div>
+                  <div>${replySnippet}</div>
+                </div>
+              `;
+              displayContent = displayContent.substring(splitIdx + 1).trim();
+            }
+          }
+
+          // Media payload checks
           if (displayContent.startsWith('[img]')) {
             const base64Data = displayContent.substring(5);
             displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image" onclick="openChatImageViewer('${base64Data}')">`;
@@ -303,29 +553,417 @@
                 <div class="add-to-pack-tooltip" id="${stickerId}" onclick="saveStickerToDrawer(event, '${base64Data}')">Add to stickerpack</div>
               </div>
             `;
+          } else if (displayContent.startsWith('[audio]')) {
+            const audioData = displayContent.substring(7);
+            const audioId = `vn_${msg.id || Math.random().toString(36).substr(2, 9)}`;
+            displayContent = `
+              <div class="custom-audio-player" id="player_${audioId}">
+                <button type="button" class="play-btn" onclick="toggleCustomAudio('${audioId}')">▶</button>
+                <div class="audio-track">
+                  <div class="audio-progress" id="progress_${audioId}"></div>
+                </div>
+                <span class="audio-time" id="time_${audioId}">0:00</span>
+                <audio id="${audioId}" src="${audioData}" preload="metadata" onloadedmetadata="initAudioDuration('${audioId}')" ontimeupdate="updateAudioProgress('${audioId}')" onended="resetAudioPlayer('${audioId}')"></audio>
+              </div>
+            `;
           }
 
+          const safeContent = (msg.content || '').replace(/"/g, '&quot;');
+
           return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}">
+            <div class="message-wrapper ${isSent ? 'sent' : 'received'}" 
+                 data-sender="${senderClean}" 
+                 data-content="${safeContent}">
               <div class="message-bubble">
+                ${quotedHtml}
                 <div class="message-text">${displayContent}</div>
                 <div class="message-meta">
                   <span class="timer-clock">${time}</span>
+                  ${isSent ? `<span class="read-status ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}
                 </div>
               </div>
             </div>
           `;
         }).join('');
 
+        attachSwipeListeners();
+
         if (!isUserScrolling) {
-          setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 50);
+          setTimeout(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }, 50);
         }
+        
       } catch (err) {
         console.error('Error loading chat:', err);
       }
     }
 
-    // --- STICKER DRAWER & MANAGEMENT ---
+    // Custom Audio Control Handlers
+    function toggleCustomAudio(id) {
+      const audio = document.getElementById(id);
+      const player = document.getElementById(`player_${id}`);
+      if (!audio || !player) return;
+
+      const btn = player.querySelector('.play-btn');
+
+      // Pause all other audio players
+      document.querySelectorAll('audio').forEach(a => {
+        if (a.id !== id && !a.paused) {
+          a.pause();
+          const p = document.getElementById(`player_${a.id}`);
+          if (p) {
+            const b = p.querySelector('.play-btn');
+            if (b) b.textContent = '▶';
+          }
+        }
+      });
+
+      if (audio.paused) {
+        audio.play();
+        if (btn) btn.textContent = '❚❚';
+      } else {
+        audio.pause();
+        if (btn) btn.textContent = '▶';
+      }
+    }
+
+    function initAudioDuration(id) {
+      const audio = document.getElementById(id);
+      const timeLabel = document.getElementById(`time_${id}`);
+      if (audio && timeLabel) {
+        const duration = audio.duration;
+        if (!isNaN(duration) && isFinite(duration)) {
+          timeLabel.textContent = formatAudioTime(duration);
+        }
+      }
+    }
+
+    function updateAudioProgress(id) {
+      const audio = document.getElementById(id);
+      const progress = document.getElementById(`progress_${id}`);
+      const timeLabel = document.getElementById(`time_${id}`);
+
+      if (audio && progress) {
+        const percent = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        progress.style.width = `${percent}%`;
+        if (timeLabel && audio.duration) {
+          timeLabel.textContent = formatAudioTime(audio.currentTime);
+        }
+      }
+    }
+
+    function resetAudioPlayer(id) {
+      const audio = document.getElementById(id);
+      const player = document.getElementById(`player_${id}`);
+      const progress = document.getElementById(`progress_${id}`);
+      const timeLabel = document.getElementById(`time_${id}`);
+
+      if (player) {
+        const btn = player.querySelector('.play-btn');
+        if (btn) btn.textContent = '▶';
+      }
+      if (progress) progress.style.width = '0%';
+      if (audio && timeLabel) {
+        timeLabel.textContent = formatAudioTime(audio.duration || 0);
+      }
+    }
+
+    // 4. Swipe-to-Reply Logic
+    function attachSwipeListeners() {
+      const wrappers = document.querySelectorAll('.message-wrapper');
+      wrappers.forEach(wrapper => {
+        let startX = 0;
+        let currentX = 0;
+        let isSwiping = false;
+
+        wrapper.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          isSwiping = true;
+          wrapper.style.transition = 'none';
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+          if (!isSwiping) return;
+          currentX = e.touches[0].clientX - startX;
+
+          if (currentX > 0 && currentX < 90) {
+            wrapper.style.transform = `translateX(${currentX}px)`;
+          }
+        }, { passive: true });
+
+        wrapper.addEventListener('touchend', () => {
+          if (!isSwiping) return;
+          isSwiping = false;
+          wrapper.style.transition = 'transform 0.2s ease';
+
+          if (currentX > 50) {
+            const sender = wrapper.getAttribute('data-sender');
+            let content = wrapper.getAttribute('data-content');
+
+            if (content.startsWith('[reply:')) {
+              const closeIdx = content.indexOf(']');
+              if (closeIdx !== -1) content = content.substring(closeIdx + 1).trim();
+            }
+
+            triggerReplyUI(sender, content);
+            if (navigator.vibrate) navigator.vibrate(25);
+          }
+
+          wrapper.style.transform = 'translateX(0px)';
+          currentX = 0;
+        });
+      });
+    }
+
+    function triggerReplyUI(sender, text) {
+      activeReplyTo = { sender, text };
+      const bar = document.getElementById('reply-preview-bar');
+      const userLabel = document.getElementById('reply-user-label');
+      const textLabel = document.getElementById('reply-text-label');
+      const input = document.getElementById('message-input');
+
+      if (bar && userLabel && textLabel) {
+        userLabel.textContent = `Replying to ${sender}`;
+        textLabel.textContent = formatSnippetText(text);
+        bar.style.display = 'flex';
+      }
+
+      if (input) input.focus();
+    }
+
+    function cancelReply() {
+      activeReplyTo = null;
+      const bar = document.getElementById('reply-preview-bar');
+      if (bar) bar.style.display = 'none';
+    }
+
+    // 5. Message Submission
+    if (chatForm) {
+      chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const input = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        if (!input) return;
+
+        let content = input.value.trim();
+        if (!content || !targetUser || !activeUser) return;
+
+        if (activeReplyTo) {
+          const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
+          content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
+        }
+
+        if (sendBtn) sendBtn.disabled = true;
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sender: activeUser,
+              receiver: targetUser,
+              sender_username: activeUser,
+              receiver_username: targetUser,
+              content: content
+            })
+          });
+
+          if (response.ok) {
+            input.value = '';
+            cancelReply();
+            isUserScrolling = false;
+            await loadChat();
+            setTimeout(() => {
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 50);
+          } else {
+            console.error('Server failed to record message');
+          }
+        } catch (err) {
+          console.error('Network error sending message:', err);
+        } finally {
+          if (sendBtn) sendBtn.disabled = false;
+        }
+      });
+    }
+
+    // 6. Typing Indicator
+    const messageInput = document.getElementById('message-input');
+    const typingIndicator = document.getElementById('typing-indicator');
+    let typingTimeout;
+
+    if (messageInput) {
+      messageInput.addEventListener('input', () => {
+        sendTypingStatus(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          sendTypingStatus(false);
+        }, 2000);
+      });
+    }
+
+    async function sendTypingStatus(isTyping) {
+      if (!activeUser || !targetUser) return;
+      try {
+        await fetch(`${API_BASE_URL}/api/typing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: activeUser,
+            receiver: targetUser,
+            isTyping: isTyping
+          })
+        });
+      } catch (err) {
+        console.error('Typing indicator status error:', err);
+      }
+    }
+
+    async function checkPartnerTyping() {
+      if (!activeUser || !targetUser) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isTyping) {
+            typingIndicator.textContent = `${targetUser} is typing...`;
+          } else {
+            typingIndicator.textContent = '';
+          }
+        }
+      } catch (err) {
+        console.error('Typing poll error:', err);
+      }
+    }
+
+    setInterval(checkPartnerTyping, 2000);
+
+    // 7. Presence Heartbeats
+    async function sendHeartbeat() {
+      if (!activeUser) return;
+      try {
+        await fetch(`${API_BASE_URL}/api/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: activeUser })
+        });
+      } catch (err) {
+        console.error('Heartbeat error:', err);
+      }
+    }
+
+    async function checkTargetOnlineStatus() {
+      if (!targetUser) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const dot = document.getElementById('online-dot');
+          if (dot) {
+            dot.style.display = data.online ? 'block' : 'none';
+          }
+        }
+      } catch (err) {
+        console.error('Online status fetch error:', err);
+      }
+    }
+
+    sendHeartbeat();
+    checkTargetOnlineStatus();
+
+    setInterval(sendHeartbeat, 15000);
+    setInterval(checkTargetOnlineStatus, 5000);
+
+    // Initial executions & periodic refreshing
+    loadChat();
+    setInterval(loadChat, 3000);
+    setInterval(loadTargetUserProfile, 10000);
+
+    // ==========================================
+    // 8. IMAGE SHARING & LIGHTBOX LOGIC
+    // ==========================================
+    let selectedCompressedImage = null;
+
+    function handleImageSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          const maxWidth = 1200;
+          const maxHeight = 1200;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          selectedCompressedImage = canvas.toDataURL('image/jpeg', 0.75);
+          
+          document.getElementById('preview-modal-title').textContent = 'Preview Image';
+          document.getElementById('image-preview-elem').src = selectedCompressedImage;
+          document.getElementById('preview-modal-actions').style.display = 'flex';
+          document.getElementById('image-preview-modal').style.display = 'flex';
+        };
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openChatImageViewer(base64Url) {
+      document.getElementById('preview-modal-title').textContent = 'View Photo';
+      document.getElementById('image-preview-elem').src = base64Url;
+      document.getElementById('preview-modal-actions').style.display = 'none';
+      document.getElementById('image-preview-modal').style.display = 'flex';
+    }
+
+    function closeImagePreview() {
+      document.getElementById('image-preview-modal').style.display = 'none';
+      document.getElementById('image-file-input').value = '';
+      selectedCompressedImage = null;
+    }
+
+    async function sendSelectedImage() {
+      if (!selectedCompressedImage || !targetUser || !activeUser) return;
+      const sendBtn = document.getElementById('image-send-btn');
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending...';
+      }
+
+      const payload = `[img]${selectedCompressedImage}`;
+      await postMessagePayload(payload);
+      
+      closeImagePreview();
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Image';
+      }
+    }
+
+    // ==========================================
+    // 9. STICKER & SAVE-TO-PACK LOGIC
+    // ==========================================
     function getSavedStickers() {
       return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
     }
@@ -334,7 +972,9 @@
       const drawer = document.getElementById('sticker-drawer');
       if (!drawer) return;
       drawer.classList.toggle('active');
-      if (drawer.classList.contains('active')) renderStickerDrawer();
+      if (drawer.classList.contains('active')) {
+        renderStickerDrawer();
+      }
     }
 
     function renderStickerDrawer() {
@@ -345,11 +985,12 @@
       if (!grid) return;
 
       grid.innerHTML = '';
+
       stickers.forEach((dataUrl, idx) => {
         const item = document.createElement('div');
         item.className = 'sticker-item';
         item.innerHTML = `<img src="${dataUrl}" alt="Sticker ${idx+1}">`;
-        item.onclick = () => handleStickerPackClick(dataUrl, idx);
+        item.onclick = () => sendSticker(dataUrl);
         grid.appendChild(item);
       });
 
@@ -360,46 +1001,6 @@
         addBtn.onclick = () => document.getElementById('sticker-file-input').click();
         grid.appendChild(addBtn);
       }
-    }
-
-    function handleStickerPackClick(dataUrl, index) {
-      const choice = confirm("Tap 'OK' to send this sticker, or 'Cancel' to remove it from your pack.");
-      if (choice) {
-        sendSticker(dataUrl);
-      } else {
-        if (confirm("Remove sticker from pack?")) {
-          let stickers = getSavedStickers();
-          stickers.splice(index, 1);
-          localStorage.setItem('retro_stickers', JSON.stringify(stickers));
-          renderStickerDrawer();
-        }
-      }
-    }
-
-    function toggleStickerSaveTooltip(event, stickerId) {
-      event.stopPropagation();
-      document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
-        if (tip.id !== stickerId) tip.classList.remove('active');
-      });
-      const tooltip = document.getElementById(stickerId);
-      if (tooltip) tooltip.classList.toggle('active');
-    }
-
-    function saveStickerToDrawer(event, dataUrl) {
-      event.stopPropagation();
-      const stickers = getSavedStickers();
-      if (stickers.includes(dataUrl)) return alert('Already in your pack!');
-      if (stickers.length >= 10) return alert('Pack is full (max 10).');
-      
-      stickers.push(dataUrl);
-      localStorage.setItem('retro_stickers', JSON.stringify(stickers));
-      alert('Added to your stickerpack!');
-      event.target.classList.remove('active');
-    }
-
-    async function sendSticker(dataUrl) {
-      toggleStickerDrawer();
-      await postMessagePayload(`[sticker]${dataUrl}`);
     }
 
     function handleStickerSelected(event) {
@@ -416,7 +1017,7 @@
           canvas.height = 150;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, 150, 150);
-          const compressedBase64 = canvas.toDataURL('image/webp', 0.65);
+          const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
 
           const stickers = getSavedStickers();
           if (stickers.length >= 10) return alert('Maximum 10 stickers allowed.');
@@ -428,60 +1029,91 @@
       reader.readAsDataURL(file);
     }
 
-    // --- COMPRESSED IMAGE HANDLING ---
-    function handleImageSelected(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = () => {
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 1000;
-
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          selectedCompressedImage = canvas.toDataURL('image/jpeg', 0.65);
-          
-          document.getElementById('image-preview-elem').src = selectedCompressedImage;
-          document.getElementById('preview-modal-actions').style.display = 'flex';
-          document.getElementById('image-preview-modal').style.display = 'flex';
-        };
-      };
-      reader.readAsDataURL(file);
+    function toggleStickerSaveTooltip(event, stickerId) {
+      event.stopPropagation();
+      document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
+        if (tip.id !== stickerId) tip.classList.remove('active');
+      });
+      const tooltip = document.getElementById(stickerId);
+      if (tooltip) {
+        tooltip.classList.toggle('active');
+      }
     }
 
-    async function sendSelectedImage() {
-      if (!selectedCompressedImage) return;
-      await postMessagePayload(`[img]${selectedCompressedImage}`);
-      closeImagePreview();
+    function saveStickerToDrawer(event, dataUrl) {
+      event.stopPropagation();
+      const stickers = getSavedStickers();
+      if (stickers.includes(dataUrl)) {
+        alert('Sticker is already in your pack!');
+        return;
+      }
+      if (stickers.length >= 10) {
+        alert('Your sticker pack is full (max 10).');
+        return;
+      }
+      stickers.push(dataUrl);
+      localStorage.setItem('retro_stickers', JSON.stringify(stickers));
+      alert('Added to your stickerpack!');
+      
+      event.target.classList.remove('active');
     }
 
-    function closeImagePreview() {
-      document.getElementById('image-preview-modal').style.display = 'none';
-      document.getElementById('image-file-input').value = '';
+    async function sendSticker(dataUrl) {
+      toggleStickerDrawer();
+      await postMessagePayload(`[sticker]${dataUrl}`);
     }
 
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
+        tip.classList.remove('active');
+      });
+    });
+
+    // ==========================================
+    // 10. VOICE NOTE LOGIC
+    // ==========================================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleVoiceRecording() {
+      const vnBtn = document.getElementById('vn-btn');
+      
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              await postMessagePayload(`[audio]${reader.result}`);
+            };
+            reader.readAsDataURL(audioBlob);
+            
+            stream.getTracks().forEach(track => track.stop());
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          if (vnBtn) vnBtn.classList.add('recording');
+        } catch (err) {
+          alert('Microphone access is required to record voice notes.');
+        }
+      } else {
+        if (mediaRecorder) mediaRecorder.stop();
+        isRecording = false;
+        if (vnBtn) vnBtn.classList.remove('recording');
+      }
+    }
+
+    // Generic Media Dispatcher
     async function postMessagePayload(contentPayload) {
       try {
-        await fetch(`${API_BASE_URL}/api/messages`, {
+        const response = await fetch(`${API_BASE_URL}/api/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -492,46 +1124,18 @@
             content: contentPayload
           })
         });
-        loadChat();
+
+        if (response.ok) {
+          isUserScrolling = false;
+          await loadChat();
+          setTimeout(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }, 50);
+        }
       } catch (err) {
-        console.error('Payload error:', err);
+        console.error('Error dispatching payload:', err);
       }
     }
-
-    // --- TYPING & ONLINE STATUS ---
-    async function checkPartnerTyping() {
-      if (!targetUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const indicator = document.getElementById('typing-indicator');
-          if (indicator) indicator.textContent = data.isTyping ? `${targetUser} is typing...` : '';
-        }
-      } catch (err) { console.error(err); }
-    }
-
-    async function checkTargetOnlineStatus() {
-      if (!targetUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const dot = document.getElementById('online-dot');
-          if (dot) dot.style.display = data.online ? 'block' : 'none';
-        }
-      } catch (err) { console.error(err); }
-    }
-
-    document.addEventListener('click', () => {
-      document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => tip.classList.remove('active'));
-    });
-
-    setInterval(checkPartnerTyping, 2000);
-    setInterval(checkTargetOnlineStatus, 4000);
-    setInterval(loadChat, 3000);
-    loadChat();
-    checkTargetOnlineStatus();
   </script>
 </body>
 </html>
