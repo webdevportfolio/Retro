@@ -205,11 +205,11 @@
   </header>
 
   <!-- Chat Messages Stream -->
-  <main class="chat-container" id="chat-container" style="overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1;">
+  <main class="chat-container" id="chat-container">
     <div id="messages-list" class="messages-list"></div>
   </main>
 
-  <!-- Fixed Bottom Message Input Bar -->
+  <!-- Fixed Bottom Message Input Footer Bar -->
   <footer class="chat-input-bar">
     <div id="reply-preview-bar" class="reply-preview-bar">
       <div>
@@ -224,30 +224,35 @@
     <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
 
     <form id="chat-form">
-      <!-- Sticker Toggle Button -->
-      <button type="button" id="sticker-btn" class="media-icon-btn" onclick="toggleStickerDrawer()" title="Stickers">
-        😀
-      </button>
+      <div class="pill-input-container">
+        <!-- Sticker Toggle Button -->
+        <button type="button" id="sticker-btn" class="pill-btn" onclick="toggleStickerDrawer()" title="Stickers">
+          😀
+        </button>
 
-      <!-- Gallery Image Button -->
-      <button type="button" id="gallery-btn" class="media-icon-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
-        📎
-      </button>
-      
-      <input 
-        type="text" 
-        id="message-input" 
-        class="input-field chat-field" 
-        placeholder="Type a message..." 
-        autocomplete="off"
-      >
+        <!-- Gallery Image Button -->
+        <button type="button" id="gallery-btn" class="pill-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
+          📎
+        </button>
+        
+        <input 
+          type="text" 
+          id="message-input" 
+          class="pill-input" 
+          placeholder="Message..." 
+          autocomplete="off"
+        >
 
-      <!-- Voice Note Button -->
-      <button type="button" id="vn-btn" class="media-icon-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
-        🎙️
-      </button>
+        <!-- Voice Note Button -->
+        <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
+          🎙️
+        </button>
 
-      <button type="submit" id="send-btn" class="send-btn">Send</button>
+        <!-- Circular Send Button -->
+        <button type="submit" id="send-btn" class="circular-send-btn" title="Send">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+        </button>
+      </div>
     </form>
   </footer>
 
@@ -402,7 +407,7 @@
       if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(`New message from ${sender}`, {
-            body: messageText,
+            body: formatSnippetText(messageText),
             icon: 'icon.png',
             badge: 'icon.png',
             vibrate: [200, 100, 200],
@@ -418,7 +423,6 @@
       }
     }, { once: true });
 
-    // Helper to render avatar safely without redundant DOM updates
     function applyAvatar(imgElem, initialElem, url, username) {
       if (!imgElem || !initialElem) return;
 
@@ -445,7 +449,7 @@
       }
     }
 
-    // 2. Load Recipient Profile Picture (Checks changes before DOM re-renders)
+    // 2. Load Recipient Profile Picture
     async function loadTargetUserProfile() {
       if (!targetUser) return;
 
@@ -532,7 +536,6 @@
       if (sheet) sheet.classList.remove('active');
     }
 
-    // Bind sheet click handlers explicitly
     const sheetOverlay = document.getElementById('partner-profile-sheet');
     const sheetCard = document.getElementById('partner-profile-card');
 
@@ -591,6 +594,23 @@
         const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
         isUserScrolling = !isAtBottom;
       });
+    }
+
+    // Helper: Truncates raw media payloads into human-readable text
+    function formatSnippetText(content) {
+      if (!content) return '';
+      if (content.startsWith('[img]')) return '📷 Photo';
+      if (content.startsWith('[sticker]')) return '🏷️ Sticker';
+      if (content.startsWith('[audio]')) return '🎤 Voice note';
+      return content;
+    }
+
+    // Helper: Formats seconds to mm:ss
+    function formatAudioTime(seconds) {
+      if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
     // 3. Fetch & Render Messages
@@ -672,23 +692,14 @@
           let quotedHtml = '';
           let displayContent = msg.content || '';
 
-          // 1. Media payload check
-          if (displayContent.startsWith('[img]')) {
-            const base64Data = displayContent.substring(5);
-            displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image">`;
-          } else if (displayContent.startsWith('[sticker]')) {
-            const base64Data = displayContent.substring(9);
-            displayContent = `<img src="${base64Data}" class="msg-sticker" alt="Sticker">`;
-          } else if (displayContent.startsWith('[audio]')) {
-            const audioData = displayContent.substring(7);
-            displayContent = `<audio controls src="${audioData}"></audio>`;
-          } else if (displayContent.startsWith('[reply:')) {
-            // 2. Reply format check
+          // Quoted reply check
+          if (displayContent.startsWith('[reply:')) {
             const splitIdx = displayContent.indexOf(']');
             if (splitIdx !== -1) {
               const meta = displayContent.substring(7, splitIdx).split('|');
               const replyUser = meta[0] || 'User';
-              const replySnippet = meta.slice(1).join('|');
+              let replySnippet = meta.slice(1).join('|');
+              replySnippet = formatSnippetText(replySnippet);
               quotedHtml = `
                 <div class="quoted-reply-box">
                   <div class="quoted-reply-user">${replyUser}</div>
@@ -697,6 +708,28 @@
               `;
               displayContent = displayContent.substring(splitIdx + 1).trim();
             }
+          }
+
+          // Media payload checks
+          if (displayContent.startsWith('[img]')) {
+            const base64Data = displayContent.substring(5);
+            displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image">`;
+          } else if (displayContent.startsWith('[sticker]')) {
+            const base64Data = displayContent.substring(9);
+            displayContent = `<img src="${base64Data}" class="msg-sticker" alt="Sticker">`;
+          } else if (displayContent.startsWith('[audio]')) {
+            const audioData = displayContent.substring(7);
+            const audioId = `vn_${msg.id || Math.random().toString(36).substr(2, 9)}`;
+            displayContent = `
+              <div class="custom-audio-player" id="player_${audioId}">
+                <button type="button" class="play-btn" onclick="toggleCustomAudio('${audioId}')">▶</button>
+                <div class="audio-track">
+                  <div class="audio-progress" id="progress_${audioId}"></div>
+                </div>
+                <span class="audio-time" id="time_${audioId}">0:00</span>
+                <audio id="${audioId}" src="${audioData}" preload="metadata" onloadedmetadata="initAudioDuration('${audioId}')" ontimeupdate="updateAudioProgress('${audioId}')" onended="resetAudioPlayer('${audioId}')"></audio>
+              </div>
+            `;
           }
 
           const safeContent = (msg.content || '').replace(/"/g, '&quot;');
@@ -727,6 +760,73 @@
         
       } catch (err) {
         console.error('Error loading chat:', err);
+      }
+    }
+
+    // Custom Audio Control Handlers
+    function toggleCustomAudio(id) {
+      const audio = document.getElementById(id);
+      const player = document.getElementById(`player_${id}`);
+      if (!audio || !player) return;
+
+      const btn = player.querySelector('.play-btn');
+
+      // Pause all other audio players
+      document.querySelectorAll('audio').forEach(a => {
+        if (a.id !== id && !a.paused) {
+          a.pause();
+          const p = document.getElementById(`player_${a.id}`);
+          if (p) {
+            const b = p.querySelector('.play-btn');
+            if (b) b.textContent = '▶';
+          }
+        }
+      });
+
+      if (audio.paused) {
+        audio.play();
+        if (btn) btn.textContent = '❚❚';
+      } else {
+        audio.pause();
+        if (btn) btn.textContent = '▶';
+      }
+    }
+
+    function initAudioDuration(id) {
+      const audio = document.getElementById(id);
+      const timeLabel = document.getElementById(`time_${id}`);
+      if (audio && timeLabel && audio.duration) {
+        timeLabel.textContent = formatAudioTime(audio.duration);
+      }
+    }
+
+    function updateAudioProgress(id) {
+      const audio = document.getElementById(id);
+      const progress = document.getElementById(`progress_${id}`);
+      const timeLabel = document.getElementById(`time_${id}`);
+
+      if (audio && progress) {
+        const percent = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = `${percent}%`;
+        if (timeLabel) {
+          timeLabel.textContent = formatAudioTime(audio.currentTime);
+        }
+      }
+    }
+
+    function resetAudioPlayer(id) {
+      const audio = document.getElementById(id);
+      const player = document.getElementById(`player_${id}`);
+      const progress = document.getElementById(`progress_${id}`);
+      const timeLabel = document.getElementById(`time_${id}`);
+
+      if (player) {
+        const btn = player.querySelector('.play-btn');
+        if (btn) btn.textContent = '▶';
+      }
+      if (progress) progress.style.width = '0%';
+      if (audio && timeLabel) {
+        timeLabel.textContent = formatAudioTime(audio.duration || 0);
       }
     }
 
@@ -786,7 +886,7 @@
 
       if (bar && userLabel && textLabel) {
         userLabel.textContent = `Replying to ${sender}`;
-        textLabel.textContent = text;
+        textLabel.textContent = formatSnippetText(text);
         bar.style.display = 'flex';
       }
 
@@ -988,7 +1088,7 @@
     }
 
     // ==========================================
-    // 9. STICKER LOGIC (Compress & Limit 10)
+    // 9. STICKER LOGIC
     // ==========================================
     function getSavedStickers() {
       return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
