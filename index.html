@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>RETRO | Inbox</title>
+  <title>Inbox</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -30,17 +30,6 @@
       <div id="code-error" class="code-error-msg"></div>
     </div>
 
-    <!-- Group Chats Section -->
-    <div class="inbox-section">
-      <div class="inbox-section-title">
-        <span>GROUP CHATS</span>
-        <button id="open-create-group-btn" class="create-group-trigger">+ Create Group</button>
-      </div>
-      <div id="group-list" class="chat-list">
-        <div class="empty-state">No group chats yet.</div>
-      </div>
-    </div>
-
     <!-- Direct Messages Section -->
     <div class="inbox-section">
       <div class="inbox-section-title">
@@ -48,35 +37,6 @@
       </div>
       <div id="inbox-list" class="chat-list">
         <div class="empty-state">No direct messages yet.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CREATE GROUP MODAL -->
-  <div id="create-group-modal" class="retro-modal-overlay">
-    <div class="retro-modal-content">
-      <div class="retro-modal-header">
-        <h3>Create Group Chat</h3>
-        <button id="close-group-modal-btn" class="retro-modal-close">&times;</button>
-      </div>
-      <div class="retro-modal-body">
-        <div id="group-modal-error" class="modal-error-box" style="display:none;"></div>
-        
-        <div class="avatar-picker-wrapper">
-          <label for="group-avatar-input" class="avatar-picker-label">
-            <span id="avatar-picker-icon">📷</span>
-            <img id="avatar-preview-img" alt="Group Preview" style="display:none;" />
-          </label>
-          <input type="file" id="group-avatar-input" accept="image/*" style="display:none;" />
-          <span class="avatar-picker-hint">Set Group Photo</span>
-        </div>
-
-        <input type="text" id="group-name-input" class="modal-input" placeholder="Group Name..." />
-
-        <div class="select-members-label">Select Members from DMs:</div>
-        <div id="dm-contacts-checklist" class="contacts-checklist"></div>
-
-        <button id="submit-create-group-btn" class="modal-submit-btn">Create Group</button>
       </div>
     </div>
   </div>
@@ -102,11 +62,10 @@
     </div>
   </div>
 
-  <!-- Embedded JavaScript Application Logic -->
+  <!-- JavaScript Application Logic -->
   <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
     let activeUser = '';
-    let knownDmContacts = new Set();
 
     function logout() {
       localStorage.removeItem('username');
@@ -233,210 +192,14 @@
         });
       }
 
-      // Modal Triggers
-      const openGroupBtn = document.getElementById('open-create-group-btn');
-      const closeGroupBtn = document.getElementById('close-group-modal-btn');
-      const submitGroupBtn = document.getElementById('submit-create-group-btn');
-      const groupAvatarInput = document.getElementById('group-avatar-input');
       const dismissNotifsBtn = document.getElementById('dismiss-notifs-btn');
-
-      if (openGroupBtn) openGroupBtn.addEventListener('click', openCreateGroupModal);
-      if (closeGroupBtn) closeGroupBtn.addEventListener('click', closeCreateGroupModal);
-      if (submitGroupBtn) submitGroupBtn.addEventListener('click', handleCreateGroupSubmit);
-      if (groupAvatarInput) groupAvatarInput.addEventListener('change', previewGroupAvatar);
       if (dismissNotifsBtn) dismissNotifsBtn.addEventListener('click', () => {
         document.getElementById('notif-modal')?.classList.remove('active');
       });
 
       loadInbox();
-      loadUserGroups();
-      setInterval(() => {
-        loadInbox();
-        loadUserGroups();
-      }, 4000);
+      setInterval(loadInbox, 4000);
     });
-
-    /* Modal Utilities */
-    function openCreateGroupModal() {
-      hideGroupModalError();
-      const modal = document.getElementById('create-group-modal');
-      const contactsContainer = document.getElementById('dm-contacts-checklist');
-      if (!modal) return;
-      
-      const sortedContacts = Array.from(knownDmContacts).sort((a, b) => a.localeCompare(b));
-
-      if (contactsContainer) {
-        if (sortedContacts.length === 0) {
-          contactsContainer.innerHTML = '<div class="empty-state">No DM contacts available</div>';
-        } else {
-          contactsContainer.innerHTML = sortedContacts.map(contact => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.3rem 0;">
-              <span style="font-size:0.85rem; font-weight:600;">@${contact}</span>
-              <input type="checkbox" value="${contact}" class="group-member-checkbox">
-            </div>
-          `).join('');
-        }
-      }
-
-      modal.classList.add('active');
-    }
-
-    function closeCreateGroupModal() {
-      const modal = document.getElementById('create-group-modal');
-      if (modal) modal.classList.remove('active');
-      
-      const nameInput = document.getElementById('group-name-input');
-      const fileInput = document.getElementById('group-avatar-input');
-      if (nameInput) nameInput.value = '';
-      if (fileInput) fileInput.value = '';
-      hideGroupModalError();
-      
-      const previewImg = document.getElementById('avatar-preview-img');
-      const icon = document.getElementById('avatar-picker-icon');
-      if (previewImg) {
-        previewImg.src = '';
-        previewImg.style.display = 'none';
-      }
-      if (icon) icon.style.display = 'inline';
-    }
-
-    function showGroupModalError(msg) {
-      const errBox = document.getElementById('group-modal-error');
-      if (errBox) {
-        errBox.textContent = msg;
-        errBox.style.display = 'block';
-      }
-    }
-
-    function hideGroupModalError() {
-      const errBox = document.getElementById('group-modal-error');
-      if (errBox) {
-        errBox.style.display = 'none';
-        errBox.textContent = '';
-      }
-    }
-
-    function previewGroupAvatar(event) {
-      const file = event.target.files[0];
-      const previewImg = document.getElementById('avatar-preview-img');
-      const icon = document.getElementById('avatar-picker-icon');
-
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          if (previewImg) {
-            previewImg.src = e.target.result;
-            previewImg.style.display = 'block';
-          }
-          if (icon) icon.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    async function handleCreateGroupSubmit() {
-      hideGroupModalError();
-      const nameInput = document.getElementById('group-name-input');
-      const fileInput = document.getElementById('group-avatar-input');
-      const submitBtn = document.getElementById('submit-create-group-btn');
-
-      if (!nameInput) return;
-      const groupName = nameInput.value.trim();
-      if (!groupName) {
-        showGroupModalError('Please enter a group name.');
-        return;
-      }
-
-      const checkedMembers = Array.from(document.querySelectorAll('.group-member-checkbox:checked')).map(cb => cb.value);
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating...';
-      }
-
-      let avatarBase64 = null;
-      if (fileInput && fileInput.files[0]) {
-        avatarBase64 = await new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = e => resolve(e.target.result);
-          reader.readAsDataURL(fileInput.files[0]);
-        });
-      }
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/groups`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: groupName,
-            avatar: avatarBase64,
-            created_by: activeUser,
-            members: checkedMembers || []
-          })
-        });
-
-        const data = await res.json();
-        if (res.ok && data.group) {
-          closeCreateGroupModal();
-          window.location.href = `groupchat.html?groupId=${data.group.id}`;
-        } else {
-          showGroupModalError(data.error || 'Failed to create group.');
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Create Group';
-          }
-        }
-      } catch (err) {
-        console.error('Error creating group:', err);
-        showGroupModalError('Network error while creating group.');
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Create Group';
-        }
-      }
-    }
-
-    /* Data Fetching */
-    async function loadUserGroups() {
-      if (!activeUser) return;
-      const groupListContainer = document.getElementById('group-list');
-      if (!groupListContainer) return;
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/groups/user/${encodeURIComponent(activeUser)}`);
-        if (!res.ok) {
-          groupListContainer.innerHTML = '<div class="empty-state">No group chats yet.</div>';
-          return;
-        }
-        const data = await res.json();
-        const groups = Array.isArray(data) ? data : (data.groups || []);
-
-        if (!groups || groups.length === 0) {
-          groupListContainer.innerHTML = '<div class="empty-state">No group chats yet.</div>';
-          return;
-        }
-
-        groupListContainer.innerHTML = groups.map(g => `
-          <div class="chat-card" onclick="window.location.href='groupchat.html?groupId=${g.id}'">
-            <div class="inbox-card-avatar">
-              ${g.avatar 
-                ? `<img src="${g.avatar}" class="inbox-avatar-img" alt="${g.name}">` 
-                : `<span>${g.name.charAt(0).toUpperCase()}</span>`
-              }
-            </div>
-            <div class="inbox-card-content">
-              <div class="inbox-card-header">
-                <div class="inbox-card-username">${g.name}</div>
-              </div>
-              <div class="inbox-card-preview">Tap to enter group chat</div>
-            </div>
-          </div>
-        `).join('');
-      } catch (err) {
-        console.error('Failed to load user groups:', err);
-        groupListContainer.innerHTML = '<div class="empty-state">No group chats yet.</div>';
-      }
-    }
 
     async function loadInbox() {
       const lowerActive = activeUser.toLowerCase();
@@ -476,8 +239,6 @@
           }
 
           if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
-
-          knownDmContacts.add(otherUserDisplay);
 
           const mapKey = otherUserDisplay.toLowerCase();
           const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
