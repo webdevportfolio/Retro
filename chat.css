@@ -20,6 +20,8 @@
   margin: 0;
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Prevent Android blue tap highlight for native feel */
+  -webkit-tap-highlight-color: transparent; 
 }
 
 body {
@@ -57,6 +59,7 @@ body {
   z-index: 10;
   flex-shrink: 0;
   width: 100%;
+  user-select: none; /* Prevent accidental text highlighting */
 }
 
 .nav-btn {
@@ -67,6 +70,7 @@ body {
   background: none;
   border: none;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .chat-header-user {
@@ -133,6 +137,7 @@ body {
   cursor: pointer;
   padding: 4px 8px;
   transition: color 0.2s;
+  touch-action: manipulation;
 }
 
 .three-dots-btn:hover {
@@ -148,6 +153,20 @@ body {
   flex-direction: column;
   background: #000;
   width: 100%;
+  /* Smooth scrolling for iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Clean, modern scrollbars for chat stream */
+.chat-container::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.chat-container::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .messages-list {
@@ -205,6 +224,7 @@ body {
   border-radius: 4px;
   margin-bottom: 6px;
   color: rgba(255, 255, 255, 0.9);
+  user-select: none;
 }
 
 .quoted-reply-user {
@@ -278,6 +298,7 @@ body {
   justify-content: center;
   cursor: pointer;
   font-size: 0.8rem;
+  touch-action: manipulation;
 }
 
 .sent .play-btn {
@@ -313,6 +334,7 @@ body {
   font-size: 0.68rem;
   color: rgba(255, 255, 255, 0.65);
   margin-top: 4px;
+  user-select: none;
 }
 
 .read-status {
@@ -335,6 +357,14 @@ body {
   overflow-y: auto;
 }
 
+.sticker-drawer::-webkit-scrollbar {
+  width: 6px;
+}
+.sticker-drawer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
 .sticker-drawer.active {
   display: block;
 }
@@ -346,6 +376,7 @@ body {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-bottom: 10px;
+  user-select: none;
 }
 
 .sticker-grid {
@@ -387,6 +418,7 @@ body {
   width: 100%;
   margin-bottom: 8px;
   border-radius: 8px;
+  user-select: none;
 }
 
 .reply-preview-user {
@@ -404,13 +436,16 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.9rem;
+  padding: 4px;
+  touch-action: manipulation;
 }
 
 /* --- Input Footer Bar --- */
 .chat-input-bar {
   background: rgba(18, 18, 20, 0.95);
   border-top: 1px solid var(--glass-border);
-  padding: 10px 12px;
+  /* Added env(safe-area-inset-bottom) for iPhone Home Bar clearance */
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom));
   width: 100%;
   flex-shrink: 0;
   display: flex;
@@ -445,6 +480,7 @@ body {
   justify-content: center;
   transition: transform 0.15s, background 0.15s;
   flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .pill-btn:hover {
@@ -484,6 +520,7 @@ body {
   cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .circular-send-btn svg {
@@ -526,7 +563,7 @@ body {
   border-top-right-radius: 20px;
   border: 1px solid var(--glass-border);
   border-bottom: none;
-  padding: 20px;
+  padding: 20px max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -545,6 +582,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  user-select: none;
 }
 
 .sheet-title {
@@ -631,6 +669,7 @@ body {
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 .sheet-code-box button:hover {
@@ -650,6 +689,7 @@ body {
   cursor: pointer;
   margin-top: 8px;
   transition: background 0.2s ease;
+  touch-action: manipulation;
 }
 
 .sheet-clear-btn:hover {
@@ -718,7 +758,8 @@ body {
   margin-top: 4px;
 }
 
-.send-btn.image-send-btn {
+/* FIXED: Target the send-btn correctly */
+.send-btn {
   background: var(--accent-purple);
   border: none;
   border-radius: 20px;
@@ -729,13 +770,15 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+  touch-action: manipulation;
 }
 
-.send-btn.image-send-btn:hover {
+.send-btn:hover {
   background: var(--accent-purple-hover);
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
 }
+
 /* --- Demure Toast Notification --- */
 .demure-toast {
   position: fixed;
@@ -800,6 +843,7 @@ body {
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   transition: transform 0.15s, background 0.15s;
+  touch-action: manipulation;
 }
 
 .remove-sticker-btn:hover {
