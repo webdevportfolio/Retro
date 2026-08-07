@@ -113,6 +113,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const openDeleteModalBtn = document.getElementById('open-delete-modal-btn');
   const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
   const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+// Sliding in whatever specific panel, modal, or overlay you actually built
+const activePanel = document.getElementById('your-actual-id');
+const appOverlay = document.getElementById('app-overlay');
+
+function revealElement() {
+  activePanel.classList.add('slide-in-active');
+  appOverlay.classList.add('visible');
+}
 
   // 3. Render Profile Details & Avatar
   if (usernameDisplay) usernameDisplay.textContent = currentUser;
