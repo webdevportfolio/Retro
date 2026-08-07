@@ -32,7 +32,6 @@
         </div>
       </div>
 
-      <!-- 3-Dots Profile Modal Toggle -->
       <button type="button" class="three-dots-btn" onclick="openAvatarView()" title="User Profile">⋮</button>
     </header>
 
@@ -66,6 +65,7 @@
 
       <form id="chat-form">
         <div class="pill-input-container">
+
           <!-- Gallery Image Button -->
           <button type="button" id="gallery-btn" class="pill-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
             📎
@@ -91,7 +91,9 @@
 
           <!-- Circular Send Button -->
           <button type="submit" id="send-btn" class="circular-send-btn" title="Send">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            <svg viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+            </svg>
           </button>
         </div>
       </form>
@@ -105,9 +107,11 @@
         <div class="sheet-title" id="preview-modal-title">Preview Image</div>
         <button type="button" class="close-reply-btn" onclick="closeImagePreview()">✕</button>
       </div>
+
       <div class="image-preview-container">
         <img id="image-preview-elem" src="" alt="Selected Preview">
       </div>
+
       <div class="image-preview-actions" id="preview-modal-actions">
         <button type="button" class="nav-btn" onclick="closeImagePreview()">Cancel</button>
         <button type="button" id="image-send-btn" class="send-btn image-send-btn" onclick="sendSelectedImage()">Send Image</button>
@@ -119,14 +123,12 @@
   <div id="partner-profile-sheet" class="partner-profile-sheet">
     <div class="partner-profile-card" id="partner-profile-card">
       
-      <!-- Top Header Navigation -->
       <div class="sheet-header">
         <button type="button" class="nav-btn" onclick="closeAvatarView()">← Back</button>
         <div class="sheet-title">Profile</div>
         <div style="width: 32px;"></div>
       </div>
 
-      <!-- Avatar Section -->
       <div class="sheet-avatar-wrapper">
         <div class="sheet-avatar">
           <img id="sheet-avatar-img" src="" alt="Profile Picture" style="display: none;">
@@ -134,10 +136,8 @@
         </div>
       </div>
 
-      <!-- Display Name -->
       <div id="sheet-username" class="sheet-username">User</div>
 
-      <!-- Private Code Container -->
       <div class="sheet-code-container">
         <div class="sheet-code-label">PRIVATE CHAT CODE</div>
         <div class="sheet-code-box">
@@ -146,7 +146,6 @@
         </div>
       </div>
 
-      <!-- Single Action Item -->
       <button type="button" class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
 
     </div>
@@ -164,12 +163,25 @@
     let previousMessageCount = 0;
     let lastFetchedPfpUrl = null;
 
-    // 1. Resolve Session & Recipient
-    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+    // =========================================================
+    // 1. RESOLVE SESSION & RECIPIENT
+    // =========================================================
+
+    const rawActiveUser =
+      localStorage.getItem('username') ||
+      localStorage.getItem('retro_session') ||
+      '';
+
     const activeUser = rawActiveUser.trim().replace('@', '');
-    
+
     const urlParams = new URLSearchParams(window.location.search);
-    let targetUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('u') || '';
+
+    let targetUser =
+      urlParams.get('user') ||
+      urlParams.get('username') ||
+      urlParams.get('u') ||
+      '';
+
     targetUser = targetUser.trim().replace('@', '');
 
     if (!activeUser) {
@@ -189,10 +201,14 @@
 
     if (chatTitleElem && targetUser) {
       chatTitleElem.textContent = targetUser;
-      if (avatarInitial) avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
+
+      if (avatarInitial) {
+        avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
+      }
 
       const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
       const cachedUrl = localStorage.getItem(cacheKey);
+
       if (cachedUrl && avatarImg && avatarInitial) {
         avatarImg.src = cachedUrl;
         avatarImg.style.display = 'block';
@@ -203,67 +219,97 @@
       loadTargetUserProfile();
     }
 
-    // --- SOCKET.IO REAL-TIME LISTENERS ---
+    // =========================================================
+    // SOCKET.IO REAL-TIME LISTENERS
+    // =========================================================
+
     socket.on('connect', () => {
       if (activeUser) {
         socket.emit('register_user', activeUser);
       }
+
       if (activeUser && targetUser) {
-        socket.emit('join_room', { sender: activeUser, receiver: targetUser });
+        socket.emit('join_room', {
+          sender: activeUser,
+          receiver: targetUser
+        });
+
         socket.emit('check_online', targetUser);
       }
     });
 
-    socket.on('receive_message', (message) => {
+    socket.on('receive_message', () => {
       loadChat();
     });
 
     socket.on('user_typing', ({ sender, isTyping }) => {
       if (sender && sender.toLowerCase() === targetUser.toLowerCase()) {
         const typingIndicator = document.getElementById('typing-indicator');
+
         if (typingIndicator) {
-          typingIndicator.textContent = isTyping ? `${targetUser} is typing...` : '';
+          typingIndicator.textContent =
+            isTyping ? `${targetUser} is typing...` : '';
         }
       }
     });
 
     socket.on('online_status', ({ username, online }) => {
-      if (username && username.toLowerCase() === targetUser.toLowerCase()) {
+      if (
+        username &&
+        username.toLowerCase() === targetUser.toLowerCase()
+      ) {
         updateOnlineDot(online);
       }
     });
 
     socket.on('user_presence', ({ username, online }) => {
-      if (username && username.toLowerCase() === targetUser.toLowerCase()) {
+      if (
+        username &&
+        username.toLowerCase() === targetUser.toLowerCase()
+      ) {
         updateOnlineDot(online);
       }
     });
 
     function updateOnlineDot(isOnline) {
       const dot = document.getElementById('online-dot');
+
       if (dot) {
         dot.style.display = isOnline ? 'block' : 'none';
       }
     }
 
-    // --- SLEEK CUSTOM TOAST NOTIFICATION ---
+    // =========================================================
+    // TOAST
+    // =========================================================
+
     function showToast(message) {
       const toast = document.getElementById('demure-toast');
+
       if (!toast) return;
+
       toast.textContent = message;
       toast.classList.add('show');
+
       clearTimeout(toast.timer);
+
       toast.timer = setTimeout(() => {
         toast.classList.remove('show');
       }, 2400);
     }
 
-    // --- NOTIFICATION HELPERS ---
+    // =========================================================
+    // NOTIFICATION HELPERS
+    // =========================================================
+
     async function updateAppBadge(count) {
       if ('setAppBadge' in navigator) {
         try {
-          if (count > 0) await navigator.setAppBadge(count);
-          else await navigator.clearAppBadge();
+          if (count > 0) {
+            await navigator.setAppBadge(count);
+          } else {
+            await navigator.clearAppBadge();
+          }
         } catch (e) {
           console.error('Badge error:', e);
         }
@@ -274,14 +320,21 @@
 
     function playNotificationSound() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioCtx =
+          new (window.AudioContext || window.webkitAudioContext)();
+
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+
         gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          audioCtx.currentTime + 0.35
+        );
 
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -294,52 +347,90 @@
     }
 
     function showPopUpNotification(sender, messageText) {
-      if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+      if (
+        Notification.permission === 'granted' &&
+        'serviceWorker' in navigator
+      ) {
         navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification(`New message from ${sender}`, {
-            body: formatSnippetText(messageText),
-            icon: 'icon.png',
-            badge: 'icon.png',
-            vibrate: [200, 100, 200],
-            data: { url: `chat.html?user=${encodeURIComponent(sender)}` }
-          });
+          registration.showNotification(
+            `New message from ${sender}`,
+            {
+              body: formatSnippetText(messageText),
+              icon: 'icon.png',
+              badge: 'icon.png',
+              vibrate: [200, 100, 200],
+              data: {
+                url: `chat.html?user=${encodeURIComponent(sender)}`
+              }
+            }
+          );
         });
       }
     }
 
-    document.addEventListener('click', () => {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }, { once: true });
+    document.addEventListener(
+      'click',
+      () => {
+        if (
+          'Notification' in window &&
+          Notification.permission === 'default'
+        ) {
+          Notification.requestPermission();
+        }
+      },
+      { once: true }
+    );
+
+    // =========================================================
+    // AVATAR
+    // =========================================================
 
     function applyAvatar(imgElem, initialElem, url, username) {
       if (!imgElem || !initialElem) return;
 
       if (url) {
-        if (imgElem.src === url && imgElem.style.display === 'block') return;
+        if (
+          imgElem.src === url &&
+          imgElem.style.display === 'block'
+        ) {
+          return;
+        }
 
         imgElem.onerror = function() {
           this.style.display = 'none';
+
           if (initialElem) {
             initialElem.style.display = 'block';
-            initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+            initialElem.textContent =
+              username
+                ? username.charAt(0).toUpperCase()
+                : '?';
           }
         };
 
         imgElem.src = url;
         imgElem.style.display = 'block';
-        if (initialElem) initialElem.style.display = 'none';
+
+        if (initialElem) {
+          initialElem.style.display = 'none';
+        }
       } else {
         imgElem.style.display = 'none';
+
         if (initialElem) {
           initialElem.style.display = 'block';
-          initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
+          initialElem.textContent =
+            username
+              ? username.charAt(0).toUpperCase()
+              : '?';
         }
       }
     }
 
-    // 2. Load Recipient Profile Picture
+    // =========================================================
+    // 2. LOAD RECIPIENT PROFILE
+    // =========================================================
+
     async function loadTargetUserProfile() {
       if (!targetUser) return;
 
@@ -347,110 +438,247 @@
         let pfpUrl = null;
         const timestamp = Date.now();
 
-        const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`);
+        const userRes = await fetch(
+          `${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`
+        );
+
         if (userRes.ok) {
           const uData = await userRes.json();
-          pfpUrl = uData.pfpUrl || uData.photoURL || uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
+
+          pfpUrl =
+            uData.pfpUrl ||
+            uData.photoURL ||
+            uData.pfp ||
+            uData.avatar ||
+            uData.profile_picture ||
+            uData.profilePic ||
+            uData.image;
         }
 
         if (!pfpUrl) {
-          const res = await fetch(`${API_BASE_URL}/api/users?t=${timestamp}`);
+          const res = await fetch(
+            `${API_BASE_URL}/api/users?t=${timestamp}`
+          );
+
           if (res.ok) {
             const users = await res.json();
             const targetLower = targetUser.toLowerCase();
-            
+
             const found = users.find(u => {
-              const uname = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '').toLowerCase();
+              const uname = (
+                typeof u === 'string'
+                  ? u
+                  : u.username || u.name || ''
+              )
+                .trim()
+                .replace('@', '')
+                .toLowerCase();
+
               return uname === targetLower;
             });
 
             if (found && typeof found === 'object') {
-              pfpUrl = found.pfpUrl || found.photoURL || found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
+              pfpUrl =
+                found.pfpUrl ||
+                found.photoURL ||
+                found.pfp ||
+                found.avatar ||
+                found.profile_picture ||
+                found.profilePic ||
+                found.image;
             }
           }
         }
 
         if (pfpUrl && pfpUrl !== lastFetchedPfpUrl) {
           lastFetchedPfpUrl = pfpUrl;
-          applyAvatar(avatarImg, avatarInitial, pfpUrl, targetUser);
 
-          const sheetImg = document.getElementById('sheet-avatar-img');
-          const sheetInitial = document.getElementById('sheet-avatar-initial');
-          applyAvatar(sheetImg, sheetInitial, pfpUrl, targetUser);
+          applyAvatar(
+            avatarImg,
+            avatarInitial,
+            pfpUrl,
+            targetUser
+          );
 
-          const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
+          const sheetImg =
+            document.getElementById('sheet-avatar-img');
+
+          const sheetInitial =
+            document.getElementById('sheet-avatar-initial');
+
+          applyAvatar(
+            sheetImg,
+            sheetInitial,
+            pfpUrl,
+            targetUser
+          );
+
+          const cacheKey =
+            `retro_pfp_${targetUser.toLowerCase()}`;
+
           localStorage.setItem(cacheKey, pfpUrl);
-        } else if (!pfpUrl && lastFetchedPfpUrl !== null) {
+
+        } else if (
+          !pfpUrl &&
+          lastFetchedPfpUrl !== null
+        ) {
           lastFetchedPfpUrl = null;
-          applyAvatar(avatarImg, avatarInitial, null, targetUser);
+
+          applyAvatar(
+            avatarImg,
+            avatarInitial,
+            null,
+            targetUser
+          );
         }
+
       } catch (err) {
-        console.error('Error fetching target avatar:', err);
+        console.error(
+          'Error fetching target avatar:',
+          err
+        );
       }
     }
 
-    // --- PROFILE SHEET LOGIC ---
+    // =========================================================
+    // PROFILE SHEET
+    // =========================================================
+
     function getChatCode(user) {
       let hash = 0;
-      const str = user.toLowerCase() + "_retro_secret_salt";
+      const str =
+        user.toLowerCase() +
+        "_retro_secret_salt";
+
       for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash =
+          (hash << 5) -
+          hash +
+          str.charCodeAt(i);
+
         hash |= 0;
       }
-      const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
+
+      const cleanHash =
+        Math.abs(hash)
+          .toString(36)
+          .toUpperCase()
+          .substring(0, 5);
+
       return `RETRO-${cleanHash}`;
     }
 
     function openAvatarView() {
-      const sheet = document.getElementById('partner-profile-sheet');
-      const sheetImg = document.getElementById('sheet-avatar-img');
-      const sheetInitial = document.getElementById('sheet-avatar-initial');
-      const sheetUsername = document.getElementById('sheet-username');
-      const sheetCodeInput = document.getElementById('sheet-chat-code');
+      const sheet =
+        document.getElementById('partner-profile-sheet');
+
+      const sheetImg =
+        document.getElementById('sheet-avatar-img');
+
+      const sheetInitial =
+        document.getElementById('sheet-avatar-initial');
+
+      const sheetUsername =
+        document.getElementById('sheet-username');
+
+      const sheetCodeInput =
+        document.getElementById('sheet-chat-code');
 
       if (!sheet) return;
 
-      if (sheetUsername) sheetUsername.textContent = targetUser;
-      if (sheetCodeInput) sheetCodeInput.value = getChatCode(targetUser);
+      if (sheetUsername) {
+        sheetUsername.textContent = targetUser;
+      }
 
-      const cachedUrl = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
-      const currentSrc = (avatarImg && avatarImg.style.display !== 'none' && avatarImg.src) ? avatarImg.src : cachedUrl;
-      
-      applyAvatar(sheetImg, sheetInitial, currentSrc, targetUser);
+      if (sheetCodeInput) {
+        sheetCodeInput.value =
+          getChatCode(targetUser);
+      }
+
+      const cachedUrl =
+        localStorage.getItem(
+          `retro_pfp_${targetUser.toLowerCase()}`
+        );
+
+      const currentSrc =
+        avatarImg &&
+        avatarImg.style.display !== 'none' &&
+        avatarImg.src
+          ? avatarImg.src
+          : cachedUrl;
+
+      applyAvatar(
+        sheetImg,
+        sheetInitial,
+        currentSrc,
+        targetUser
+      );
 
       sheet.classList.add('active');
     }
 
     function closeAvatarView() {
-      const sheet = document.getElementById('partner-profile-sheet');
-      if (sheet) sheet.classList.remove('active');
+      const sheet =
+        document.getElementById(
+          'partner-profile-sheet'
+        );
+
+      if (sheet) {
+        sheet.classList.remove('active');
+      }
     }
 
-    const sheetOverlay = document.getElementById('partner-profile-sheet');
-    const sheetCard = document.getElementById('partner-profile-card');
+    const sheetOverlay =
+      document.getElementById(
+        'partner-profile-sheet'
+      );
+
+    const sheetCard =
+      document.getElementById(
+        'partner-profile-card'
+      );
 
     if (sheetOverlay) {
-      sheetOverlay.addEventListener('click', (e) => {
-        if (e.target === sheetOverlay) {
-          closeAvatarView();
+      sheetOverlay.addEventListener(
+        'click',
+        e => {
+          if (e.target === sheetOverlay) {
+            closeAvatarView();
+          }
         }
-      });
+      );
     }
 
     if (sheetCard) {
-      sheetCard.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
+      sheetCard.addEventListener(
+        'click',
+        e => {
+          e.stopPropagation();
+        }
+      );
     }
 
     async function copyPartnerCode() {
-      const codeInput = document.getElementById('sheet-chat-code');
-      const btn = document.getElementById('sheet-copy-btn');
+      const codeInput =
+        document.getElementById(
+          'sheet-chat-code'
+        );
+
+      const btn =
+        document.getElementById(
+          'sheet-copy-btn'
+        );
+
       if (!codeInput) return;
 
       try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(codeInput.value);
+        if (
+          navigator.clipboard &&
+          window.isSecureContext
+        ) {
+          await navigator.clipboard.writeText(
+            codeInput.value
+          );
         } else {
           codeInput.select();
           document.execCommand('copy');
@@ -458,648 +686,1843 @@
 
         if (btn) {
           const origText = btn.innerText;
+
           btn.innerText = 'Copied!';
-          setTimeout(() => btn.innerText = origText, 2000);
+
+          setTimeout(
+            () => btn.innerText = origText,
+            2000
+          );
         }
+
       } catch (err) {
         console.error('Copy error:', err);
       }
     }
 
     async function clearCurrentChat() {
-      if (!confirm(`Are you sure you want to clear your chat with ${targetUser}?`)) return;
+      if (
+        !confirm(
+          `Are you sure you want to clear your chat with ${targetUser}?`
+        )
+      ) {
+        return;
+      }
 
       try {
         if (messagesList) {
-          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">Chat cleared.</div>';
+          messagesList.innerHTML =
+            '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">Chat cleared.</div>';
         }
+
         closeAvatarView();
+
       } catch (err) {
-        console.error('Clear chat error:', err);
+        console.error(
+          'Clear chat error:',
+          err
+        );
       }
     }
 
     if (chatContainer) {
-      chatContainer.addEventListener('scroll', () => {
-        const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
-        isUserScrolling = !isAtBottom;
-      });
+      chatContainer.addEventListener(
+        'scroll',
+        () => {
+          const isAtBottom =
+            chatContainer.scrollHeight -
+            chatContainer.scrollTop -
+            chatContainer.clientHeight < 50;
+
+          isUserScrolling = !isAtBottom;
+        }
+      );
     }
+
+    // =========================================================
+    // MESSAGE SNIPPET FORMATTER
+    // =========================================================
 
     function formatSnippetText(content) {
       if (!content) return '';
-      if (content.includes('data:image/') || content.startsWith('data:image')) return '🎨 Sticker';
-      if (content.startsWith('[img]')) return '📷 Photo';
-      if (content.startsWith('[sticker]')) return '🏷️ Sticker';
-      if (content.startsWith('[audio]')) return '🎤 Voice note';
+
+      if (
+        content.includes('data:image/') ||
+        content.startsWith('data:image')
+      ) {
+        return '[sticker]';
+      }
+
+      if (content.startsWith('[img]')) {
+        return '📷 Photo';
+      }
+
+      if (content.startsWith('[sticker]')) {
+        return '[sticker]';
+      }
+
+      if (content.startsWith('[audio]')) {
+        return '🎤 Voice note';
+      }
+
       return content;
     }
 
     function formatAudioTime(seconds) {
-      if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+      if (
+        isNaN(seconds) ||
+        !isFinite(seconds)
+      ) {
+        return '0:00';
+      }
+
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
+
       return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
-    // 3. Fetch & Render Messages
+    // =========================================================
+    // HELPER: EXTRACT REPLY DATA SAFELY
+    // =========================================================
+
+    function parseReplyContent(content) {
+      if (!content || !content.startsWith('[reply:')) {
+        return null;
+      }
+
+      /*
+        Normal reply:
+
+        [reply:Mimi|hello] what's up?
+
+        Sticker reply:
+
+        [reply:Mimi|[sticker]] that's funny
+      */
+
+      const stickerReplyMatch =
+        content.match(
+          /^\[reply:([^|]+)\|\[sticker\]\]\s?(.*)$/s
+        );
+
+      if (stickerReplyMatch) {
+        return {
+          replyUser: stickerReplyMatch[1],
+          replySnippet: '[sticker]',
+          messageText: stickerReplyMatch[2] || ''
+        };
+      }
+
+      /*
+        Handle old messages that may contain sticker
+        base64 data inside the reply.
+      */
+
+      const oldStickerMatch =
+        content.match(
+          /^\[reply:([^|]+)\|\[sticker\](?:data:image\/[^]]*)\]\s?(.*)$/s
+        );
+
+      if (oldStickerMatch) {
+        return {
+          replyUser: oldStickerMatch[1],
+          replySnippet: '[sticker]',
+          messageText: oldStickerMatch[2] || ''
+        };
+      }
+
+      /*
+        Normal text reply.
+      */
+
+      const normalMatch =
+        content.match(
+          /^\[reply:([^|]+)\|([\s\S]*?)\]\s?(.*)$/
+        );
+
+      if (normalMatch) {
+        return {
+          replyUser: normalMatch[1],
+          replySnippet: normalMatch[2],
+          messageText: normalMatch[3] || ''
+        };
+      }
+
+      return null;
+    }
+
+    // =========================================================
+    // 3. FETCH & RENDER MESSAGES
+    // =========================================================
+
     async function loadChat() {
       if (!activeUser || !targetUser) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+        const response = await fetch(
+          `${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`
+        );
+
         if (!response.ok) return;
 
-        const allMessages = await response.json();
+        const allMessages =
+          await response.json();
+
         if (!messagesList) return;
 
-        const activeLower = activeUser.toLowerCase();
-        const targetLower = targetUser.toLowerCase();
+        const activeLower =
+          activeUser.toLowerCase();
 
-        const messages = allMessages
-          .filter(msg => {
-            const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-            const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
-            return (sender === activeLower && receiver === targetLower) || (sender === targetLower && receiver === activeLower);
-          })
-          .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
+        const targetLower =
+          targetUser.toLowerCase();
 
-        if (messages && messages.length > 0) {
-          if (messages.length > previousMessageCount && previousMessageCount !== 0) {
-            const latestMsg = messages[messages.length - 1];
-            const sender = (latestMsg.sender_username || latestMsg.sender || '').trim().replace('@', '');
+        const messages =
+          allMessages
+            .filter(msg => {
+              const sender =
+                (
+                  msg.sender_username ||
+                  msg.sender ||
+                  ''
+                )
+                  .trim()
+                  .replace('@', '')
+                  .toLowerCase();
 
-            if (sender.toLowerCase() === targetLower) {
+              const receiver =
+                (
+                  msg.receiver_username ||
+                  msg.receiver ||
+                  ''
+                )
+                  .trim()
+                  .replace('@', '')
+                  .toLowerCase();
+
+              return (
+                sender === activeLower &&
+                receiver === targetLower
+              ) || (
+                sender === targetLower &&
+                receiver === activeLower
+              );
+            })
+            .sort(
+              (a, b) =>
+                new Date(
+                  a.created_at ||
+                  a.timestamp ||
+                  0
+                ) -
+                new Date(
+                  b.created_at ||
+                  b.timestamp ||
+                  0
+                )
+            );
+
+        // =====================================================
+        // NOTIFICATION CHECK
+        // =====================================================
+
+        if (
+          messages &&
+          messages.length > 0
+        ) {
+          if (
+            messages.length >
+              previousMessageCount &&
+            previousMessageCount !== 0
+          ) {
+            const latestMsg =
+              messages[
+                messages.length - 1
+              ];
+
+            const sender =
+              (
+                latestMsg.sender_username ||
+                latestMsg.sender ||
+                ''
+              )
+                .trim()
+                .replace('@', '');
+
+            if (
+              sender.toLowerCase() ===
+              targetLower
+            ) {
               playNotificationSound();
-              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+              if (navigator.vibrate) {
+                navigator.vibrate([
+                  100,
+                  50,
+                  100
+                ]);
+              }
+
               updateAppBadge(1);
 
               if (document.hidden) {
-                let textSnippet = latestMsg.content || 'New message';
-                if (textSnippet.startsWith('[reply:')) {
-                  const closeIdx = textSnippet.indexOf(']');
-                  if (closeIdx !== -1) textSnippet = textSnippet.substring(closeIdx + 1).trim();
+                let textSnippet =
+                  latestMsg.content ||
+                  'New message';
+
+                const parsedReply =
+                  parseReplyContent(
+                    textSnippet
+                  );
+
+                if (parsedReply) {
+                  textSnippet =
+                    parsedReply.messageText;
                 }
-                showPopUpNotification(targetUser, textSnippet);
+
+                showPopUpNotification(
+                  targetUser,
+                  textSnippet
+                );
               }
             }
           }
-          previousMessageCount = messages.length;
+
+          previousMessageCount =
+            messages.length;
         }
 
-        if (!messages || messages.length === 0) {
-          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
+        // =====================================================
+        // EMPTY CHAT
+        // =====================================================
+
+        if (
+          !messages ||
+          messages.length === 0
+        ) {
+          messagesList.innerHTML =
+            '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
+
           return;
         }
 
-        const latestIncoming = [...messages].reverse().find(msg => {
-          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-          return sender === targetLower;
-        });
+        // =====================================================
+        // MARK INCOMING AS READ
+        // =====================================================
+
+        const latestIncoming =
+          [...messages]
+            .reverse()
+            .find(msg => {
+              const sender =
+                (
+                  msg.sender_username ||
+                  msg.sender ||
+                  ''
+                )
+                  .trim()
+                  .replace('@', '')
+                  .toLowerCase();
+
+              return sender === targetLower;
+            });
 
         if (latestIncoming) {
-          const msgTime = latestIncoming.created_at || latestIncoming.timestamp || new Date().toISOString();
-          localStorage.setItem(`read_${targetLower}`, msgTime);
+          const msgTime =
+            latestIncoming.created_at ||
+            latestIncoming.timestamp ||
+            new Date().toISOString();
 
-          fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ other_user: targetUser })
-          }).catch(err => console.error('Mark-read error:', err));
+          localStorage.setItem(
+            `read_${targetLower}`,
+            msgTime
+          );
+
+          fetch(
+            `${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+              body: JSON.stringify({
+                other_user: targetUser
+              })
+            }
+          ).catch(
+            err =>
+              console.error(
+                'Mark-read error:',
+                err
+              )
+          );
         }
 
-        messagesList.innerHTML = messages.map(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const senderClean = senderRaw.trim().replace('@', '');
-          const isSent = senderClean.toLowerCase() === activeLower;
-          const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // =====================================================
+        // RENDER MESSAGES
+        // =====================================================
 
-          const lastReadByTarget = localStorage.getItem(`read_${targetLower}`);
-          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
-          const isRead = msg.is_read || (lastReadByTarget && new Date(lastReadByTarget) >= msgDate);
+        messagesList.innerHTML =
+          messages
+            .map(msg => {
+              const senderRaw =
+                msg.sender_username ||
+                msg.sender ||
+                '';
 
-          let quotedHtml = '';
-          let displayContent = msg.content || '';
+              const senderClean =
+                senderRaw
+                  .trim()
+                  .replace('@', '');
 
-          if (displayContent.startsWith('[reply:')) {
-            const splitIdx = displayContent.indexOf(']');
-            if (splitIdx !== -1) {
-              const meta = displayContent.substring(7, splitIdx).split('|');
-              const replyUser = meta[0] || 'User';
-              let replySnippet = meta.slice(1).join('|');
-              replySnippet = sanitizeMessageContent(replySnippet);
-              quotedHtml = `
-                <div class="quoted-reply-box">
-                  <div class="quoted-reply-user">${replyUser}</div>
-                  <div>${replySnippet}</div>
+              const isSent =
+                senderClean.toLowerCase() ===
+                activeLower;
+
+              const time =
+                new Date(
+                  msg.created_at ||
+                  msg.timestamp ||
+                  Date.now()
+                ).toLocaleTimeString(
+                  [],
+                  {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }
+                );
+
+              const lastReadByTarget =
+                localStorage.getItem(
+                  `read_${targetLower}`
+                );
+
+              const msgDate =
+                new Date(
+                  msg.created_at ||
+                  msg.timestamp ||
+                  Date.now()
+                );
+
+              const isRead =
+                msg.is_read ||
+                (
+                  lastReadByTarget &&
+                  new Date(
+                    lastReadByTarget
+                  ) >= msgDate
+                );
+
+              let quotedHtml = '';
+              let displayContent =
+                msg.content || '';
+
+              // =================================================
+              // REPLY HANDLING
+              // =================================================
+
+              const parsedReply =
+                parseReplyContent(
+                  displayContent
+                );
+
+              if (parsedReply) {
+                const replyUser =
+                  parsedReply.replyUser ||
+                  'User';
+
+                let replySnippet =
+                  parsedReply.replySnippet ||
+                  '';
+
+                /*
+                  IMPORTANT:
+                  Sticker reply stays literally [sticker].
+                  It is NOT converted to an image.
+                */
+
+                if (
+                  replySnippet ===
+                  '[sticker]' ||
+                  replySnippet.includes(
+                    'data:image/'
+                  )
+                ) {
+                  replySnippet =
+                    '[sticker]';
+                } else {
+                  replySnippet =
+                    sanitizeMessageContent(
+                      replySnippet
+                    );
+                }
+
+                quotedHtml = `
+                  <div class="quoted-reply-box">
+                    <div class="quoted-reply-user">${replyUser}</div>
+                    <div>${replySnippet}</div>
+                  </div>
+                `;
+
+                /*
+                  This is the ACTUAL text you sent.
+                  It stays underneath the reply box.
+                */
+
+                displayContent =
+                  parsedReply.messageText;
+              }
+
+              // =================================================
+              // ACTUAL STICKER MESSAGE
+              // =================================================
+
+              if (
+                displayContent.startsWith(
+                  'data:image/'
+                )
+              ) {
+                const stickerId =
+                  `stk_${Math.random()
+                    .toString(36)
+                    .substr(2, 9)}`;
+
+                displayContent = `
+                  <div
+                    class="sticker-wrapper-container"
+                    onclick="toggleStickerSaveTooltip(event, '${stickerId}')"
+                  >
+                    <img
+                      src="${displayContent}"
+                      class="msg-sticker"
+                      alt="Sticker"
+                    >
+
+                    <div
+                      class="add-to-pack-tooltip"
+                      id="${stickerId}"
+                      onclick="saveStickerToDrawer(event, '${displayContent}')"
+                    >
+                      Add to stickerpack
+                    </div>
+                  </div>
+                `;
+
+              // =================================================
+              // ACTUAL IMAGE MESSAGE
+              // =================================================
+
+              } else if (
+                displayContent.startsWith(
+                  '[img]'
+                )
+              ) {
+                const base64Data =
+                  displayContent.substring(5);
+
+                displayContent =
+                  `<img src="${base64Data}" class="msg-image" alt="Shared Image" onclick="openChatImageViewer('${base64Data}')">`;
+
+              // =================================================
+              // ACTUAL STICKER WITH [sticker] PREFIX
+              // =================================================
+
+              } else if (
+                displayContent.startsWith(
+                  '[sticker]'
+                )
+              ) {
+                const base64Data =
+                  displayContent.substring(9);
+
+                const stickerId =
+                  `stk_${Math.random()
+                    .toString(36)
+                    .substr(2, 9)}`;
+
+                displayContent = `
+                  <div
+                    class="sticker-wrapper-container"
+                    onclick="toggleStickerSaveTooltip(event, '${stickerId}')"
+                  >
+                    <img
+                      src="${base64Data}"
+                      class="msg-sticker"
+                      alt="Sticker"
+                    >
+
+                    <div
+                      class="add-to-pack-tooltip"
+                      id="${stickerId}"
+                      onclick="saveStickerToDrawer(event, '${base64Data}')"
+                    >
+                      Add to stickerpack
+                    </div>
+                  </div>
+                `;
+
+              // =================================================
+              // AUDIO MESSAGE
+              // =================================================
+
+              } else if (
+                displayContent.startsWith(
+                  '[audio]'
+                )
+              ) {
+                const audioData =
+                  displayContent.substring(7);
+
+                const audioId =
+                  `vn_${
+                    msg.id ||
+                    Math.random()
+                      .toString(36)
+                      .substr(2, 9)
+                  }`;
+
+                displayContent = `
+                  <div
+                    class="custom-audio-player"
+                    id="player_${audioId}"
+                  >
+                    <button
+                      type="button"
+                      class="play-btn"
+                      onclick="toggleCustomAudio('${audioId}')"
+                    >
+                      ▶
+                    </button>
+
+                    <div class="audio-track">
+                      <div
+                        class="audio-progress"
+                        id="progress_${audioId}"
+                      ></div>
+                    </div>
+
+                    <span
+                      class="audio-time"
+                      id="time_${audioId}"
+                    >
+                      0:00
+                    </span>
+
+                    <audio
+                      id="${audioId}"
+                      src="${audioData}"
+                      preload="metadata"
+                      onloadedmetadata="initAudioDuration('${audioId}')"
+                      ontimeupdate="updateAudioProgress('${audioId}')"
+                      onended="resetAudioPlayer('${audioId}')"
+                    ></audio>
+                  </div>
+                `;
+              }
+
+              const safeContent =
+                (msg.content || '')
+                  .replace(
+                    /"/g,
+                    '&quot;'
+                  );
+
+              return `
+                <div
+                  class="message-wrapper ${isSent ? 'sent' : 'received'}"
+                  data-sender="${senderClean}"
+                  data-content="${safeContent}"
+                >
+                  <div class="message-bubble">
+
+                    ${quotedHtml}
+
+                    <div class="message-text">
+                      ${displayContent}
+                    </div>
+
+                    <div class="message-meta">
+                      <span class="timer-clock">
+                        ${time}
+                      </span>
+
+                      ${
+                        isSent
+                          ? `
+                            <span
+                              class="read-status ${
+                                isRead
+                                  ? 'read'
+                                  : ''
+                              }"
+                            >
+                              ${
+                                isRead
+                                  ? '✓✓'
+                                  : '✓'
+                              }
+                            </span>
+                          `
+                          : ''
+                      }
+                    </div>
+
+                  </div>
                 </div>
               `;
-              displayContent = displayContent.substring(splitIdx + 1).trim();
-            }
-          }
-
-          if (displayContent.startsWith('data:image/')) {
-            const stickerId = `stk_${Math.random().toString(36).substr(2, 9)}`;
-            displayContent = `
-              <div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event, '${stickerId}')">
-                <img src="${displayContent}" class="msg-sticker" alt="Sticker">
-                <div class="add-to-pack-tooltip" id="${stickerId}" onclick="saveStickerToDrawer(event, '${displayContent}')">Add to stickerpack</div>
-              </div>
-            `;
-          } else if (displayContent.startsWith('[img]')) {
-            const base64Data = displayContent.substring(5);
-            displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image" onclick="openChatImageViewer('${base64Data}')">`;
-          } else if (displayContent.startsWith('[sticker]')) {
-            const base64Data = displayContent.substring(9);
-            const stickerId = `stk_${Math.random().toString(36).substr(2, 9)}`;
-            displayContent = `
-              <div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event, '${stickerId}')">
-                <img src="${base64Data}" class="msg-sticker" alt="Sticker">
-                <div class="add-to-pack-tooltip" id="${stickerId}" onclick="saveStickerToDrawer(event, '${base64Data}')">Add to stickerpack</div>
-              </div>
-            `;
-          } else if (displayContent.startsWith('[audio]')) {
-            const audioData = displayContent.substring(7);
-            const audioId = `vn_${msg.id || Math.random().toString(36).substr(2, 9)}`;
-            displayContent = `
-              <div class="custom-audio-player" id="player_${audioId}">
-                <button type="button" class="play-btn" onclick="toggleCustomAudio('${audioId}')">▶</button>
-                <div class="audio-track">
-                  <div class="audio-progress" id="progress_${audioId}"></div>
-                </div>
-                <span class="audio-time" id="time_${audioId}">0:00</span>
-                <audio id="${audioId}" src="${audioData}" preload="metadata" onloadedmetadata="initAudioDuration('${audioId}')" ontimeupdate="updateAudioProgress('${audioId}')" onended="resetAudioPlayer('${audioId}')"></audio>
-              </div>
-            `;
-          }
-
-          const safeContent = (msg.content || '').replace(/"/g, '&quot;');
-
-          return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}" 
-                 data-sender="${senderClean}" 
-                 data-content="${safeContent}">
-              <div class="message-bubble">
-                ${quotedHtml}
-                <div class="message-text">${displayContent}</div>
-                <div class="message-meta">
-                  <span class="timer-clock">${time}</span>
-                  ${isSent ? `<span class="read-status ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
+            })
+            .join('');
 
         attachSwipeListeners();
 
         if (!isUserScrolling) {
           setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            chatContainer.scrollTop =
+              chatContainer.scrollHeight;
           }, 50);
         }
-        
+
       } catch (err) {
-        console.error('Error loading chat:', err);
+        console.error(
+          'Error loading chat:',
+          err
+        );
       }
     }
 
-    // Custom Audio Control Handlers
+    // =========================================================
+    // CUSTOM AUDIO CONTROLS
+    // =========================================================
+
     function toggleCustomAudio(id) {
-      const audio = document.getElementById(id);
-      const player = document.getElementById(`player_${id}`);
+      const audio =
+        document.getElementById(id);
+
+      const player =
+        document.getElementById(
+          `player_${id}`
+        );
+
       if (!audio || !player) return;
 
-      const btn = player.querySelector('.play-btn');
+      const btn =
+        player.querySelector(
+          '.play-btn'
+        );
 
-      document.querySelectorAll('audio').forEach(a => {
-        if (a.id !== id && !a.paused) {
-          a.pause();
-          const p = document.getElementById(`player_${a.id}`);
-          if (p) {
-            const b = p.querySelector('.play-btn');
-            if (b) b.textContent = '▶';
+      document
+        .querySelectorAll('audio')
+        .forEach(a => {
+          if (
+            a.id !== id &&
+            !a.paused
+          ) {
+            a.pause();
+
+            const p =
+              document.getElementById(
+                `player_${a.id}`
+              );
+
+            if (p) {
+              const b =
+                p.querySelector(
+                  '.play-btn'
+                );
+
+              if (b) {
+                b.textContent = '▶';
+              }
+            }
           }
-        }
-      });
+        });
 
       if (audio.paused) {
         audio.play();
-        if (btn) btn.textContent = '❚❚';
+
+        if (btn) {
+          btn.textContent = '❚❚';
+        }
       } else {
         audio.pause();
-        if (btn) btn.textContent = '▶';
+
+        if (btn) {
+          btn.textContent = '▶';
+        }
       }
     }
 
     function initAudioDuration(id) {
-      const audio = document.getElementById(id);
-      const timeLabel = document.getElementById(`time_${id}`);
+      const audio =
+        document.getElementById(id);
+
+      const timeLabel =
+        document.getElementById(
+          `time_${id}`
+        );
+
       if (audio && timeLabel) {
-        const duration = audio.duration;
-        if (!isNaN(duration) && isFinite(duration)) {
-          timeLabel.textContent = formatAudioTime(duration);
+        const duration =
+          audio.duration;
+
+        if (
+          !isNaN(duration) &&
+          isFinite(duration)
+        ) {
+          timeLabel.textContent =
+            formatAudioTime(duration);
         }
       }
     }
 
     function updateAudioProgress(id) {
-      const audio = document.getElementById(id);
-      const progress = document.getElementById(`progress_${id}`);
-      const timeLabel = document.getElementById(`time_${id}`);
+      const audio =
+        document.getElementById(id);
+
+      const progress =
+        document.getElementById(
+          `progress_${id}`
+        );
+
+      const timeLabel =
+        document.getElementById(
+          `time_${id}`
+        );
 
       if (audio && progress) {
-        const percent = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-        progress.style.width = `${percent}%`;
-        if (timeLabel && audio.duration) {
-          timeLabel.textContent = formatAudioTime(audio.currentTime);
+        const percent =
+          audio.duration
+            ? (
+                audio.currentTime /
+                audio.duration
+              ) * 100
+            : 0;
+
+        progress.style.width =
+          `${percent}%`;
+
+        if (
+          timeLabel &&
+          audio.duration
+        ) {
+          timeLabel.textContent =
+            formatAudioTime(
+              audio.currentTime
+            );
         }
       }
     }
 
     function resetAudioPlayer(id) {
-      const audio = document.getElementById(id);
-      const player = document.getElementById(`player_${id}`);
-      const progress = document.getElementById(`progress_${id}`);
-      const timeLabel = document.getElementById(`time_${id}`);
+      const audio =
+        document.getElementById(id);
+
+      const player =
+        document.getElementById(
+          `player_${id}`
+        );
+
+      const progress =
+        document.getElementById(
+          `progress_${id}`
+        );
+
+      const timeLabel =
+        document.getElementById(
+          `time_${id}`
+        );
 
       if (player) {
-        const btn = player.querySelector('.play-btn');
-        if (btn) btn.textContent = '▶';
+        const btn =
+          player.querySelector(
+            '.play-btn'
+          );
+
+        if (btn) {
+          btn.textContent = '▶';
+        }
       }
-      if (progress) progress.style.width = '0%';
+
+      if (progress) {
+        progress.style.width = '0%';
+      }
+
       if (audio && timeLabel) {
-        timeLabel.textContent = formatAudioTime(audio.duration || 0);
+        timeLabel.textContent =
+          formatAudioTime(
+            audio.duration || 0
+          );
       }
     }
 
-    // 4. Swipe-to-Reply Logic
+    // =========================================================
+    // 4. SWIPE-TO-REPLY
+    // =========================================================
+
     function attachSwipeListeners() {
-      const wrappers = document.querySelectorAll('.message-wrapper');
+      const wrappers =
+        document.querySelectorAll(
+          '.message-wrapper'
+        );
+
       wrappers.forEach(wrapper => {
         let startX = 0;
         let currentX = 0;
         let isSwiping = false;
 
-        wrapper.addEventListener('touchstart', (e) => {
-          startX = e.touches[0].clientX;
-          isSwiping = true;
-          wrapper.style.transition = 'none';
-        }, { passive: true });
+        wrapper.addEventListener(
+          'touchstart',
+          e => {
+            startX =
+              e.touches[0].clientX;
 
-        wrapper.addEventListener('touchmove', (e) => {
-          if (!isSwiping) return;
-          currentX = e.touches[0].clientX - startX;
+            isSwiping = true;
 
-          if (currentX > 0 && currentX < 90) {
-            wrapper.style.transform = `translateX(${currentX}px)`;
-          }
-        }, { passive: true });
+            wrapper.style.transition =
+              'none';
+          },
+          { passive: true }
+        );
 
-        wrapper.addEventListener('touchend', () => {
-          if (!isSwiping) return;
-          isSwiping = false;
-          wrapper.style.transition = 'transform 0.2s ease';
+        wrapper.addEventListener(
+          'touchmove',
+          e => {
+            if (!isSwiping) return;
 
-          if (currentX > 50) {
-            const sender = wrapper.getAttribute('data-sender');
-            let content = wrapper.getAttribute('data-content');
+            currentX =
+              e.touches[0].clientX -
+              startX;
 
-            if (content.startsWith('[reply:')) {
-              const closeIdx = content.indexOf(']');
-              if (closeIdx !== -1) content = content.substring(closeIdx + 1).trim();
+            if (
+              currentX > 0 &&
+              currentX < 90
+            ) {
+              wrapper.style.transform =
+                `translateX(${currentX}px)`;
+            }
+          },
+          { passive: true }
+        );
+
+        wrapper.addEventListener(
+          'touchend',
+          () => {
+            if (!isSwiping) return;
+
+            isSwiping = false;
+
+            wrapper.style.transition =
+              'transform 0.2s ease';
+
+            if (currentX > 50) {
+              const sender =
+                wrapper.getAttribute(
+                  'data-sender'
+                );
+
+              let content =
+                wrapper.getAttribute(
+                  'data-content'
+                ) || '';
+
+              /*
+                If this message itself is a reply,
+                extract the actual message text
+                before creating a new reply.
+              */
+              const parsed =
+                parseReplyContent(
+                  content
+                );
+
+              if (parsed) {
+                content =
+                  parsed.messageText;
+              }
+
+              /*
+                If this is a sticker message,
+                pass only [sticker] to the
+                reply system — never the base64.
+              */
+              if (
+                content.startsWith(
+                  '[sticker]'
+                )
+              ) {
+                content = '[sticker]';
+              } else if (
+                content.includes(
+                  'data:image/'
+                )
+              ) {
+                content = '[sticker]';
+              }
+
+              triggerReplyUI(
+                sender,
+                content
+              );
+
+              if (navigator.vibrate) {
+                navigator.vibrate(25);
+              }
             }
 
-            triggerReplyUI(sender, content);
-            if (navigator.vibrate) navigator.vibrate(25);
-          }
+            wrapper.style.transform =
+              'translateX(0px)';
 
-          wrapper.style.transform = 'translateX(0px)';
-          currentX = 0;
-        });
+            currentX = 0;
+          }
+        );
       });
     }
 
-    function triggerReplyUI(sender, text) {
-      activeReplyTo = { sender, text };
-      const bar = document.getElementById('reply-preview-bar');
-      const userLabel = document.getElementById('reply-user-label');
-      const textLabel = document.getElementById('reply-text-label');
-      const input = document.getElementById('message-input');
+    // =========================================================
+    // REPLY UI
+    // =========================================================
 
-      if (bar && userLabel && textLabel) {
-        userLabel.textContent = `Replying to ${sender}`;
-        textLabel.textContent = formatSnippetText(text);
+    function triggerReplyUI(sender, text) {
+      let replyText = text || '';
+
+      /*
+        IMPORTANT:
+        Never store sticker base64 in
+        activeReplyTo.
+
+        Only store [sticker].
+      */
+
+      if (
+        replyText.startsWith(
+          '[sticker]'
+        ) ||
+        replyText.includes(
+          'data:image/'
+        )
+      ) {
+        replyText = '[sticker]';
+      }
+
+      activeReplyTo = {
+        sender,
+        text: replyText
+      };
+
+      const bar =
+        document.getElementById(
+          'reply-preview-bar'
+        );
+
+      const userLabel =
+        document.getElementById(
+          'reply-user-label'
+        );
+
+      const textLabel =
+        document.getElementById(
+          'reply-text-label'
+        );
+
+      const input =
+        document.getElementById(
+          'message-input'
+        );
+
+      if (
+        bar &&
+        userLabel &&
+        textLabel
+      ) {
+        userLabel.textContent =
+          `Replying to ${sender}`;
+
+        /*
+          Sticker reply preview is
+          literally [sticker].
+        */
+        textLabel.textContent =
+          replyText === '[sticker]'
+            ? '[sticker]'
+            : formatSnippetText(
+                replyText
+              );
+
         bar.style.display = 'flex';
       }
 
-      if (input) input.focus();
+      if (input) {
+        input.focus();
+      }
     }
 
     function cancelReply() {
       activeReplyTo = null;
-      const bar = document.getElementById('reply-preview-bar');
-      if (bar) bar.style.display = 'none';
+
+      const bar =
+        document.getElementById(
+          'reply-preview-bar'
+        );
+
+      if (bar) {
+        bar.style.display = 'none';
+      }
     }
 
-    // 5. Message Submission
+    // =========================================================
+    // 5. MESSAGE SUBMISSION
+    // =========================================================
+
     if (chatForm) {
-      chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const input = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        if (!input) return;
+      chatForm.addEventListener(
+        'submit',
+        async e => {
+          e.preventDefault();
 
-        let content = input.value.trim();
-        if (!content || !targetUser || !activeUser) return;
+          const input =
+            document.getElementById(
+              'message-input'
+            );
 
-        if (activeReplyTo) {
-          const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
-          content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
+          const sendBtn =
+            document.getElementById(
+              'send-btn'
+            );
+
+          if (!input) return;
+
+          let content =
+            input.value.trim();
+
+          if (
+            !content ||
+            !targetUser ||
+            !activeUser
+          ) {
+            return;
+          }
+
+          if (activeReplyTo) {
+            let cleanSnippet =
+              activeReplyTo.text || '';
+
+            /*
+              IMPORTANT:
+              If replying to a sticker,
+              store only [sticker].
+            */
+            if (
+              cleanSnippet.startsWith(
+                '[sticker]'
+              ) ||
+              cleanSnippet.includes(
+                'data:image/'
+              )
+            ) {
+              cleanSnippet =
+                '[sticker]';
+            } else {
+              cleanSnippet =
+                cleanSnippet
+                  .substring(0, 40)
+                  .replace(/\|/g, ' ');
+            }
+
+            content =
+              `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
+          }
+
+          if (sendBtn) {
+            sendBtn.disabled = true;
+          }
+
+          await postMessagePayload(
+            content
+          );
+
+          input.value = '';
+
+          cancelReply();
+
+          if (sendBtn) {
+            sendBtn.disabled = false;
+          }
         }
-
-        if (sendBtn) sendBtn.disabled = true;
-
-        await postMessagePayload(content);
-        input.value = '';
-        cancelReply();
-        if (sendBtn) sendBtn.disabled = false;
-      });
+      );
     }
 
-    // 6. Real-time Typing Indicators
-    const messageInput = document.getElementById('message-input');
+    // =========================================================
+    // 6. REAL-TIME TYPING INDICATORS
+    // =========================================================
+
+    const messageInput =
+      document.getElementById(
+        'message-input'
+      );
+
     let typingTimeout;
 
     if (messageInput) {
-      messageInput.addEventListener('input', () => {
-        sendTypingStatus(true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-          sendTypingStatus(false);
-        }, 2000);
-      });
+      messageInput.addEventListener(
+        'input',
+        () => {
+          sendTypingStatus(true);
+
+          clearTimeout(
+            typingTimeout
+          );
+
+          typingTimeout =
+            setTimeout(() => {
+              sendTypingStatus(false);
+            }, 2000);
+        }
+      );
     }
 
     function sendTypingStatus(isTyping) {
-      if (!activeUser || !targetUser) return;
-      socket.emit('typing', {
-        sender: activeUser,
-        receiver: targetUser,
-        isTyping: isTyping
-      });
+      if (
+        !activeUser ||
+        !targetUser
+      ) {
+        return;
+      }
+
+      socket.emit(
+        'typing',
+        {
+          sender: activeUser,
+          receiver: targetUser,
+          isTyping
+        }
+      );
     }
 
-    // Initial executions
-    loadChat();
-    setInterval(loadTargetUserProfile, 10000);
+    // =========================================================
+    // INITIAL EXECUTIONS
+    // =========================================================
 
-    // ==========================================
-    // 7. IMAGE SHARING & LIGHTBOX LOGIC
-    // ==========================================
+    loadChat();
+
+    setInterval(
+      loadTargetUserProfile,
+      10000
+    );
+
+    // =========================================================
+    // 7. IMAGE SHARING & LIGHTBOX
+    // =========================================================
+
     let selectedCompressedImage = null;
 
     function handleImageSelected(event) {
-      const file = event.target.files[0];
+      const file =
+        event.target.files[0];
+
       if (!file) return;
 
-      const reader = new FileReader();
+      const reader =
+        new FileReader();
+
       reader.onload = function(e) {
         const img = new Image();
-        img.src = e.target.result;
-        
+
+        img.src =
+          e.target.result;
+
         img.onload = () => {
           let width = img.width;
           let height = img.height;
+
           const maxWidth = 1200;
           const maxHeight = 1200;
 
           if (width > height) {
             if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
+              height =
+                Math.round(
+                  (height * maxWidth) /
+                  width
+                );
+
+              width =
+                maxWidth;
             }
           } else {
             if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
+              width =
+                Math.round(
+                  (width * maxHeight) /
+                  height
+                );
+
+              height =
+                maxHeight;
             }
           }
 
-          const canvas = document.createElement('canvas');
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
+
           canvas.width = width;
           canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
 
-          selectedCompressedImage = canvas.toDataURL('image/jpeg', 0.75);
-          
-          document.getElementById('preview-modal-title').textContent = 'Preview Image';
-          document.getElementById('image-preview-elem').src = selectedCompressedImage;
-          document.getElementById('preview-modal-actions').style.display = 'flex';
-          document.getElementById('image-preview-modal').style.display = 'flex';
+          const ctx =
+            canvas.getContext(
+              '2d'
+            );
+
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            width,
+            height
+          );
+
+          selectedCompressedImage =
+            canvas.toDataURL(
+              'image/jpeg',
+              0.75
+            );
+
+          document.getElementById(
+            'preview-modal-title'
+          ).textContent =
+            'Preview Image';
+
+          document.getElementById(
+            'image-preview-elem'
+          ).src =
+            selectedCompressedImage;
+
+          document.getElementById(
+            'preview-modal-actions'
+          ).style.display =
+            'flex';
+
+          document.getElementById(
+            'image-preview-modal'
+          ).style.display =
+            'flex';
         };
       };
+
       reader.readAsDataURL(file);
     }
 
-    function openChatImageViewer(base64Url) {
-      document.getElementById('preview-modal-title').textContent = 'View Photo';
-      document.getElementById('image-preview-elem').src = base64Url;
-      document.getElementById('preview-modal-actions').style.display = 'none';
-      document.getElementById('image-preview-modal').style.display = 'flex';
+    function openChatImageViewer(
+      base64Url
+    ) {
+      document.getElementById(
+        'preview-modal-title'
+      ).textContent =
+        'View Photo';
+
+      document.getElementById(
+        'image-preview-elem'
+      ).src =
+        base64Url;
+
+      document.getElementById(
+        'preview-modal-actions'
+      ).style.display =
+        'none';
+
+      document.getElementById(
+        'image-preview-modal'
+      ).style.display =
+        'flex';
     }
 
     function closeImagePreview() {
-      document.getElementById('image-preview-modal').style.display = 'none';
-      document.getElementById('image-file-input').value = '';
-      selectedCompressedImage = null;
+      document.getElementById(
+        'image-preview-modal'
+      ).style.display =
+        'none';
+
+      document.getElementById(
+        'image-file-input'
+      ).value = '';
+
+      selectedCompressedImage =
+        null;
     }
 
     async function sendSelectedImage() {
-      if (!selectedCompressedImage || !targetUser || !activeUser) return;
-      const sendBtn = document.getElementById('image-send-btn');
-      if (sendBtn) {
-        sendBtn.disabled = true;
-        sendBtn.textContent = 'Sending...';
+      if (
+        !selectedCompressedImage ||
+        !targetUser ||
+        !activeUser
+      ) {
+        return;
       }
 
-      const payload = `[img]${selectedCompressedImage}`;
-      await postMessagePayload(payload);
-      
+      const sendBtn =
+        document.getElementById(
+          'image-send-btn'
+        );
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent =
+          'Sending...';
+      }
+
+      const payload =
+        `[img]${selectedCompressedImage}`;
+
+      await postMessagePayload(
+        payload
+      );
+
       closeImagePreview();
+
       if (sendBtn) {
         sendBtn.disabled = false;
-        sendBtn.textContent = 'Send Image';
+        sendBtn.textContent =
+          'Send Image';
       }
     }
 
-    // ==========================================
+    // =========================================================
     // 8. STICKER & SAVE-TO-PACK LOGIC
-    // ==========================================
+    // =========================================================
+
     function getSavedStickers() {
-      return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
+      return JSON.parse(
+        localStorage.getItem(
+          'retro_stickers'
+        ) || '[]'
+      );
     }
 
     function toggleStickerDrawer() {
-      const drawer = document.getElementById('sticker-drawer');
+      const drawer =
+        document.getElementById(
+          'sticker-drawer'
+        );
+
       if (!drawer) return;
-      drawer.classList.toggle('active');
-      if (drawer.classList.contains('active')) {
+
+      drawer.classList.toggle(
+        'active'
+      );
+
+      if (
+        drawer.classList.contains(
+          'active'
+        )
+      ) {
         renderStickerDrawer();
       }
     }
 
     function renderStickerDrawer() {
-      const grid = document.getElementById('sticker-grid');
-      const stickers = getSavedStickers();
-      const countElem = document.getElementById('sticker-count');
-      if (countElem) countElem.textContent = stickers.length;
+      const grid =
+        document.getElementById(
+          'sticker-grid'
+        );
+
+      const stickers =
+        getSavedStickers();
+
+      const countElem =
+        document.getElementById(
+          'sticker-count'
+        );
+
+      if (countElem) {
+        countElem.textContent =
+          stickers.length;
+      }
+
       if (!grid) return;
 
       grid.innerHTML = '';
 
-      stickers.forEach((dataUrl, idx) => {
-        const item = document.createElement('div');
-        item.className = 'sticker-item-wrapper';
-        item.innerHTML = `
-          <img src="${dataUrl}" alt="Sticker ${idx+1}" onclick="sendSticker('${dataUrl}')">
-          <button type="button" class="remove-sticker-btn" onclick="removeSticker(event, ${idx})" title="Remove sticker">✕</button>
-        `;
-        grid.appendChild(item);
-      });
+      stickers.forEach(
+        (dataUrl, idx) => {
+          const item =
+            document.createElement(
+              'div'
+            );
+
+          item.className =
+            'sticker-item-wrapper';
+
+          item.innerHTML = `
+            <img
+              src="${dataUrl}"
+              alt="Sticker ${idx + 1}"
+              onclick="sendSticker('${dataUrl}')"
+            >
+
+            <button
+              type="button"
+              class="remove-sticker-btn"
+              onclick="removeSticker(event, ${idx})"
+              title="Remove sticker"
+            >
+              ✕
+            </button>
+          `;
+
+          grid.appendChild(item);
+        }
+      );
 
       if (stickers.length < 10) {
-        const addBtn = document.createElement('div');
-        addBtn.className = 'add-sticker-btn';
+        const addBtn =
+          document.createElement(
+            'div'
+          );
+
+        addBtn.className =
+          'add-sticker-btn';
+
         addBtn.textContent = '+';
-        addBtn.onclick = () => document.getElementById('sticker-file-input').click();
-        grid.appendChild(addBtn);
+
+        addBtn.onclick =
+          () =>
+            document
+              .getElementById(
+                'sticker-file-input'
+              )
+              .click();
+
+        grid.appendChild(
+          addBtn
+        );
       }
     }
 
-    function removeSticker(event, index) {
+    function removeSticker(
+      event,
+      index
+    ) {
       event.stopPropagation();
-      let stickers = getSavedStickers();
-      stickers.splice(index, 1);
-      localStorage.setItem('retro_stickers', JSON.stringify(stickers));
+
+      let stickers =
+        getSavedStickers();
+
+      stickers.splice(
+        index,
+        1
+      );
+
+      localStorage.setItem(
+        'retro_stickers',
+        JSON.stringify(
+          stickers
+        )
+      );
+
       renderStickerDrawer();
-      showToast('Removed from stickerpack');
+
+      showToast(
+        'Removed from stickerpack'
+      );
     }
 
-    function handleStickerSelected(event) {
-      const file = event.target.files[0];
+    function handleStickerSelected(
+      event
+    ) {
+      const file =
+        event.target.files[0];
+
       if (!file) return;
 
-      const reader = new FileReader();
+      const reader =
+        new FileReader();
+
       reader.onload = function(e) {
-        const img = new Image();
-        img.src = e.target.result;
+        const img =
+          new Image();
+
+        img.src =
+          e.target.result;
+
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
+
           canvas.width = 150;
           canvas.height = 150;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, 150, 150);
-          const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
 
-          const stickers = getSavedStickers();
-          if (stickers.length >= 10) return showToast('Stickerpack is full (max 10)');
-          stickers.push(compressedBase64);
-          localStorage.setItem('retro_stickers', JSON.stringify(stickers));
+          const ctx =
+            canvas.getContext(
+              '2d'
+            );
+
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            150,
+            150
+          );
+
+          const compressedBase64 =
+            canvas.toDataURL(
+              'image/webp',
+              0.7
+            );
+
+          const stickers =
+            getSavedStickers();
+
+          if (
+            stickers.length >= 10
+          ) {
+            return showToast(
+              'Stickerpack is full (max 10)'
+            );
+          }
+
+          stickers.push(
+            compressedBase64
+          );
+
+          localStorage.setItem(
+            'retro_stickers',
+            JSON.stringify(
+              stickers
+            )
+          );
+
           renderStickerDrawer();
-          showToast('Sticker added');
+
+          showToast(
+            'Sticker added'
+          );
         };
       };
+
       reader.readAsDataURL(file);
     }
 
-    function toggleStickerSaveTooltip(event, stickerId) {
+    function toggleStickerSaveTooltip(
+      event,
+      stickerId
+    ) {
       event.stopPropagation();
-      document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
-        if (tip.id !== stickerId) tip.classList.remove('active');
-      });
-      const tooltip = document.getElementById(stickerId);
+
+      document
+        .querySelectorAll(
+          '.add-to-pack-tooltip'
+        )
+        .forEach(tip => {
+          if (
+            tip.id !== stickerId
+          ) {
+            tip.classList.remove(
+              'active'
+            );
+          }
+        });
+
+      const tooltip =
+        document.getElementById(
+          stickerId
+        );
+
       if (tooltip) {
-        tooltip.classList.toggle('active');
+        tooltip.classList.toggle(
+          'active'
+        );
       }
     }
 
-    function saveStickerToDrawer(event, dataUrl) {
+    function saveStickerToDrawer(
+      event,
+      dataUrl
+    ) {
       event.stopPropagation();
-      const stickers = getSavedStickers();
-      if (stickers.includes(dataUrl)) {
-        showToast('Already in your stickerpack');
+
+      const stickers =
+        getSavedStickers();
+
+      if (
+        stickers.includes(dataUrl)
+      ) {
+        showToast(
+          'Already in your stickerpack'
+        );
+
         return;
       }
-      if (stickers.length >= 10) {
-        showToast('Stickerpack full (max 10)');
+
+      if (
+        stickers.length >= 10
+      ) {
+        showToast(
+          'Stickerpack full (max 10)'
+        );
+
         return;
       }
+
       stickers.push(dataUrl);
-      localStorage.setItem('retro_stickers', JSON.stringify(stickers));
-      showToast('Added to stickerpack ✨');
-      
-      if (event.target && event.target.classList) {
-        event.target.classList.remove('active');
+
+      localStorage.setItem(
+        'retro_stickers',
+        JSON.stringify(
+          stickers
+        )
+      );
+
+      showToast(
+        'Added to stickerpack ✨'
+      );
+
+      if (
+        event.target &&
+        event.target.classList
+      ) {
+        event.target.classList.remove(
+          'active'
+        );
       }
     }
 
-    async function sendSticker(dataUrl) {
+    async function sendSticker(
+      dataUrl
+    ) {
       toggleStickerDrawer();
-      await postMessagePayload(`[sticker]${dataUrl}`);
+
+      await postMessagePayload(
+        `[sticker]${dataUrl}`
+      );
     }
 
-    document.addEventListener('click', () => {
-      document.querySelectorAll('.add-to-pack-tooltip').forEach(tip => {
-        tip.classList.remove('active');
-      });
-    });
+    document.addEventListener(
+      'click',
+      () => {
+        document
+          .querySelectorAll(
+            '.add-to-pack-tooltip'
+          )
+          .forEach(tip => {
+            tip.classList.remove(
+              'active'
+            );
+          });
+      }
+    );
 
-    // ==========================================
+    // =========================================================
     // 9. VOICE NOTE LOGIC
-    // ==========================================
+    // =========================================================
+
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
 
     async function toggleVoiceRecording() {
-      const vnBtn = document.getElementById('vn-btn');
-      
+      const vnBtn =
+        document.getElementById(
+          'vn-btn'
+        );
+
       if (!isRecording) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream);
+          const stream =
+            await navigator.mediaDevices.getUserMedia(
+              {
+                audio: true
+              }
+            );
+
+          mediaRecorder =
+            new MediaRecorder(
+              stream
+            );
+
           audioChunks = [];
 
-          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-          mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-              await postMessagePayload(`[audio]${reader.result}`);
+          mediaRecorder.ondataavailable =
+            e =>
+              audioChunks.push(
+                e.data
+              );
+
+          mediaRecorder.onstop =
+            async () => {
+              const audioBlob =
+                new Blob(
+                  audioChunks,
+                  {
+                    type:
+                      'audio/webm'
+                  }
+                );
+
+              const reader =
+                new FileReader();
+
+              reader.onloadend =
+                async () => {
+                  await postMessagePayload(
+                    `[audio]${reader.result}`
+                  );
+                };
+
+              reader.readAsDataURL(
+                audioBlob
+              );
+
+              stream
+                .getTracks()
+                .forEach(
+                  track =>
+                    track.stop()
+                );
             };
-            reader.readAsDataURL(audioBlob);
-            
-            stream.getTracks().forEach(track => track.stop());
-          };
 
           mediaRecorder.start();
+
           isRecording = true;
-          if (vnBtn) vnBtn.classList.add('recording');
+
+          if (vnBtn) {
+            vnBtn.classList.add(
+              'recording'
+            );
+          }
+
         } catch (err) {
-          showToast('Microphone access required');
+          showToast(
+            'Microphone access required'
+          );
         }
+
       } else {
-        if (mediaRecorder) mediaRecorder.stop();
+        if (mediaRecorder) {
+          mediaRecorder.stop();
+        }
+
         isRecording = false;
-        if (vnBtn) vnBtn.classList.remove('recording');
+
+        if (vnBtn) {
+          vnBtn.classList.remove(
+            'recording'
+          );
+        }
       }
     }
 
-    // Generic Message Dispatcher (Emits via Socket & Posts to DB)
-    async function postMessagePayload(contentPayload) {
+    // =========================================================
+    // GENERIC MESSAGE DISPATCHER
+    // =========================================================
+
+    async function postMessagePayload(
+      contentPayload
+    ) {
       const msgData = {
         sender: activeUser,
         receiver: targetUser,
@@ -1108,47 +2531,106 @@
         content: contentPayload
       };
 
-      // Emit real-time socket event immediately
-      socket.emit('send_message', msgData);
+      socket.emit(
+        'send_message',
+        msgData
+      );
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msgData)
-        });
+        const response =
+          await fetch(
+            `${API_BASE_URL}/api/messages`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+              body:
+                JSON.stringify(
+                  msgData
+                )
+            }
+          );
 
         if (response.ok) {
           isUserScrolling = false;
+
           await loadChat();
+
           setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            chatContainer.scrollTop =
+              chatContainer.scrollHeight;
           }, 50);
         }
+
       } catch (err) {
-        console.error('Error dispatching payload:', err);
+        console.error(
+          'Error dispatching payload:',
+          err
+        );
       }
     }
 
-    function sanitizeMessageContent(content) {
+    // =========================================================
+    // SANITIZE REPLY CONTENT
+    // =========================================================
+
+    function sanitizeMessageContent(
+      content
+    ) {
       if (!content) return '';
-      let text = content.trim();
 
-      if (text.startsWith('[reply:')) {
-        const splitIdx = text.indexOf(']');
-        if (splitIdx !== -1) text = text.substring(splitIdx + 1).trim();
+      let text =
+        content.trim();
+
+      if (
+        text.startsWith(
+          '[reply:'
+        )
+      ) {
+        const parsed =
+          parseReplyContent(
+            text
+          );
+
+        if (parsed) {
+          text =
+            parsed.replySnippet;
+        }
       }
 
-      if (text.includes('data:image/') || text.startsWith('data:image')) {
-        return '🎨 Sticker';
+      /*
+        Sticker replies must remain
+        literally [sticker].
+      */
+
+      if (
+        text === '[sticker]' ||
+        text.includes(
+          'data:image/'
+        )
+      ) {
+        return '[sticker]';
       }
 
-      if (text.startsWith('[img]')) return '📷 Photo';
-      if (text.startsWith('[sticker]')) return '🎨 Sticker';
-      if (text.startsWith('[audio]')) return '🎙️ Voice note';
+      if (
+        text.startsWith('[img]')
+      ) {
+        return '📷 Photo';
+      }
+
+      if (
+        text.startsWith(
+          '[audio]'
+        )
+      ) {
+        return '🎙️ Voice note';
+      }
 
       return text;
     }
+
   </script>        
 </body>
-</html>
+  </html>
