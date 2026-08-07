@@ -265,571 +265,567 @@
     <img id="modal-avatar-img" src="" alt="Profile Picture">
   </div>
 
-  <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-    let lastKnownMsgCount = 0;
-    let activeUser = '';
-    let knownDmContacts = new Set();
 
-    function cleanPreviewText(text) {
-      if (!text) return '';
-      let clean = text;
-      // Strip reply metadata: [reply:username|snippet]
-      if (clean.startsWith('[reply:')) {
-        const splitIdx = clean.indexOf(']');
-        if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
+      <script>
+  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+  let lastKnownMsgCount = 0;
+  let activeUser = '';
+  let knownDmContacts = new Set();
+
+  // Global Logout Function (Callable by onclick="logout()")
+  function logout() {
+    localStorage.removeItem('username');
+    localStorage.removeItem('retro_session');
+    window.location.href = 'auth.html';
+  }
+
+  function cleanPreviewText(text) {
+    if (!text) return '';
+    let clean = text;
+    if (clean.startsWith('[reply:')) {
+      const splitIdx = clean.indexOf(']');
+      if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
+    }
+    if (clean.startsWith('[img]')) return '📷 Photo';
+    if (clean.startsWith('[sticker]')) return '🎨 Sticker';
+    if (clean.startsWith('[audio]')) return '🎙️ Voice note';
+    return clean;
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/sw.js');
+      } catch (swErr) {
+        console.error('Service Worker Registration Failed:', swErr);
       }
-      if (clean.startsWith('[img]')) return '📷 Photo';
-      if (clean.startsWith('[sticker]')) return '🎨 Sticker';
-      if (clean.startsWith('[audio]')) return '🎙️ Voice note';
-      return clean;
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      if ('serviceWorker' in navigator) {
-        try {
-          await navigator.serviceWorker.register('/sw.js');
-        } catch (swErr) {
-          console.error('Service Worker Registration Failed:', swErr);
-        }
-      }
+    const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
+    activeUser = rawActive.trim().replace('@', '');
 
-      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      activeUser = rawActive.trim().replace('@', '');
+    if (!activeUser) {
+      window.location.href = 'auth.html';
+      return;
+    }
 
-      if (!activeUser) {
-        window.location.href = 'auth.html';
-        return;
-      }
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) {
+      profileBtn.textContent = activeUser;
+    }
 
-      const profileBtn = document.getElementById('profile-btn');
-      if (profileBtn) {
-        profileBtn.textContent = activeUser;
-      }
+    if ('Notification' in window && Notification.permission === 'default') {
+      setTimeout(() => {
+        const notifModal = document.getElementById('notif-modal');
+        if (notifModal) notifModal.classList.add('active');
+      }, 800);
+    }
 
-      if ('Notification' in window && Notification.permission === 'default') {
-        setTimeout(() => {
-          document.getElementById('notif-modal').classList.add('active');
-        }, 800);
-      }
+    registerPushSubscription(activeUser);
 
-      registerPushSubscription(activeUser);
+    const joinCodeInput = document.getElementById('join-code-input');
+    const joinCodeBtn = document.getElementById('join-code-btn');
+    const codeError = document.getElementById('code-error');
 
-      const joinCodeInput = document.getElementById('join-code-input');
-      const joinCodeBtn = document.getElementById('join-code-btn');
-      const codeError = document.getElementById('code-error');
+    async function handleCodeJoin() {
+      const inputCode = joinCodeInput.value.trim().toUpperCase();
+      if (!inputCode) return;
 
-      async function handleCodeJoin() {
-        const inputCode = joinCodeInput.value.trim().toUpperCase();
-        if (!inputCode) return;
+      joinCodeBtn.disabled = true;
+      joinCodeBtn.textContent = 'Searching...';
+      codeError.style.display = 'none';
 
-        joinCodeBtn.disabled = true;
-        joinCodeBtn.textContent = 'Searching...';
-        codeError.style.display = 'none';
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users`);
+        if (!res.ok) throw new Error('Failed to fetch users list');
+        const users = await res.json();
 
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/users`);
-          if (!res.ok) throw new Error('Failed to fetch users list');
-          const users = await res.json();
+        const matchedUser = users.find(u => {
+          const username = (typeof u === 'string' ? u : u.username || '').trim().replace('@', '');
+          return getChatCode(username) === inputCode;
+        });
 
-          const matchedUser = users.find(u => {
-            const username = (typeof u === 'string' ? u : u.username || '').trim().replace('@', '');
-            return getChatCode(username) === inputCode;
-          });
+        if (matchedUser) {
+          const targetUsername = typeof matchedUser === 'string' ? matchedUser : matchedUser.username;
 
-          if (matchedUser) {
-            const targetUsername = typeof matchedUser === 'string' ? matchedUser : matchedUser.username;
-
-            if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
-              codeError.textContent = 'You cannot chat with yourself!';
-              codeError.style.display = 'block';
-              joinCodeBtn.disabled = false;
-              joinCodeBtn.textContent = 'Search';
-              return;
-            }
-
-            window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
-          } else {
-            codeError.textContent = 'Invalid Chat Code. Please check and try again.';
+          if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
+            codeError.textContent = 'You cannot chat with yourself!';
             codeError.style.display = 'block';
             joinCodeBtn.disabled = false;
             joinCodeBtn.textContent = 'Search';
+            return;
           }
-        } catch (err) {
-          console.error('Error resolving code:', err);
-          codeError.textContent = 'Network error. Could not verify code.';
+
+          window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
+        } else {
+          codeError.textContent = 'Invalid Chat Code. Please check and try again.';
           codeError.style.display = 'block';
           joinCodeBtn.disabled = false;
           joinCodeBtn.textContent = 'Search';
         }
+      } catch (err) {
+        console.error('Error resolving code:', err);
+        codeError.textContent = 'Network error. Could not verify code.';
+        codeError.style.display = 'block';
+        joinCodeBtn.disabled = false;
+        joinCodeBtn.textContent = 'Search';
       }
+    }
 
-      function getChatCode(user) {
-        let hash = 0;
-        const str = user.toLowerCase() + "_retro_secret_salt";
-        for (let i = 0; i < str.length; i++) {
-          hash = (hash << 5) - hash + str.charCodeAt(i);
-          hash |= 0;
-        }
-        const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
-        return `RETRO-${cleanHash}`;
+    function getChatCode(user) {
+      let hash = 0;
+      const str = user.toLowerCase() + "_retro_secret_salt";
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
       }
+      const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
+      return `RETRO-${cleanHash}`;
+    }
 
-      if (joinCodeBtn) joinCodeBtn.addEventListener('click', handleCodeJoin);
-      if (joinCodeInput) {
-        joinCodeInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') handleCodeJoin();
-        });
-      }
+    if (joinCodeBtn) joinCodeBtn.addEventListener('click', handleCodeJoin);
+    if (joinCodeInput) {
+      joinCodeInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleCodeJoin();
+      });
+    }
 
-      const openGroupBtn = document.getElementById('open-create-group-btn');
-      const submitGroupBtn = document.getElementById('submit-create-group-btn');
+    const openGroupBtn = document.getElementById('open-create-group-btn');
+    const submitGroupBtn = document.getElementById('submit-create-group-btn');
 
-      if (openGroupBtn) openGroupBtn.addEventListener('click', openCreateGroupModal);
-      if (submitGroupBtn) submitGroupBtn.addEventListener('click', handleCreateGroupSubmit);
+    if (openGroupBtn) openGroupBtn.addEventListener('click', openCreateGroupModal);
+    if (submitGroupBtn) submitGroupBtn.addEventListener('click', handleCreateGroupSubmit);
 
+    loadInbox();
+    loadUserGroups();
+    setInterval(() => {
       loadInbox();
       loadUserGroups();
-      setInterval(() => {
-        loadInbox();
-        loadUserGroups();
-      }, 4000);
-    });
+    }, 4000);
+  });
 
-    function logout() {
-      localStorage.removeItem('username');
-      localStorage.removeItem('retro_session');
-      window.location.href = 'auth.html';
-    }
+  function dismissNotifModal() {
+    const modal = document.getElementById('notif-modal');
+    if (!modal) return;
+    modal.classList.remove('active');
+  }
 
-    function dismissNotifModal() {
-      const modal = document.getElementById('notif-modal');
-      if (!modal) return;
-      modal.classList.remove('active');
-    }
-
-    async function handleEnableNotifsClick() {
-      try {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          registerPushSubscription(activeUser);
-        }
-      } catch (err) {
-        console.error('Notification permission error:', err);
-      } finally {
-        dismissNotifModal();
+  async function handleEnableNotifsClick() {
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        registerPushSubscription(activeUser);
       }
+    } catch (err) {
+      console.error('Notification permission error:', err);
+    } finally {
+      dismissNotifModal();
     }
+  }
 
-    function openChat(username, timestamp) {
-      localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
+  function openChat(username, timestamp) {
+    localStorage.setItem(`read_${username.toLowerCase()}`, timestamp);
 
-      fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ other_user: username })
-      }).catch(err => console.error('Mark-read failed:', err));
+    fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ other_user: username })
+    }).catch(err => console.error('Mark-read failed:', err));
 
-      window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
-    }
+    window.location.href = `chat.html?user=${encodeURIComponent(username)}`;
+  }
 
-    function openGroupChat(groupId) {
-      window.location.href = `groupchat.html?groupId=${groupId}`;
-    }
+  function openGroupChat(groupId) {
+    window.location.href = `groupchat.html?groupId=${groupId}`;
+  }
 
-    function viewInboxAvatar(event, imgSrc) {
-      event.stopPropagation();
-      const modal = document.getElementById('avatar-modal');
-      const modalImg = document.getElementById('modal-avatar-img');
-      if (modal && modalImg) {
-        modalImg.src = imgSrc;
-        modal.classList.add('active');
-      }
-    }
-
-    function closeAvatarModal() {
-      const modal = document.getElementById('avatar-modal');
-      if (modal) modal.classList.remove('active');
-    }
-
-    function previewGroupAvatar(event) {
-      const file = event.target.files[0];
-      const previewImg = document.getElementById('avatar-preview-img');
-      const icon = document.getElementById('avatar-picker-icon');
-
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          previewImg.src = e.target.result;
-          previewImg.style.display = 'block';
-          icon.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    function showGroupModalError(msg) {
-      const errBox = document.getElementById('group-modal-error');
-      if (errBox) {
-        errBox.textContent = msg;
-        errBox.style.display = 'block';
-      }
-    }
-
-    function hideGroupModalError() {
-      const errBox = document.getElementById('group-modal-error');
-      if (errBox) {
-        errBox.style.display = 'none';
-        errBox.textContent = '';
-      }
-    }
-
-    function openCreateGroupModal() {
-      hideGroupModalError();
-      const modal = document.getElementById('create-group-modal');
-      const contactsContainer = document.getElementById('dm-contacts-checklist');
-      
-      const sortedContacts = Array.from(knownDmContacts).sort((a, b) => a.localeCompare(b));
-
-      if (sortedContacts.length === 0) {
-        contactsContainer.innerHTML = '<div class="empty-contacts-notice">No DM contacts available</div>';
-      } else {
-        contactsContainer.innerHTML = sortedContacts.map(contact => `
-          <div class="contact-select-item">
-            <span style="font-size:0.85rem; font-weight:600;">@${contact}</span>
-            <input type="checkbox" value="${contact}" class="group-member-checkbox">
-          </div>
-        `).join('');
-      }
-
+  function viewInboxAvatar(event, imgSrc) {
+    event.stopPropagation();
+    const modal = document.getElementById('avatar-modal');
+    const modalImg = document.getElementById('modal-avatar-img');
+    if (modal && modalImg) {
+      modalImg.src = imgSrc;
       modal.classList.add('active');
     }
+  }
 
-    function closeCreateGroupModal() {
-      const modal = document.getElementById('create-group-modal');
-      modal.classList.remove('active');
-      document.getElementById('group-name-input').value = '';
-      document.getElementById('group-avatar-input').value = '';
-      hideGroupModalError();
-      
-      const previewImg = document.getElementById('avatar-preview-img');
-      const icon = document.getElementById('avatar-picker-icon');
-      if (previewImg) {
-        previewImg.src = '';
-        previewImg.style.display = 'none';
-      }
-      if (icon) icon.style.display = 'inline';
+  function closeAvatarModal() {
+    const modal = document.getElementById('avatar-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function previewGroupAvatar(event) {
+    const file = event.target.files[0];
+    const previewImg = document.getElementById('avatar-preview-img');
+    const icon = document.getElementById('avatar-picker-icon');
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        previewImg.style.display = 'block';
+        icon.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function showGroupModalError(msg) {
+    const errBox = document.getElementById('group-modal-error');
+    if (errBox) {
+      errBox.textContent = msg;
+      errBox.style.display = 'block';
+    }
+  }
+
+  function hideGroupModalError() {
+    const errBox = document.getElementById('group-modal-error');
+    if (errBox) {
+      errBox.style.display = 'none';
+      errBox.textContent = '';
+    }
+  }
+
+  function openCreateGroupModal() {
+    hideGroupModalError();
+    const modal = document.getElementById('create-group-modal');
+    const contactsContainer = document.getElementById('dm-contacts-checklist');
+    
+    const sortedContacts = Array.from(knownDmContacts).sort((a, b) => a.localeCompare(b));
+
+    if (sortedContacts.length === 0) {
+      contactsContainer.innerHTML = '<div class="empty-contacts-notice">No DM contacts available</div>';
+    } else {
+      contactsContainer.innerHTML = sortedContacts.map(contact => `
+        <div class="contact-select-item">
+          <span style="font-size:0.85rem; font-weight:600;">@${contact}</span>
+          <input type="checkbox" value="${contact}" class="group-member-checkbox">
+        </div>
+      `).join('');
     }
 
-    async function handleCreateGroupSubmit() {
-      hideGroupModalError();
-      const nameInput = document.getElementById('group-name-input');
-      const fileInput = document.getElementById('group-avatar-input');
-      const submitBtn = document.getElementById('submit-create-group-btn');
+    modal.classList.add('active');
+  }
 
-      const groupName = nameInput.value.trim();
-      if (!groupName) {
-        showGroupModalError('Please enter a group name.');
-        return;
-      }
+  function closeCreateGroupModal() {
+    const modal = document.getElementById('create-group-modal');
+    modal.classList.remove('active');
+    document.getElementById('group-name-input').value = '';
+    document.getElementById('group-avatar-input').value = '';
+    hideGroupModalError();
+    
+    const previewImg = document.getElementById('avatar-preview-img');
+    const icon = document.getElementById('avatar-picker-icon');
+    if (previewImg) {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+    }
+    if (icon) icon.style.display = 'inline';
+  }
 
-      const checkedMembers = Array.from(document.querySelectorAll('.group-member-checkbox:checked')).map(cb => cb.value);
+  async function handleCreateGroupSubmit() {
+    hideGroupModalError();
+    const nameInput = document.getElementById('group-name-input');
+    const fileInput = document.getElementById('group-avatar-input');
+    const submitBtn = document.getElementById('submit-create-group-btn');
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Creating...';
+    const groupName = nameInput.value.trim();
+    if (!groupName) {
+      showGroupModalError('Please enter a group name.');
+      return;
+    }
 
-      let avatarBase64 = null;
-      if (fileInput.files[0]) {
-        avatarBase64 = await new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = e => resolve(e.target.result);
-          reader.readAsDataURL(fileInput.files[0]);
-        });
-      }
+    const checkedMembers = Array.from(document.querySelectorAll('.group-member-checkbox:checked')).map(cb => cb.value);
 
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/groups`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: groupName,
-            avatar: avatarBase64,
-            created_by: activeUser,
-            members: checkedMembers || []
-          })
-        });
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating...';
 
-        const data = await res.json();
-        if (res.ok && data.group) {
-          closeCreateGroupModal();
-          window.location.href = `groupchat.html?groupId=${data.group.id}`;
-        } else {
-          showGroupModalError(data.error || 'Failed to create group.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Create Group';
-        }
-      } catch (err) {
-        console.error('Error creating group:', err);
-        showGroupModalError('Network error while creating group.');
+    let avatarBase64 = null;
+    if (fileInput.files[0]) {
+      avatarBase64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(fileInput.files[0]);
+      });
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: groupName,
+          avatar: avatarBase64,
+          created_by: activeUser,
+          members: checkedMembers || []
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.group) {
+        closeCreateGroupModal();
+        window.location.href = `groupchat.html?groupId=${data.group.id}`;
+      } else {
+        showGroupModalError(data.error || 'Failed to create group.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Create Group';
       }
+    } catch (err) {
+      console.error('Error creating group:', err);
+      showGroupModalError('Network error while creating group.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create Group';
     }
+  }
 
-    async function loadUserGroups() {
-      if (!activeUser) return;
+  async function loadUserGroups() {
+    if (!activeUser) return;
 
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/groups/user/${encodeURIComponent(activeUser)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const groups = Array.isArray(data) ? data : (data.groups || []);
+
+      const groupListContainer = document.getElementById('group-list');
+      if (!groupListContainer) return;
+
+      if (!groups || groups.length === 0) {
+        groupListContainer.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.4); font-style:italic;">No group chats yet.</div>';
+        return;
+      }
+
+      groupListContainer.innerHTML = groups.map(g => `
+        <div class="chat-card" onclick="openGroupChat('${g.id}')">
+          <div class="inbox-card-avatar" ${g.avatar ? `onclick="viewInboxAvatar(event, '${g.avatar}')"` : ''}>
+            ${g.avatar 
+              ? `<img src="${g.avatar}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
+              : `<span class="inbox-avatar-initial">${g.name.charAt(0).toUpperCase()}</span>`
+            }
+          </div>
+          <div class="inbox-card-content">
+            <div class="inbox-card-header">
+              <div class="inbox-card-username">${g.name}</div>
+            </div>
+            <div class="inbox-card-preview">Tap to enter group chat</div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      console.error('Failed to load user groups:', err);
+    }
+  }
+
+  function updateHomeScreenBadge(count) {
+    if ('setAppBadge' in navigator) {
+      if (count > 0) {
+        navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
+      } else {
+        navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
+      }
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  async function registerPushSubscription(username) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const res = await fetch(`${API_BASE_URL}/api/vapid-public-key`); 
+      if (!res.ok) return;
+      const { publicKey } = await res.json();
+
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+      }
+
+      await fetch(`${API_BASE_URL}/api/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, subscription })
+      });
+    } catch (err) {
+      console.error('Push subscription failed:', err);
+    }
+  }
+
+  async function loadInbox() {
+    const lowerActive = activeUser.toLowerCase();
+    if (!activeUser) return;
+
+    try {
+      let userAvatars = {};
       try {
-        const res = await fetch(`${API_BASE_URL}/api/groups/user/${encodeURIComponent(activeUser)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const groups = Array.isArray(data) ? data : (data.groups || []);
+        const usersRes = await fetch(`${API_BASE_URL}/api/users`);
+        if (usersRes.ok) {
+          const usersList = await usersRes.json();
+          usersList.forEach(u => {
+            if (typeof u === 'object') {
+              const uname = (u.username || u.name || '').trim().replace('@', '').toLowerCase();
+              const pfp = u.pfp || u.avatar || u.profile_picture || u.profilePic || u.image;
+              if (uname && pfp) {
+                userAvatars[uname] = pfp;
+                localStorage.setItem(`retro_pfp_${uname}`, pfp);
+              }
+            }
+          });
+        }
+      } catch (uErr) {
+        console.error('Error loading user avatars:', uErr);
+      }
 
-        const groupListContainer = document.getElementById('group-list');
-        if (!groupListContainer) return;
+      let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
+      if (!response.ok) return;
+      
+      let messages = await response.json();
 
-        if (!groups || groups.length === 0) {
-          groupListContainer.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.4); font-style:italic;">No group chats yet.</div>';
-          return;
+      if ((!messages || messages.length === 0) && activeUser !== lowerActive) {
+        const fallbackRes = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
+        if (fallbackRes.ok) {
+          messages = await fallbackRes.json();
+        }
+      }
+
+      const inboxList = document.getElementById('inbox-list');
+      const emptyState = document.getElementById('empty-state');
+      
+      if (!inboxList) return;
+
+      if (!messages || messages.length === 0) {
+        inboxList.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        document.title = 'RETRO | Inbox';
+        updateHomeScreenBadge(0);
+        return;
+      }
+
+      lastKnownMsgCount = messages.length;
+      const conversationMap = {};
+      
+      messages.forEach(msg => {
+        const senderRaw = msg.sender_username || msg.sender || '';
+        const receiverRaw = msg.receiver_username || msg.receiver || '';
+        
+        const sender = senderRaw.trim().replace('@', '').toLowerCase();
+        const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
+        
+        let otherUserDisplay = '';
+        if (sender === lowerActive) {
+          otherUserDisplay = receiverRaw.trim().replace('@', '');
+        } else if (receiver === lowerActive) {
+          otherUserDisplay = senderRaw.trim().replace('@', '');
         }
 
-        groupListContainer.innerHTML = groups.map(g => `
-          <div class="chat-card" onclick="openGroupChat('${g.id}')">
-            <div class="inbox-card-avatar" ${g.avatar ? `onclick="viewInboxAvatar(event, '${g.avatar}')"` : ''}>
-              ${g.avatar 
-                ? `<img src="${g.avatar}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
-                : `<span class="inbox-avatar-initial">${g.name.charAt(0).toUpperCase()}</span>`
+        if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
+
+        knownDmContacts.add(otherUserDisplay);
+
+        const mapKey = otherUserDisplay.toLowerCase();
+        const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
+
+        if (!conversationMap[mapKey]) {
+          conversationMap[mapKey] = {
+            username: otherUserDisplay,
+            sender: sender,
+            content: msg.content || '',
+            created_at: msgDate,
+            unreadCount: 0
+          };
+        }
+
+        const lastReadTime = localStorage.getItem(`read_${mapKey}`);
+        const isIncoming = sender !== lowerActive;
+        const isUnread = isIncoming && (!lastReadTime || msgDate > new Date(lastReadTime));
+
+        if (isUnread) {
+          conversationMap[mapKey].unreadCount++;
+        }
+
+        if (msgDate >= new Date(conversationMap[mapKey].created_at)) {
+          conversationMap[mapKey].created_at = msgDate;
+          conversationMap[mapKey].content = msg.content || '';
+          conversationMap[mapKey].sender = sender;
+        }
+      });
+
+      const conversations = Object.values(conversationMap).sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      if (conversations.length === 0) {
+        inboxList.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        document.title = 'RETRO | Inbox';
+        updateHomeScreenBadge(0);
+        return;
+      }
+
+      if (emptyState) emptyState.style.display = 'none';
+
+      const totalUnread = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
+
+      if (totalUnread > 0) {
+        document.title = `(${totalUnread}) RETRO | Inbox`;
+        updateHomeScreenBadge(totalUnread);
+      } else {
+        document.title = 'RETRO | Inbox';
+        updateHomeScreenBadge(0);
+      }
+
+      inboxList.innerHTML = conversations.map(conv => {
+        const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const hasUnread = conv.unreadCount > 0;
+        const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
+        
+        const unameLower = conv.username.toLowerCase();
+        const avatarPfp = userAvatars[unameLower] || localStorage.getItem(`retro_pfp_${unameLower}`);
+
+        return `
+          <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
+            <div class="inbox-card-avatar" ${avatarPfp ? `onclick="viewInboxAvatar(event, '${avatarPfp}')"` : ''}>
+              ${avatarPfp 
+                ? `<img src="${avatarPfp}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
+                : `<span class="inbox-avatar-initial">${conv.username.charAt(0).toUpperCase()}</span>`
               }
             </div>
             <div class="inbox-card-content">
               <div class="inbox-card-header">
-                <div class="inbox-card-username">${g.name}</div>
+                <div class="inbox-card-username">${conv.username}</div>
+                ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
               </div>
-              <div class="inbox-card-preview">Tap to enter group chat</div>
+              <div class="inbox-card-preview">${cleanPreviewText(conv.content)}</div>
+              <div class="inbox-card-time">${time}</div>
             </div>
           </div>
-        `).join('');
-      } catch (err) {
-        console.error('Failed to load user groups:', err);
-      }
+        `;
+      }).join('');
+
+    } catch (err) {
+      console.error('Failed to load inbox:', err);
     }
-
-    function updateHomeScreenBadge(count) {
-      if ('setAppBadge' in navigator) {
-        if (count > 0) {
-          navigator.setAppBadge(count).catch((err) => console.error('Badge error:', err));
-        } else {
-          navigator.clearAppBadge().catch((err) => console.error('Badge error:', err));
-        }
-      }
-    }
-
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-      }
-      return outputArray;
-    }
-
-    async function registerPushSubscription(username) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (Notification.permission !== 'granted') return;
-
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    // Updated route path to match server.js: /api/vapid-public-key
-    const res = await fetch(`${API_BASE_URL}/api/vapid-public-key`); 
-    if (!res.ok) return;
-    const { publicKey } = await res.json();
-
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
-    }
-
-    await fetch(`${API_BASE_URL}/api/subscribe`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, subscription })
-    });
-  } catch (err) {
-    console.error('Push subscription failed:', err);
   }
-}
+</script>
 
 
-        await fetch(`${API_BASE_URL}/api/subscribe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, subscription })
-        });
-      } catch (err) {
-        console.error('Push subscription failed:', err);
-      }
-    }
-
-    async function loadInbox() {
-      const lowerActive = activeUser.toLowerCase();
-      if (!activeUser) return;
-
-      try {
-        let userAvatars = {};
-        try {
-          const usersRes = await fetch(`${API_BASE_URL}/api/users`);
-          if (usersRes.ok) {
-            const usersList = await usersRes.json();
-            usersList.forEach(u => {
-              if (typeof u === 'object') {
-                const uname = (u.username || u.name || '').trim().replace('@', '').toLowerCase();
-                const pfp = u.pfp || u.avatar || u.profile_picture || u.profilePic || u.image;
-                if (uname && pfp) {
-                  userAvatars[uname] = pfp;
-                  localStorage.setItem(`retro_pfp_${uname}`, pfp);
-                }
-              }
-            });
-          }
-        } catch (uErr) {
-          console.error('Error loading user avatars:', uErr);
-        }
-
-        let response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
-        if (!response.ok) return;
+    
+      
+    
         
-        let messages = await response.json();
-
-        if ((!messages || messages.length === 0) && activeUser !== lowerActive) {
-          const fallbackRes = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(lowerActive)}`);
-          if (fallbackRes.ok) {
-            messages = await fallbackRes.json();
-          }
-        }
-
-        const inboxList = document.getElementById('inbox-list');
-        const emptyState = document.getElementById('empty-state');
-        
-        if (!inboxList) return;
-
-        if (!messages || messages.length === 0) {
-          inboxList.innerHTML = '';
-          if (emptyState) emptyState.style.display = 'block';
-          document.title = 'RETRO | Inbox';
-          updateHomeScreenBadge(0);
-          return;
-        }
-
-        lastKnownMsgCount = messages.length;
-        const conversationMap = {};
-        
-        messages.forEach(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const receiverRaw = msg.receiver_username || msg.receiver || '';
-          
-          const sender = senderRaw.trim().replace('@', '').toLowerCase();
-          const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
-          
-          let otherUserDisplay = '';
-          if (sender === lowerActive) {
-            otherUserDisplay = receiverRaw.trim().replace('@', '');
-          } else if (receiver === lowerActive) {
-            otherUserDisplay = senderRaw.trim().replace('@', '');
-          }
-
-          if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
-
-          knownDmContacts.add(otherUserDisplay);
-
-          const mapKey = otherUserDisplay.toLowerCase();
-          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
-
-          if (!conversationMap[mapKey]) {
-            conversationMap[mapKey] = {
-              username: otherUserDisplay,
-              sender: sender,
-              content: msg.content || '',
-              created_at: msgDate,
-              unreadCount: 0
-            };
-          }
-
-          const lastReadTime = localStorage.getItem(`read_${mapKey}`);
-          const isIncoming = sender !== lowerActive;
-          const isUnread = isIncoming && (!lastReadTime || msgDate > new Date(lastReadTime));
-
-          if (isUnread) {
-            conversationMap[mapKey].unreadCount++;
-          }
-
-          if (msgDate >= new Date(conversationMap[mapKey].created_at)) {
-            conversationMap[mapKey].created_at = msgDate;
-            conversationMap[mapKey].content = msg.content || '';
-            conversationMap[mapKey].sender = sender;
-          }
-        });
-
-        const conversations = Object.values(conversationMap).sort((a, b) => {
-          return new Date(b.created_at) - new Date(a.created_at);
-        });
-
-        if (conversations.length === 0) {
-          inboxList.innerHTML = '';
-          if (emptyState) emptyState.style.display = 'block';
-          document.title = 'RETRO | Inbox';
-          updateHomeScreenBadge(0);
-          return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-
-        const totalUnread = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
-
-        if (totalUnread > 0) {
-          document.title = `(${totalUnread}) RETRO | Inbox`;
-          updateHomeScreenBadge(totalUnread);
-        } else {
-          document.title = 'RETRO | Inbox';
-          updateHomeScreenBadge(0);
-        }
-
-        inboxList.innerHTML = conversations.map(conv => {
-          const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const hasUnread = conv.unreadCount > 0;
-          const cardClass = hasUnread ? 'chat-card unread' : 'chat-card';
-          
-          const unameLower = conv.username.toLowerCase();
-          const avatarPfp = userAvatars[unameLower] || localStorage.getItem(`retro_pfp_${unameLower}`);
-
-          return `
-            <div class="${cardClass}" onclick="openChat('${conv.username}', '${conv.created_at.toISOString()}')">
-              <div class="inbox-card-avatar" ${avatarPfp ? `onclick="viewInboxAvatar(event, '${avatarPfp}')"` : ''}>
-                ${avatarPfp 
-                  ? `<img src="${avatarPfp}" class="inbox-avatar-img" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
-                  : `<span class="inbox-avatar-initial">${conv.username.charAt(0).toUpperCase()}</span>`
-                }
-              </div>
-              <div class="inbox-card-content">
-                <div class="inbox-card-header">
-                  <div class="inbox-card-username">${conv.username}</div>
-                  ${hasUnread ? `<span class="unread-badge">${conv.unreadCount} new</span>` : ''}
-                </div>
-                <div class="inbox-card-preview">${cleanPreviewText(conv.content)}</div>
-                <div class="inbox-card-time">${time}</div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-      } catch (err) {
-        console.error('Failed to load inbox:', err);
-      }
-    }
-  </script>
 </body>
 </html>
