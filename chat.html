@@ -3,1234 +3,529 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat</title>
+  <title>Real-Time Chat</title>
   <link rel="stylesheet" href="chat.css">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
-  <meta name="theme-color" content="#000000">
-  <style>
-    /* In-Chat Partner Profile Sheet Styles */
-    .partner-profile-sheet {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 9999;
-      justify-content: flex-end;
-      align-items: center;
-      flex-direction: column;
-    }
-
-    .partner-profile-sheet.active {
-      display: flex;
-    }
-
-    .partner-profile-card {
-      width: 100%;
-      max-width: 520px;
-      background: #09090b;
-      border-top-left-radius: 20px;
-      border-top-right-radius: 20px;
-      border: 1px solid var(--glass-border);
-      border-bottom: none;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
-      animation: slideUp 0.25s ease-out;
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-
-    .sheet-header {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-
-    .sheet-title {
-      font-weight: 800;
-      font-size: 1rem;
-      color: var(--text-main);
-    }
-
-    .sheet-avatar-wrapper {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      padding: 3px;
-      background: var(--accent-purple);
-      box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
-      pointer-events: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .sheet-avatar {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: #18181b;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--accent-purple);
-      overflow: hidden;
-      pointer-events: none;
-    }
-
-    .sheet-avatar img,
-    .chat-header-avatar img {
-      pointer-events: none !important;
-      user-select: none !important;
-      -webkit-user-select: none !important;
-      -webkit-touch-callout: none !important;
-      -webkit-user-drag: none !important;
-    }
-
-    .sheet-username {
-      font-weight: 800;
-      font-size: 1.1rem;
-      color: var(--text-main);
-      letter-spacing: 0.5px;
-    }
-
-    .sheet-code-container {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .sheet-code-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.5);
-      letter-spacing: 0.5px;
-    }
-
-    .sheet-code-box {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-    }
-
-    .sheet-code-box input {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: var(--accent-purple);
-      font-weight: 700;
-      font-family: monospace;
-      font-size: 0.95rem;
-      outline: none;
-    }
-
-    .sheet-code-box button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: #ffffff;
-      padding: 0 14px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .sheet-code-box button:hover {
-      background: var(--accent-purple);
-      color: #000000;
-    }
-
-    .sheet-clear-btn {
-      width: 100%;
-      padding: 12px;
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 8px;
-      color: #ef4444;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: background 0.2s ease;
-    }
-
-    .sheet-clear-btn:hover {
-      background: rgba(239, 68, 68, 0.2);
-    }
-
-    .chat-header-avatar-wrapper { cursor: pointer; }
-  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
-  <header class="nav-bar">
-    <a href="index.html" class="nav-btn">← Back</a>
-    
-    <div class="chat-header-user">
-      <div class="chat-header-avatar-wrapper" onclick="openAvatarView()">
-        <div class="chat-header-avatar" id="header-avatar-container">
-          <img id="header-avatar-img" src="" alt="Avatar" style="display: none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
-          <span id="header-avatar-initial">?</span>
+  <div class="chat-app-container">
+    <!-- Header -->
+    <header class="chat-header">
+      <div class="user-info" id="profileTrigger">
+        <div class="avatar-wrapper">
+          <div class="avatar" id="headerAvatar">?</div>
+          <div class="status-dot" id="statusDot"></div>
         </div>
-        <div class="online-dot" id="online-dot" style="display: none;" title="Active"></div>
+        <div class="user-details">
+          <h3 id="targetUsername">Chat Partner</h3>
+          <span id="targetStatusText">Offline</span>
+        </div>
       </div>
-      <div>
-        <div id="chat-with-user" class="chat-header-title">Loading...</div>
-        <div id="typing-indicator" style="font-size: 0.72rem; color: #a855f7; height: 12px; font-weight: 500;"></div>
+      <div class="header-actions">
+        <button id="toggleProfileBtn"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       </div>
+    </header>
+
+    <!-- Message Stream -->
+    <main class="chat-messages" id="chatMessages">
+      <!-- Dynamic messages injected here -->
+    </main>
+
+    <!-- Quoted Reply Bar -->
+    <div class="reply-preview-bar" id="replyPreviewBar" style="display: none;">
+      <span id="replyPreviewText">Replying to message...</span>
+      <button id="cancelReplyBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <div class="nav-spacer"></div>
-  </header>
+    <!-- Sticker Drawer -->
+    <div class="sticker-drawer" id="stickerDrawer" style="display: none;"></div>
 
-  <!-- Chat Messages Stream -->
-  <main class="chat-container" id="chat-container">
-    <div id="messages-list" class="messages-list"></div>
-  </main>
-
-  <!-- Fixed Bottom Message Input Footer Bar -->
-  <footer class="chat-input-bar">
-    <div id="reply-preview-bar" class="reply-preview-bar">
-      <div>
-        <div id="reply-user-label" class="reply-preview-user">Replying to</div>
-        <div id="reply-text-label" class="reply-preview-content"></div>
-      </div>
-      <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
-    </div>
-
-    <!-- Hidden file inputs -->
-    <input type="file" id="image-file-input" accept="image/*" style="display: none;" onchange="handleImageSelected(event)">
-    <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
-
-    <form id="chat-form">
-      <div class="pill-input-container">
-        <!-- Sticker Toggle Button -->
-        <button type="button" id="sticker-btn" class="pill-btn" onclick="toggleStickerDrawer()" title="Stickers">
-          😀
-        </button>
-
-        <!-- Gallery Image Button -->
-        <button type="button" id="gallery-btn" class="pill-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">
-          📎
-        </button>
+    <!-- Bottom Input Container -->
+    <footer class="chat-input-container">
+      <div class="chat-input-row">
+        <!-- Media Attachments -->
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <button class="input-icon-btn" id="attachBtn" title="Attach Image"><i class="fa-solid fa-paperclip"></i></button>
+        <button class="input-icon-btn" id="stickerToggleBtn" title="Stickers"><i class="fa-regular fa-face-smile"></i></button>
         
-        <input 
-          type="text" 
-          id="message-input" 
-          class="pill-input" 
-          placeholder="Message..." 
-          autocomplete="off"
-        >
-
-        <!-- Voice Note Button -->
-        <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">
-          🎙️
-        </button>
-
-        <!-- Circular Send Button -->
-        <button type="submit" id="send-btn" class="circular-send-btn" title="Send">
-          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
+        <!-- Text Input -->
+        <input type="text" class="chat-input-field" id="messageInput" placeholder="Type a message..." autocomplete="off">
+        
+        <!-- Voice Note / Send Button -->
+        <button class="input-icon-btn" id="voiceNoteBtn" title="Hold/Click to record voice note"><i class="fa-solid fa-microphone"></i></button>
+        <button class="send-action-btn" id="sendMessageBtn"><i class="fa-solid fa-paper-plane"></i></button>
       </div>
-    </form>
-  </footer>
+    </footer>
 
-  <!-- Sticker Drawer Sheet -->
-  <div id="sticker-drawer" class="sticker-drawer">
-    <div class="sticker-drawer-header">
-      <span>Your Stickers (<span id="sticker-count">0</span>/10)</span>
-      <button type="button" class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button>
-    </div>
-    <div class="sticker-grid" id="sticker-grid">
-      <!-- Dynamically generated sticker list & '+' button -->
-    </div>
-  </div>
-
-  <!-- Image Preview Modal -->
-  <div id="image-preview-modal" class="image-preview-modal" style="display: none;">
-    <div class="image-preview-card">
-      <div class="sheet-header">
-        <div class="sheet-title">Preview Image</div>
-        <button type="button" class="close-reply-btn" onclick="closeImagePreview()">✕</button>
-      </div>
-      <div class="image-preview-container">
-        <img id="image-preview-elem" src="" alt="Selected Preview">
-      </div>
-      <div class="image-preview-actions">
-        <button type="button" class="nav-btn" onclick="closeImagePreview()">Cancel</button>
-        <button type="button" id="image-send-btn" class="send-btn image-send-btn" onclick="sendSelectedImage()">Send Image</button>
+    <!-- Image Preview Modal -->
+    <div class="modal-overlay" id="imagePreviewModal" style="display: none;">
+      <div class="modal-content">
+        <h3>Send Photo</h3>
+        <div class="preview-img-container">
+          <img id="previewImage" src="" alt="Preview">
+        </div>
+        <input type="text" class="chat-input-field" id="imageCaptionInput" placeholder="Add a caption...">
+        <div class="modal-actions">
+          <button class="cancel-btn" id="cancelImageBtn">Cancel</button>
+          <button class="image-send-btn send-btn" id="sendImageBtn">Send</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- In-Chat Partner Profile Sheet -->
-  <div id="partner-profile-sheet" class="partner-profile-sheet">
-    <div class="partner-profile-card" id="partner-profile-card">
+    <!-- Partner Profile Slide-Over Sheet -->
+    <aside class="profile-sheet" id="profileSheet">
+      <div class="profile-sheet-avatar" id="sheetAvatar">?</div>
+      <h2 id="sheetUsername">User</h2>
       
-      <!-- Top Header Navigation -->
-      <div class="sheet-header">
-        <button class="nav-btn" onclick="closeAvatarView()">← Back</button>
-        <div class="sheet-title">Profile</div>
-        <div style="width: 50px;"></div>
+      <div class="private-code-box">
+        <span>Private Chat Code</span>
+        <code id="privateChatCode">RETRO-000000</code>
       </div>
 
-      <!-- Avatar Section -->
-      <div class="sheet-avatar-wrapper">
-        <div class="sheet-avatar">
-          <img id="sheet-avatar-img" src="" alt="Profile Picture" style="display: none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
-          <span id="sheet-avatar-initial">?</span>
-        </div>
-      </div>
-
-      <!-- Display Name -->
-      <div id="sheet-username" class="sheet-username">User</div>
-
-      <!-- Private Code Container -->
-      <div class="sheet-code-container">
-        <div class="sheet-code-label">PRIVATE CHAT CODE</div>
-        <div class="sheet-code-box">
-          <input type="text" id="sheet-chat-code" readonly value="Generating...">
-          <button id="sheet-copy-btn" onclick="copyPartnerCode()">Copy Code</button>
-        </div>
-      </div>
-
-      <!-- Single Action Item -->
-      <button class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
-
-    </div>
+      <button class="clear-chat-btn" id="clearChatBtn"><i class="fa-solid fa-trash"></i> Clear Conversation</button>
+    </aside>
   </div>
 
   <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-
-    let activeReplyTo = null;
-    let isUserScrolling = false;
-    let previousMessageCount = 0;
-    let lastFetchedPfpUrl = null;
-
-    // 1. Resolve Session & Recipient
-    const rawActiveUser = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-    const activeUser = rawActiveUser.trim().replace('@', '');
-    
+    // ==========================================
+    // State & Target Resolution
+    // ==========================================
     const urlParams = new URLSearchParams(window.location.search);
-    let targetUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('u') || '';
-    targetUser = targetUser.trim().replace('@', '');
-
-    if (!activeUser) {
-      window.location.href = 'auth.html';
-    }
-
-    if (!targetUser || targetUser.toLowerCase() === activeUser.toLowerCase()) {
-      window.location.href = 'index.html';
-    }
-
-    const chatTitleElem = document.getElementById('chat-with-user');
-    const avatarImg = document.getElementById('header-avatar-img');
-    const avatarInitial = document.getElementById('header-avatar-initial');
-    const chatContainer = document.getElementById('chat-container');
-    const messagesList = document.getElementById('messages-list');
-    const chatForm = document.getElementById('chat-form');
-
-    if (chatTitleElem && targetUser) {
-      chatTitleElem.textContent = targetUser;
-      if (avatarInitial) avatarInitial.textContent = targetUser.charAt(0).toUpperCase();
-
-      const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
-      const cachedUrl = localStorage.getItem(cacheKey);
-      if (cachedUrl && avatarImg && avatarInitial) {
-        avatarImg.src = cachedUrl;
-        avatarImg.style.display = 'block';
-        avatarInitial.style.display = 'none';
-        lastFetchedPfpUrl = cachedUrl;
-      }
-
-      loadTargetUserProfile();
-    }
-
-    // --- NOTIFICATION HELPERS ---
-    async function updateAppBadge(count) {
-      if ('setAppBadge' in navigator) {
-        try {
-          if (count > 0) await navigator.setAppBadge(count);
-          else await navigator.clearAppBadge();
-        } catch (e) {
-          console.error('Badge error:', e);
-        }
-      }
-    }
-
-    window.addEventListener('focus', () => updateAppBadge(0));
-
-    function playNotificationSound() {
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.35);
-      } catch (err) {
-        console.error('Audio error:', err);
-      }
-    }
-
-    function showPopUpNotification(sender, messageText) {
-      if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification(`New message from ${sender}`, {
-            body: formatSnippetText(messageText),
-            icon: 'icon.png',
-            badge: 'icon.png',
-            vibrate: [200, 100, 200],
-            data: { url: `chat.html?user=${encodeURIComponent(sender)}` }
-          });
-        });
-      }
-    }
-
-    document.addEventListener('click', () => {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }, { once: true });
-
-    function applyAvatar(imgElem, initialElem, url, username) {
-      if (!imgElem || !initialElem) return;
-
-      if (url) {
-        if (imgElem.src === url && imgElem.style.display === 'block') return;
-
-        imgElem.onerror = function() {
-          this.style.display = 'none';
-          if (initialElem) {
-            initialElem.style.display = 'block';
-            initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
-          }
-        };
-
-        imgElem.src = url;
-        imgElem.style.display = 'block';
-        if (initialElem) initialElem.style.display = 'none';
-      } else {
-        imgElem.style.display = 'none';
-        if (initialElem) {
-          initialElem.style.display = 'block';
-          initialElem.textContent = username ? username.charAt(0).toUpperCase() : '?';
-        }
-      }
-    }
-
-    // 2. Load Recipient Profile Picture
-    async function loadTargetUserProfile() {
-      if (!targetUser) return;
-
-      try {
-        let pfpUrl = null;
-        const timestamp = Date.now();
-
-        const userRes = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${timestamp}`);
-        if (userRes.ok) {
-          const uData = await userRes.json();
-          pfpUrl = uData.pfpUrl || uData.photoURL || uData.pfp || uData.avatar || uData.profile_picture || uData.profilePic || uData.image;
-        }
-
-        if (!pfpUrl) {
-          const res = await fetch(`${API_BASE_URL}/api/users?t=${timestamp}`);
-          if (res.ok) {
-            const users = await res.json();
-            const targetLower = targetUser.toLowerCase();
-            
-            const found = users.find(u => {
-              const uname = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace('@', '').toLowerCase();
-              return uname === targetLower;
-            });
-
-            if (found && typeof found === 'object') {
-              pfpUrl = found.pfpUrl || found.photoURL || found.pfp || found.avatar || found.profile_picture || found.profilePic || found.image;
-            }
-          }
-        }
-
-        if (pfpUrl && pfpUrl !== lastFetchedPfpUrl) {
-          lastFetchedPfpUrl = pfpUrl;
-          applyAvatar(avatarImg, avatarInitial, pfpUrl, targetUser);
-
-          const sheetImg = document.getElementById('sheet-avatar-img');
-          const sheetInitial = document.getElementById('sheet-avatar-initial');
-          applyAvatar(sheetImg, sheetInitial, pfpUrl, targetUser);
-
-          const cacheKey = `retro_pfp_${targetUser.toLowerCase()}`;
-          localStorage.setItem(cacheKey, pfpUrl);
-        } else if (!pfpUrl && lastFetchedPfpUrl !== null) {
-          lastFetchedPfpUrl = null;
-          applyAvatar(avatarImg, avatarInitial, null, targetUser);
-        }
-      } catch (err) {
-        console.error('Error fetching target avatar:', err);
-      }
-    }
-
-    // --- PROFILE SHEET LOGIC ---
-    function getChatCode(user) {
-      let hash = 0;
-      const str = user.toLowerCase() + "_retro_secret_salt";
-      for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
-        hash |= 0;
-      }
-      const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
-      return `RETRO-${cleanHash}`;
-    }
-
-    function openAvatarView() {
-      const sheet = document.getElementById('partner-profile-sheet');
-      const sheetImg = document.getElementById('sheet-avatar-img');
-      const sheetInitial = document.getElementById('sheet-avatar-initial');
-      const sheetUsername = document.getElementById('sheet-username');
-      const sheetCodeInput = document.getElementById('sheet-chat-code');
-
-      if (!sheet) return;
-
-      if (sheetUsername) sheetUsername.textContent = targetUser;
-      if (sheetCodeInput) sheetCodeInput.value = getChatCode(targetUser);
-
-      const cachedUrl = localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
-      const currentSrc = (avatarImg && avatarImg.style.display !== 'none' && avatarImg.src) ? avatarImg.src : cachedUrl;
-      
-      applyAvatar(sheetImg, sheetInitial, currentSrc, targetUser);
-
-      sheet.classList.add('active');
-    }
-
-    function closeAvatarView() {
-      const sheet = document.getElementById('partner-profile-sheet');
-      if (sheet) sheet.classList.remove('active');
-    }
-
-    const sheetOverlay = document.getElementById('partner-profile-sheet');
-    const sheetCard = document.getElementById('partner-profile-card');
-
-    if (sheetOverlay) {
-      sheetOverlay.addEventListener('click', (e) => {
-        if (e.target === sheetOverlay) {
-          closeAvatarView();
-        }
-      });
-    }
-
-    if (sheetCard) {
-      sheetCard.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-    }
-
-    async function copyPartnerCode() {
-      const codeInput = document.getElementById('sheet-chat-code');
-      const btn = document.getElementById('sheet-copy-btn');
-      if (!codeInput) return;
-
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(codeInput.value);
-        } else {
-          codeInput.select();
-          document.execCommand('copy');
-        }
-
-        if (btn) {
-          const origText = btn.innerText;
-          btn.innerText = 'Copied!';
-          setTimeout(() => btn.innerText = origText, 2000);
-        }
-      } catch (err) {
-        console.error('Copy error:', err);
-      }
-    }
-
-    async function clearCurrentChat() {
-      if (!confirm(`Are you sure you want to clear your chat with ${targetUser}?`)) return;
-
-      try {
-        if (messagesList) {
-          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">Chat cleared.</div>';
-        }
-        closeAvatarView();
-      } catch (err) {
-        console.error('Clear chat error:', err);
-      }
-    }
-
-    if (chatContainer) {
-      chatContainer.addEventListener('scroll', () => {
-        const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
-        isUserScrolling = !isAtBottom;
-      });
-    }
-
-    // Helper: Truncates raw media payloads into human-readable text
-    function formatSnippetText(content) {
-      if (!content) return '';
-      if (content.startsWith('[img]')) return '📷 Photo';
-      if (content.startsWith('[sticker]')) return '🏷️ Sticker';
-      if (content.startsWith('[audio]')) return '🎤 Voice note';
-      return content;
-    }
-
-    // Helper: Formats seconds to mm:ss
-    function formatAudioTime(seconds) {
-      if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    }
-
-    // 3. Fetch & Render Messages
-    async function loadChat() {
-      if (!activeUser || !targetUser) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);
-        if (!response.ok) return;
-
-        const allMessages = await response.json();
-        if (!messagesList) return;
-
-        const activeLower = activeUser.toLowerCase();
-        const targetLower = targetUser.toLowerCase();
-
-        const messages = allMessages
-          .filter(msg => {
-            const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-            const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
-            return (sender === activeLower && receiver === targetLower) || (sender === targetLower && receiver === activeLower);
-          })
-          .sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
-
-        if (messages && messages.length > 0) {
-          if (messages.length > previousMessageCount && previousMessageCount !== 0) {
-            const latestMsg = messages[messages.length - 1];
-            const sender = (latestMsg.sender_username || latestMsg.sender || '').trim().replace('@', '');
-
-            if (sender.toLowerCase() === targetLower) {
-              playNotificationSound();
-              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-              updateAppBadge(1);
-
-              if (document.hidden) {
-                let textSnippet = latestMsg.content || 'New message';
-                if (textSnippet.startsWith('[reply:')) {
-                  const closeIdx = textSnippet.indexOf(']');
-                  if (closeIdx !== -1) textSnippet = textSnippet.substring(closeIdx + 1).trim();
-                }
-                showPopUpNotification(targetUser, textSnippet);
-              }
-            }
-          }
-          previousMessageCount = messages.length;
-        }
-
-        if (!messages || messages.length === 0) {
-          messagesList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); margin-top:20px; font-size:0.85rem;">No messages yet. Say hi!</div>';
-          return;
-        }
-
-        const latestIncoming = [...messages].reverse().find(msg => {
-          const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-          return sender === targetLower;
-        });
-
-        if (latestIncoming) {
-          const msgTime = latestIncoming.created_at || latestIncoming.timestamp || new Date().toISOString();
-          localStorage.setItem(`read_${targetLower}`, msgTime);
-
-          fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ other_user: targetUser })
-          }).catch(err => console.error('Mark-read error:', err));
-        }
-
-        messagesList.innerHTML = messages.map(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const senderClean = senderRaw.trim().replace('@', '');
-          const isSent = senderClean.toLowerCase() === activeLower;
-          const time = new Date(msg.created_at || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-          const lastReadByTarget = localStorage.getItem(`read_${targetLower}`);
-          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
-          const isRead = msg.is_read || (lastReadByTarget && new Date(lastReadByTarget) >= msgDate);
-
-          let quotedHtml = '';
-          let displayContent = msg.content || '';
-
-          // Quoted reply check
-          if (displayContent.startsWith('[reply:')) {
-            const splitIdx = displayContent.indexOf(']');
-            if (splitIdx !== -1) {
-              const meta = displayContent.substring(7, splitIdx).split('|');
-              const replyUser = meta[0] || 'User';
-              let replySnippet = meta.slice(1).join('|');
-              replySnippet = formatSnippetText(replySnippet);
-              quotedHtml = `
-                <div class="quoted-reply-box">
-                  <div class="quoted-reply-user">${replyUser}</div>
-                  <div>${replySnippet}</div>
-                </div>
-              `;
-              displayContent = displayContent.substring(splitIdx + 1).trim();
-            }
-          }
-
-          // Media payload checks
-          if (displayContent.startsWith('[img]')) {
-            const base64Data = displayContent.substring(5);
-            displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image">`;
-          } else if (displayContent.startsWith('[sticker]')) {
-            const base64Data = displayContent.substring(9);
-            displayContent = `<img src="${base64Data}" class="msg-sticker" alt="Sticker">`;
-          } else if (displayContent.startsWith('[audio]')) {
-            const audioData = displayContent.substring(7);
-            const audioId = `vn_${msg.id || Math.random().toString(36).substr(2, 9)}`;
-            displayContent = `
-              <div class="custom-audio-player" id="player_${audioId}">
-                <button type="button" class="play-btn" onclick="toggleCustomAudio('${audioId}')">▶</button>
-                <div class="audio-track">
-                  <div class="audio-progress" id="progress_${audioId}"></div>
-                </div>
-                <span class="audio-time" id="time_${audioId}">0:00</span>
-                <audio id="${audioId}" src="${audioData}" preload="metadata" onloadedmetadata="initAudioDuration('${audioId}')" ontimeupdate="updateAudioProgress('${audioId}')" onended="resetAudioPlayer('${audioId}')"></audio>
-              </div>
-            `;
-          }
-
-          const safeContent = (msg.content || '').replace(/"/g, '&quot;');
-
-          return `
-            <div class="message-wrapper ${isSent ? 'sent' : 'received'}" 
-                 data-sender="${senderClean}" 
-                 data-content="${safeContent}">
-              <div class="message-bubble">
-                ${quotedHtml}
-                <div class="message-text">${displayContent}</div>
-                <div class="message-meta">
-                  <span class="timer-clock">${time}</span>
-                  ${isSent ? `<span class="read-status ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        attachSwipeListeners();
-
-        if (!isUserScrolling) {
-          setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          }, 50);
-        }
-        
-      } catch (err) {
-        console.error('Error loading chat:', err);
-      }
-    }
-
-    // Custom Audio Control Handlers
-    function toggleCustomAudio(id) {
-      const audio = document.getElementById(id);
-      const player = document.getElementById(`player_${id}`);
-      if (!audio || !player) return;
-
-      const btn = player.querySelector('.play-btn');
-
-      // Pause all other audio players
-      document.querySelectorAll('audio').forEach(a => {
-        if (a.id !== id && !a.paused) {
-          a.pause();
-          const p = document.getElementById(`player_${a.id}`);
-          if (p) {
-            const b = p.querySelector('.play-btn');
-            if (b) b.textContent = '▶';
-          }
-        }
-      });
-
-      if (audio.paused) {
-        audio.play();
-        if (btn) btn.textContent = '❚❚';
-      } else {
-        audio.pause();
-        if (btn) btn.textContent = '▶';
-      }
-    }
-
-    function initAudioDuration(id) {
-      const audio = document.getElementById(id);
-      const timeLabel = document.getElementById(`time_${id}`);
-      if (audio && timeLabel && audio.duration) {
-        timeLabel.textContent = formatAudioTime(audio.duration);
-      }
-    }
-
-    function updateAudioProgress(id) {
-      const audio = document.getElementById(id);
-      const progress = document.getElementById(`progress_${id}`);
-      const timeLabel = document.getElementById(`time_${id}`);
-
-      if (audio && progress) {
-        const percent = (audio.currentTime / audio.duration) * 100;
-        progress.style.width = `${percent}%`;
-        if (timeLabel) {
-          timeLabel.textContent = formatAudioTime(audio.currentTime);
-        }
-      }
-    }
-
-    function resetAudioPlayer(id) {
-      const audio = document.getElementById(id);
-      const player = document.getElementById(`player_${id}`);
-      const progress = document.getElementById(`progress_${id}`);
-      const timeLabel = document.getElementById(`time_${id}`);
-
-      if (player) {
-        const btn = player.querySelector('.play-btn');
-        if (btn) btn.textContent = '▶';
-      }
-      if (progress) progress.style.width = '0%';
-      if (audio && timeLabel) {
-        timeLabel.textContent = formatAudioTime(audio.duration || 0);
-      }
-    }
-
-    // 4. Swipe-to-Reply Logic
-    function attachSwipeListeners() {
-      const wrappers = document.querySelectorAll('.message-wrapper');
-      wrappers.forEach(wrapper => {
-        let startX = 0;
-        let currentX = 0;
-        let isSwiping = false;
-
-        wrapper.addEventListener('touchstart', (e) => {
-          startX = e.touches[0].clientX;
-          isSwiping = true;
-          wrapper.style.transition = 'none';
-        }, { passive: true });
-
-        wrapper.addEventListener('touchmove', (e) => {
-          if (!isSwiping) return;
-          currentX = e.touches[0].clientX - startX;
-
-          if (currentX > 0 && currentX < 90) {
-            wrapper.style.transform = `translateX(${currentX}px)`;
-          }
-        }, { passive: true });
-
-        wrapper.addEventListener('touchend', () => {
-          if (!isSwiping) return;
-          isSwiping = false;
-          wrapper.style.transition = 'transform 0.2s ease';
-
-          if (currentX > 50) {
-            const sender = wrapper.getAttribute('data-sender');
-            let content = wrapper.getAttribute('data-content');
-
-            if (content.startsWith('[reply:')) {
-              const closeIdx = content.indexOf(']');
-              if (closeIdx !== -1) content = content.substring(closeIdx + 1).trim();
-            }
-
-            triggerReplyUI(sender, content);
-            if (navigator.vibrate) navigator.vibrate(25);
-          }
-
-          wrapper.style.transform = 'translateX(0px)';
-          currentX = 0;
-        });
-      });
-    }
-
-    function triggerReplyUI(sender, text) {
-      activeReplyTo = { sender, text };
-      const bar = document.getElementById('reply-preview-bar');
-      const userLabel = document.getElementById('reply-user-label');
-      const textLabel = document.getElementById('reply-text-label');
-      const input = document.getElementById('message-input');
-
-      if (bar && userLabel && textLabel) {
-        userLabel.textContent = `Replying to ${sender}`;
-        textLabel.textContent = formatSnippetText(text);
-        bar.style.display = 'flex';
-      }
-
-      if (input) input.focus();
-    }
-
-    function cancelReply() {
-      activeReplyTo = null;
-      const bar = document.getElementById('reply-preview-bar');
-      if (bar) bar.style.display = 'none';
-    }
-
-    // 5. Message Submission
-    if (chatForm) {
-      chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const input = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        if (!input) return;
-
-        let content = input.value.trim();
-        if (!content || !targetUser || !activeUser) return;
-
-        if (activeReplyTo) {
-          const cleanSnippet = activeReplyTo.text.substring(0, 40).replace(/\|/g, ' ');
-          content = `[reply:${activeReplyTo.sender}|${cleanSnippet}] ${content}`;
-        }
-
-        if (sendBtn) sendBtn.disabled = true;
-
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sender: activeUser,
-              receiver: targetUser,
-              sender_username: activeUser,
-              receiver_username: targetUser,
-              content: content
-            })
-          });
-
-          if (response.ok) {
-            input.value = '';
-            cancelReply();
-            isUserScrolling = false;
-            await loadChat();
-            setTimeout(() => {
-              chatContainer.scrollTop = chatContainer.scrollHeight;
-            }, 50);
-          } else {
-            console.error('Server failed to record message');
-          }
-        } catch (err) {
-          console.error('Network error sending message:', err);
-        } finally {
-          if (sendBtn) sendBtn.disabled = false;
-        }
-      });
-    }
-
-    // 6. Typing Indicator
-    const messageInput = document.getElementById('message-input');
-    const typingIndicator = document.getElementById('typing-indicator');
-    let typingTimeout;
-
-    if (messageInput) {
-      messageInput.addEventListener('input', () => {
-        sendTypingStatus(true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-          sendTypingStatus(false);
-        }, 2000);
-      });
-    }
-
-    async function sendTypingStatus(isTyping) {
-      if (!activeUser || !targetUser) return;
-      try {
-        await fetch(`${API_BASE_URL}/api/typing`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: activeUser,
-            receiver: targetUser,
-            isTyping: isTyping
-          })
-        });
-      } catch (err) {
-        console.error('Typing indicator status error:', err);
-      }
-    }
-
-    async function checkPartnerTyping() {
-      if (!activeUser || !targetUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.isTyping) {
-            typingIndicator.textContent = `${targetUser} is typing...`;
-          } else {
-            typingIndicator.textContent = '';
-          }
-        }
-      } catch (err) {
-        console.error('Typing poll error:', err);
-      }
-    }
-
-    setInterval(checkPartnerTyping, 2000);
-
-    // 7. Presence Heartbeats
-    async function sendHeartbeat() {
-      if (!activeUser) return;
-      try {
-        await fetch(`${API_BASE_URL}/api/heartbeat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: activeUser })
-        });
-      } catch (err) {
-        console.error('Heartbeat error:', err);
-      }
-    }
-
-    async function checkTargetOnlineStatus() {
-      if (!targetUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const dot = document.getElementById('online-dot');
-          if (dot) {
-            dot.style.display = data.online ? 'block' : 'none';
-          }
-        }
-      } catch (err) {
-        console.error('Online status fetch error:', err);
-      }
-    }
-
-    sendHeartbeat();
-    checkTargetOnlineStatus();
-
-    setInterval(sendHeartbeat, 15000);
-    setInterval(checkTargetOnlineStatus, 5000);
-
-    // Initial executions & periodic refreshing
-    loadChat();
-    setInterval(loadChat, 3000);
-    setInterval(loadTargetUserProfile, 10000);
-
-    // ==========================================
-    // 8. IMAGE SHARING LOGIC
-    // ==========================================
-    let selectedImageFile = null;
-
-    function handleImageSelected(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      selectedImageFile = file;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        document.getElementById('image-preview-elem').src = e.target.result;
-        document.getElementById('image-preview-modal').style.display = 'flex';
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function closeImagePreview() {
-      document.getElementById('image-preview-modal').style.display = 'none';
-      document.getElementById('image-file-input').value = '';
-      selectedImageFile = null;
-    }
-
-    async function sendSelectedImage() {
-      if (!selectedImageFile || !targetUser || !activeUser) return;
-      const sendBtn = document.getElementById('image-send-btn');
-      if (sendBtn) {
-        sendBtn.disabled = true;
-        sendBtn.textContent = 'Sending...';
-      }
-
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        const payload = `[img]${e.target.result}`;
-        await postMessagePayload(payload);
-        closeImagePreview();
-        if (sendBtn) {
-          sendBtn.disabled = false;
-          sendBtn.textContent = 'Send Image';
-        }
-      };
-      reader.readAsDataURL(selectedImageFile);
-    }
-
-    // ==========================================
-    // 9. STICKER LOGIC
-    // ==========================================
-    function getSavedStickers() {
-      return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
-    }
-
-    function toggleStickerDrawer() {
-      const drawer = document.getElementById('sticker-drawer');
-      if (!drawer) return;
-      drawer.classList.toggle('active');
-      if (drawer.classList.contains('active')) {
-        renderStickerDrawer();
-      }
-    }
-
-    function renderStickerDrawer() {
-      const grid = document.getElementById('sticker-grid');
-      const stickers = getSavedStickers();
-      const countElem = document.getElementById('sticker-count');
-      if (countElem) countElem.textContent = stickers.length;
-      if (!grid) return;
-
-      grid.innerHTML = '';
-
-      stickers.forEach((dataUrl, idx) => {
-        const item = document.createElement('div');
-        item.className = 'sticker-item';
-        item.innerHTML = `<img src="${dataUrl}" alt="Sticker ${idx+1}">`;
-        item.onclick = () => sendSticker(dataUrl);
-        grid.appendChild(item);
-      });
-
-      if (stickers.length < 10) {
-        const addBtn = document.createElement('div');
-        addBtn.className = 'add-sticker-btn';
-        addBtn.textContent = '+';
-        addBtn.onclick = () => document.getElementById('sticker-file-input').click();
-        grid.appendChild(addBtn);
-      }
-    }
-
-    function handleStickerSelected(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        compressImage(e.target.result, 150, 150, (compressedBase64) => {
-          const stickers = getSavedStickers();
-          if (stickers.length >= 10) return alert('Maximum 10 stickers allowed.');
-          stickers.push(compressedBase64);
-          localStorage.setItem('retro_stickers', JSON.stringify(stickers));
-          renderStickerDrawer();
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function compressImage(base64Str, maxWidth, maxHeight, callback) {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = maxWidth;
-        canvas.height = maxHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, maxWidth, maxHeight);
-        callback(canvas.toDataURL('image/webp', 0.7));
-      };
-    }
-
-    async function sendSticker(dataUrl) {
-      toggleStickerDrawer();
-      await postMessagePayload(`[sticker]${dataUrl}`);
-    }
-
-    // ==========================================
-    // 10. VOICE NOTE LOGIC
-    // ==========================================
+    let rawTarget = urlParams.get('user') || localStorage.getItem('last_chat_target') || 'Guest';
+    const targetUser = rawTarget.replace(/^@/, '').trim();
+    localStorage.setItem('last_chat_target', targetUser);
+
+    let activeReply = null;
+    let pendingImageBase64 = null;
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
 
-    async function toggleVoiceRecording() {
-      const vnBtn = document.getElementById('vn-btn');
+    // DOM Elements
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    const fileInput = document.getElementById('fileInput');
+    const attachBtn = document.getElementById('attachBtn');
+    const imagePreviewModal = document.getElementById('imagePreviewModal');
+    const previewImage = document.getElementById('previewImage');
+    const sendImageBtn = document.getElementById('sendImageBtn');
+    const cancelImageBtn = document.getElementById('cancelImageBtn');
+    const imageCaptionInput = document.getElementById('imageCaptionInput');
+    const stickerToggleBtn = document.getElementById('stickerToggleBtn');
+    const stickerDrawer = document.getElementById('stickerDrawer');
+    const voiceNoteBtn = document.getElementById('voiceNoteBtn');
+    const replyPreviewBar = document.getElementById('replyPreviewBar');
+    const replyPreviewText = document.getElementById('replyPreviewText');
+    const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+    
+    const profileSheet = document.getElementById('profileSheet');
+    const profileTrigger = document.getElementById('profileTrigger');
+    const toggleProfileBtn = document.getElementById('toggleProfileBtn');
+    const targetUsername = document.getElementById('targetUsername');
+    const sheetUsername = document.getElementById('sheetUsername');
+    const headerAvatar = document.getElementById('headerAvatar');
+    const sheetAvatar = document.getElementById('sheetAvatar');
+    const privateChatCode = document.getElementById('privateChatCode');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+    const statusDot = document.getElementById('statusDot');
+    const targetStatusText = document.getElementById('targetStatusText');
+
+    // Init User Displays
+    targetUsername.textContent = `@${targetUser}`;
+    sheetUsername.textContent = `@${targetUser}`;
+    const initial = targetUser.charAt(0).toUpperCase();
+    headerAvatar.textContent = initial;
+    sheetAvatar.textContent = initial;
+    privateChatCode.textContent = generateChatHash(targetUser);
+
+    // ==========================================
+    // Client-Side Canvas Image Compression
+    // ==========================================
+    /**
+     * Resizes and compresses an image file using HTML5 Canvas.
+     * @param {File} file - The uploaded image file.
+     * @param {number} maxWidth - Max width in pixels.
+     * @param {number} maxHeight - Max height in pixels.
+     * @param {number} quality - Compression quality (0.0 to 1.0).
+     * @returns {Promise<string>} Base64 Data URL.
+     */
+    function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            // Preserve aspect ratio while constraining dimensions
+            if (width > height) {
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Export lossy JPEG string to keep payload small
+            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedBase64);
+          };
+          img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+      });
+    }
+
+    // Attachment Picker Event
+    attachBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        // Compress image via Canvas before rendering modal or sending
+        pendingImageBase64 = await compressImage(file, 1200, 1200, 0.75);
+        previewImage.src = pendingImageBase64;
+        imagePreviewModal.style.display = 'flex';
+      } catch (err) {
+        console.error("Canvas compression failed:", err);
+        alert("Failed to process image.");
+      } finally {
+        fileInput.value = '';
+      }
+    });
+
+    cancelImageBtn.addEventListener('click', () => {
+      imagePreviewModal.style.display = 'none';
+      pendingImageBase64 = null;
+      previewImage.src = '';
+    });
+
+    sendImageBtn.addEventListener('click', () => {
+      if (!pendingImageBase64) return;
       
+      const caption = imageCaptionInput.value.trim();
+      let payload = `[img]${pendingImageBase64}[/img]`;
+      if (caption) payload += `\n${caption}`;
+
+      dispatchMessage(payload);
+
+      // Reset Modal
+      imagePreviewModal.style.display = 'none';
+      pendingImageBase64 = null;
+      imageCaptionInput.value = '';
+      previewImage.src = '';
+    });
+
+    // ==========================================
+    // Messaging & Rendering Logic
+    // ==========================================
+    function dispatchMessage(text) {
+      if (!text) return;
+
+      let formattedText = text;
+      if (activeReply) {
+        formattedText = `[reply:${activeReply.id}]${text}`;
+        clearReply();
+      }
+
+      renderMessageBubble({
+        id: Date.now(),
+        sender: 'self',
+        content: formattedText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: true
+      });
+
+      // API Post Call
+      fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: targetUser, message: formattedText })
+      }).catch(err => console.error("Send message error:", err));
+
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function renderMessageBubble(msg) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `message-wrapper ${msg.sender === 'self' ? 'sent' : 'received'}`;
+      wrapper.dataset.msgId = msg.id;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+
+      let content = msg.content;
+
+      // Handle Quoted Replies
+      if (content.startsWith('[reply:')) {
+        const match = content.match(/^\[reply:(.*?)\]/);
+        if (match) {
+          const replyDiv = document.createElement('div');
+          replyDiv.className = 'quoted-reply';
+          replyDiv.textContent = 'Replying to previous message...';
+          bubble.appendChild(replyDiv);
+          content = content.replace(/^\[reply:.*?\]/, '');
+        }
+      }
+
+      // Handle Image Tags
+      if (content.includes('[img]')) {
+        const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
+        if (imgMatch) {
+          const imgEl = document.createElement('img');
+          imgEl.src = imgMatch[1];
+          imgEl.className = 'media-image';
+          bubble.appendChild(imgEl);
+          content = content.replace(/\[img\].*?\[\/img\]/, '').trim();
+        }
+      }
+
+      // Handle Sticker Tags
+      if (content.includes('[sticker]')) {
+        const stickerMatch = content.match(/\[sticker\](.*?)\[\/sticker\]/);
+        if (stickerMatch) {
+          const stickerEl = document.createElement('img');
+          stickerEl.src = stickerMatch[1];
+          stickerEl.className = 'sticker-img';
+          bubble.appendChild(stickerEl);
+          content = content.replace(/\[sticker\].*?\[\/sticker\]/, '').trim();
+        }
+      }
+
+      // Handle Voice Audio Tags
+      if (content.includes('[audio]')) {
+        const audioMatch = content.match(/\[audio\](.*?)\[\/audio\]/);
+        if (audioMatch) {
+          const audioPlayer = createAudioPlayer(audioMatch[1]);
+          bubble.appendChild(audioPlayer);
+          content = content.replace(/\[audio\].*?\[\/audio\]/, '').trim();
+        }
+      }
+
+      if (content) {
+        const textSpan = document.createElement('span');
+        textSpan.textContent = content;
+        bubble.appendChild(textSpan);
+      }
+
+      // Time & Read Receipt
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      meta.innerHTML = `<span>${msg.time}</span> ${msg.sender === 'self' ? '<span class="read-receipt">✓✓</span>' : ''}`;
+      bubble.appendChild(meta);
+
+      wrapper.appendChild(bubble);
+
+      // Swipe-to-Reply Touch Support
+      attachSwipeGesture(wrapper, msg);
+
+      chatMessages.appendChild(wrapper);
+    }
+
+    // Audio Player Construction
+    function createAudioPlayer(src) {
+      const container = document.createElement('div');
+      container.className = 'audio-player';
+
+      const playBtn = document.createElement('button');
+      playBtn.className = 'audio-play-btn';
+      playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+
+      const track = document.createElement('div');
+      track.className = 'audio-track';
+      const progress = document.createElement('div');
+      progress.className = 'audio-progress';
+      track.appendChild(progress);
+
+      const audio = new Audio(src);
+
+      playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+          audio.play();
+          playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        } else {
+          audio.pause();
+          playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        }
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = `${pct}%`;
+      });
+
+      audio.addEventListener('ended', () => {
+        playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        progress.style.width = '0%';
+      });
+
+      container.appendChild(playBtn);
+      container.appendChild(track);
+      return container;
+    }
+
+    // Swipe-to-Reply Gesture
+    function attachSwipeGesture(element, msg) {
+      let startX = 0;
+      let currentX = 0;
+
+      element.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+      }, { passive: true });
+
+      element.addEventListener('touchmove', (e) => {
+        currentX = e.touches[0].clientX;
+        const diffX = currentX - startX;
+        if (diffX > 0 && diffX < 80) {
+          element.style.transform = `translateX(${diffX}px)`;
+        }
+      }, { passive: true });
+
+      element.addEventListener('touchend', () => {
+        const diffX = currentX - startX;
+        if (diffX > 50) {
+          setReplyState(msg);
+        }
+        element.style.transform = 'translateX(0px)';
+        startX = 0;
+        currentX = 0;
+      });
+    }
+
+    function setReplyState(msg) {
+      activeReply = msg;
+      replyPreviewText.textContent = `Replying to: ${msg.content.substring(0, 30)}...`;
+      replyPreviewBar.style.display = 'flex';
+      messageInput.focus();
+    }
+
+    function clearReply() {
+      activeReply = null;
+      replyPreviewBar.style.display = 'none';
+    }
+
+    cancelReplyBtn.addEventListener('click', clearReply);
+
+    // Send Input Event
+    sendMessageBtn.addEventListener('click', () => {
+      const text = messageInput.value.trim();
+      if (text) {
+        dispatchMessage(text);
+        messageInput.value = '';
+      }
+    });
+
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessageBtn.click();
+      }
+    });
+
+    // ==========================================
+    // Sticker Drawer & Storage
+    // ==========================================
+    function initStickerDrawer() {
+      const stickers = JSON.parse(localStorage.getItem('chat_stickers') || '[]');
+      stickerDrawer.innerHTML = '';
+      stickers.forEach((dataUrl) => {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.className = 'sticker-item';
+        img.addEventListener('click', () => {
+          dispatchMessage(`[sticker]${dataUrl}[/sticker]`);
+          stickerDrawer.style.display = 'none';
+        });
+        stickerDrawer.appendChild(img);
+      });
+    }
+
+    stickerToggleBtn.addEventListener('click', () => {
+      const visible = stickerDrawer.style.display === 'grid';
+      stickerDrawer.style.display = visible ? 'none' : 'grid';
+      if (!visible) initStickerDrawer();
+    });
+
+    // ==========================================
+    // Voice Note Recording
+    // ==========================================
+    voiceNoteBtn.addEventListener('click', async () => {
       if (!isRecording) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mediaRecorder = new MediaRecorder(stream);
           audioChunks = [];
 
-          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-          mediaRecorder.onstop = async () => {
+          mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+          mediaRecorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             const reader = new FileReader();
-            reader.onloadend = async () => {
-              await postMessagePayload(`[audio]${reader.result}`);
-            };
             reader.readAsDataURL(audioBlob);
-            
-            stream.getTracks().forEach(track => track.stop());
+            reader.onloadend = () => {
+              dispatchMessage(`[audio]${reader.result}[/audio]`);
+            };
           };
 
           mediaRecorder.start();
           isRecording = true;
-          if (vnBtn) vnBtn.classList.add('recording');
+          voiceNoteBtn.classList.add('recording');
         } catch (err) {
-          alert('Microphone access is required to record voice notes.');
+          alert('Microphone access denied or unavailable.');
         }
       } else {
-        if (mediaRecorder) mediaRecorder.stop();
+        mediaRecorder.stop();
         isRecording = false;
-        if (vnBtn) vnBtn.classList.remove('recording');
+        voiceNoteBtn.classList.remove('recording');
       }
+    });
+
+    // ==========================================
+    // Profile Sheet & Utilities
+    // ==========================================
+    function toggleProfileSheet() {
+      profileSheet.classList.toggle('active');
     }
 
-    // Generic Media Dispatcher
-    async function postMessagePayload(contentPayload) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: activeUser,
-            receiver: targetUser,
-            sender_username: activeUser,
-            receiver_username: targetUser,
-            content: contentPayload
-          })
-        });
+    profileTrigger.addEventListener('click', toggleProfileSheet);
+    toggleProfileBtn.addEventListener('click', toggleProfileSheet);
 
-        if (response.ok) {
-          isUserScrolling = false;
-          await loadChat();
-          setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          }, 50);
-        }
-      } catch (err) {
-        console.error('Error dispatching payload:', err);
+    clearChatBtn.addEventListener('click', () => {
+      if (confirm('Clear all local chat messages?')) {
+        chatMessages.innerHTML = '';
+        toggleProfileSheet();
       }
+    });
+
+    function generateChatHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return `RETRO-${Math.abs(hash).toString(16).toUpperCase().padStart(6, '0')}`;
     }
+
+    // Poll & Heartbeat Setup
+    setInterval(() => {
+      fetch(`/api/heartbeat?user=${targetUser}`).catch(() => {});
+    }, 15000);
   </script>
 </body>
 </html>
