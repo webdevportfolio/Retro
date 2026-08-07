@@ -4,12 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Inbox</title>
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#000000">
-
 </head>
 <body class="inbox-page">
 
@@ -23,7 +22,7 @@
       </div>
     </header>
 
-    <h1 class="inbox-title">Inbox</h1>
+  
 
     <!-- Chat Code Search Box -->
     <div class="code-search-box">
@@ -127,7 +126,7 @@
       const profileBtn = document.getElementById('profile-btn');
       const logoutBtn = document.getElementById('logout-btn');
       if (profileBtn) {
-        profileBtn.textContent = activeUser;
+        profileBtn.textContent = `@${activeUser}`;
         profileBtn.addEventListener('click', () => window.location.href = 'profile.html');
       }
       if (logoutBtn) {
@@ -206,116 +205,48 @@
     });
 
     async function loadInbox() {
-      const lowerActive = activeUser.toLowerCase();
-    async function loadInbox() {
-  if (!activeUser) return;
-  const lowerActive = activeUser.toLowerCase();
+      if (!activeUser) return;
 
-  const inboxList = document.getElementById('inbox-list');
-  const emptyNoticeHtml = '<div class="empty-state">No conversations yet</div>';
-  if (!inboxList) return;
+      const inboxList = document.getElementById('inbox-list');
+      const emptyNoticeHtml = '<div class="empty-state">No direct messages yet.</div>';
+      if (!inboxList) return;
 
-  try {
-    let response = await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
-    if (!response.ok) return;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
+        if (!response.ok) return;
 
-    let data = await response.json();
-    let conversations = data.conversations || [];
+        const data = await response.json();
+        const conversations = data.conversations || [];
 
-    if (!conversations || conversations.length === 0) {
-      inboxList.innerHTML = emptyNoticeHtml;
-      return;
-    }
-
-    inboxList.innerHTML = conversations.map(conv => {
-      const otherUser = conv.other_user;
-      const cachedPfp = localStorage.getItem(`retro_pfp_${otherUser.toLowerCase()}`);
-      
-      return `
-        <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'">
-          <div class="inbox-card-avatar">
-            ${cachedPfp 
-              ? `<img src="${cachedPfp}" class="inbox-avatar-img" alt="${otherUser}">` 
-              : `<span>${otherUser.charAt(0).toUpperCase()}</span>`
-            }
-          </div>
-          <div class="inbox-card-content">
-            <div class="inbox-card-header">
-              <div class="inbox-card-username">@${otherUser}</div>
-            </div>
-            <div class="inbox-card-preview">${conv.last_message || ''}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (err) {
-    console.error('Error loading inbox:', err);
-  }
-}
-
-
-        const conversationMap = {};
-        
-        messages.forEach(msg => {
-          const senderRaw = msg.sender_username || msg.sender || '';
-          const receiverRaw = msg.receiver_username || msg.receiver || '';
-          
-          const sender = senderRaw.trim().replace('@', '').toLowerCase();
-          const receiver = receiverRaw.trim().replace('@', '').toLowerCase();
-          
-          let otherUserDisplay = '';
-          let otherAvatar = msg.avatar || null;
-
-          if (sender === lowerActive) {
-            otherUserDisplay = receiverRaw.trim().replace('@', '');
-          } else if (receiver === lowerActive) {
-            otherUserDisplay = senderRaw.trim().replace('@', '');
-          }
-
-          if (!otherUserDisplay || otherUserDisplay.toLowerCase() === lowerActive) return;
-
-          const mapKey = otherUserDisplay.toLowerCase();
-          const msgDate = new Date(msg.created_at || msg.timestamp || Date.now());
-
-          if (!conversationMap[mapKey] || msgDate >= new Date(conversationMap[mapKey].created_at)) {
-            conversationMap[mapKey] = {
-              username: otherUserDisplay,
-              avatar: otherAvatar,
-              sender: sender,
-              content: msg.content || '',
-              created_at: msgDate
-            };
-          }
-        });
-
-        const conversations = Object.values(conversationMap).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-        if (conversations.length === 0) {
+        if (!conversations || conversations.length === 0) {
           inboxList.innerHTML = emptyNoticeHtml;
           return;
         }
 
-        inboxList.innerHTML = conversations.map(conv => `
-          <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(conv.username)}'">
-            <div class="inbox-card-avatar">
-              ${conv.avatar 
-                ? `<img src="${conv.avatar}" class="inbox-avatar-img" alt="${conv.username}">` 
-                : `<span>${conv.username.charAt(0).toUpperCase()}</span>`
-              }
-            </div>
-            <div class="inbox-card-content">
-              <div class="inbox-card-header">
-                <div class="inbox-card-username">${conv.username}</div>
+        inboxList.innerHTML = conversations.map(conv => {
+          const otherUser = conv.other_user;
+          const cachedPfp = localStorage.getItem(`retro_pfp_${otherUser.toLowerCase()}`);
+
+          return `
+            <div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'">
+              <div class="inbox-card-avatar">
+                ${cachedPfp 
+                  ? `<img src="${cachedPfp}" class="inbox-avatar-img" alt="${otherUser}">` 
+                  : `<span>${otherUser.charAt(0).toUpperCase()}</span>`
+                }
               </div>
-              <div class="inbox-card-preview">${cleanPreviewText(conv.content)}</div>
+              <div class="inbox-card-content">
+                <div class="inbox-card-header">
+                  <div class="inbox-card-username">@${otherUser}</div>
+                </div>
+                <div class="inbox-card-preview">${cleanPreviewText(conv.last_message)}</div>
+              </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
 
       } catch (err) {
-        console.error('Failed to load inbox:', err);
-        inboxList.innerHTML = emptyNoticeHtml;
+        console.error('Error loading inbox:', err);
       }
     }
   </script>
