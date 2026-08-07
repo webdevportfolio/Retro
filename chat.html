@@ -156,8 +156,10 @@
   <!-- Custom Demure Toast Container -->
   <div id="demure-toast" class="demure-toast"></div>
 
-  <script>
+
+         <script>
     const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+    const socket = io(API_BASE_URL);
 
     let activeReplyTo = null;
     let isUserScrolling = false;
@@ -201,6 +203,49 @@
       }
 
       loadTargetUserProfile();
+    }
+
+    // --- SOCKET.IO REAL-TIME LISTENERS ---
+    socket.on('connect', () => {
+      if (activeUser) {
+        socket.emit('register_user', activeUser);
+      }
+      if (activeUser && targetUser) {
+        socket.emit('join_room', { sender: activeUser, receiver: targetUser });
+        socket.emit('check_online', targetUser);
+      }
+    });
+
+    socket.on('receive_message', (message) => {
+      loadChat();
+    });
+
+    socket.on('user_typing', ({ sender, isTyping }) => {
+      if (sender && sender.toLowerCase() === targetUser.toLowerCase()) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+          typingIndicator.textContent = isTyping ? `${targetUser} is typing...` : '';
+        }
+      }
+    });
+
+    socket.on('online_status', ({ username, online }) => {
+      if (username && username.toLowerCase() === targetUser.toLowerCase()) {
+        updateOnlineDot(online);
+      }
+    });
+
+    socket.on('user_presence', ({ username, online }) => {
+      if (username && username.toLowerCase() === targetUser.toLowerCase()) {
+        updateOnlineDot(online);
+      }
+    });
+
+    function updateOnlineDot(isOnline) {
+      const dot = document.getElementById('online-dot');
+      if (dot) {
+        dot.style.display = isOnline ? 'block' : 'none';
+      }
     }
 
     // --- SLEEK CUSTOM TOAST NOTIFICATION ---
@@ -443,7 +488,6 @@
       });
     }
 
-    // Helper: Truncates raw media payloads into human-readable text
     function formatSnippetText(content) {
       if (!content) return '';
       if (content.startsWith('[img]')) return '📷 Photo';
@@ -452,7 +496,6 @@
       return content;
     }
 
-    // Helper: Formats seconds to mm:ss
     function formatAudioTime(seconds) {
       if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
       const mins = Math.floor(seconds / 60);
@@ -539,7 +582,6 @@
           let quotedHtml = '';
           let displayContent = msg.content || '';
 
-          // Quoted reply check
           if (displayContent.startsWith('[reply:')) {
             const splitIdx = displayContent.indexOf(']');
             if (splitIdx !== -1) {
@@ -557,7 +599,6 @@
             }
           }
 
-          // Media payload checks
           if (displayContent.startsWith('[img]')) {
             const base64Data = displayContent.substring(5);
             displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image" onclick="openChatImageViewer('${base64Data}')">`;
@@ -624,7 +665,6 @@
 
       const btn = player.querySelector('.play-btn');
 
-      // Pause all other audio players
       document.querySelectorAll('audio').forEach(a => {
         if (a.id !== id && !a.paused) {
           a.pause();
@@ -774,41 +814,15 @@
 
         if (sendBtn) sendBtn.disabled = true;
 
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sender: activeUser,
-              receiver: targetUser,
-              sender_username: activeUser,
-              receiver_username: targetUser,
-              content: content
-            })
-          });
-
-          if (response.ok) {
-            input.value = '';
-            cancelReply();
-            isUserScrolling = false;
-            await loadChat();
-            setTimeout(() => {
-              chatContainer.scrollTop = chatContainer.scrollHeight;
-            }, 50);
-          } else {
-            console.error('Server failed to record message');
-          }
-        } catch (err) {
-          console.error('Network error sending message:', err);
-        } finally {
-          if (sendBtn) sendBtn.disabled = false;
-        }
+        await postMessagePayload(content);
+        input.value = '';
+        cancelReply();
+        if (sendBtn) sendBtn.disabled = false;
       });
     }
 
-    // 6. Typing Indicator
+    // 6. Real-time Typing Indicators
     const messageInput = document.getElementById('message-input');
-    const typingIndicator = document.getElementById('typing-indicator');
     let typingTimeout;
 
     if (messageInput) {
@@ -821,85 +835,21 @@
       });
     }
 
-    async function sendTypingStatus(isTyping) {
+    function sendTypingStatus(isTyping) {
       if (!activeUser || !targetUser) return;
-      try {
-        await fetch(`${API_BASE_URL}/api/typing`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: activeUser,
-            receiver: targetUser,
-            isTyping: isTyping
-          })
-        });
-      } catch (err) {
-        console.error('Typing indicator status error:', err);
-      }
+      socket.emit('typing', {
+        sender: activeUser,
+        receiver: targetUser,
+        isTyping: isTyping
+      });
     }
 
-    async function checkPartnerTyping() {
-      if (!activeUser || !targetUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/typing/${encodeURIComponent(targetUser)}/${encodeURIComponent(activeUser)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.isTyping) {
-            typingIndicator.textContent = `${targetUser} is typing...`;
-          } else {
-            typingIndicator.textContent = '';
-          }
-        }
-      } catch (err) {
-        console.error('Typing poll error:', err);
-      }
-    }
-
-    setInterval(checkPartnerTyping, 2000);
-
-    // 7. Presence Heartbeats
-    async function sendHeartbeat() {
-      if (!activeUser) return;
-      try {
-        await fetch(`${API_BASE_URL}/api/heartbeat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: activeUser })
-        });
-      } catch (err) {
-        console.error('Heartbeat error:', err);
-      }
-    }
-
-    async function checkTargetOnlineStatus() {
-      if (!targetUser) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/online-status/${encodeURIComponent(targetUser)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const dot = document.getElementById('online-dot');
-          if (dot) {
-            dot.style.display = data.online ? 'block' : 'none';
-          }
-        }
-      } catch (err) {
-        console.error('Online status fetch error:', err);
-      }
-    }
-
-    sendHeartbeat();
-    checkTargetOnlineStatus();
-
-    setInterval(sendHeartbeat, 15000);
-    setInterval(checkTargetOnlineStatus, 5000);
-
-    // Initial executions & periodic refreshing
+    // Initial executions
     loadChat();
-    setInterval(loadChat, 3000);
     setInterval(loadTargetUserProfile, 10000);
 
     // ==========================================
-    // 8. IMAGE SHARING & LIGHTBOX LOGIC
+    // 7. IMAGE SHARING & LIGHTBOX LOGIC
     // ==========================================
     let selectedCompressedImage = null;
 
@@ -979,7 +929,7 @@
     }
 
     // ==========================================
-    // 9. STICKER & SAVE-TO-PACK LOGIC
+    // 8. STICKER & SAVE-TO-PACK LOGIC
     // ==========================================
     function getSavedStickers() {
       return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
@@ -1101,7 +1051,7 @@
     });
 
     // ==========================================
-    // 10. VOICE NOTE LOGIC
+    // 9. VOICE NOTE LOGIC
     // ==========================================
     let mediaRecorder = null;
     let audioChunks = [];
@@ -1141,19 +1091,24 @@
       }
     }
 
-    // Generic Media Dispatcher
+    // Generic Message Dispatcher (Emits via Socket & Posts to DB)
     async function postMessagePayload(contentPayload) {
+      const msgData = {
+        sender: activeUser,
+        receiver: targetUser,
+        sender_username: activeUser,
+        receiver_username: targetUser,
+        content: contentPayload
+      };
+
+      // Emit real-time socket event immediately
+      socket.emit('send_message', msgData);
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: activeUser,
-            receiver: targetUser,
-            sender_username: activeUser,
-            receiver_username: targetUser,
-            content: contentPayload
-          })
+          body: JSON.stringify(msgData)
         });
 
         if (response.ok) {
@@ -1167,6 +1122,6 @@
         console.error('Error dispatching payload:', err);
       }
     }
-  </script>
+  </script>        
 </body>
 </html>
