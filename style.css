@@ -565,3 +565,136 @@ body.inbox-page {
   display: flex;
   gap: 10px;
 }
+/* ==========================================================================
+   AUTH.HTML SPECIFIC FIXES & ALIGNMENT
+   ========================================================================== */
+body.auth-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.auth-card .logo {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--accent-purple);
+  text-shadow: 0 0 16px var(--accent-purple-glow);
+}
+
+.auth-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.auth-card .form-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.input-field {
+  width: 100%;
+  background: #09090c;
+  border: 1px solid var(--card-border);
+  color: #fff;
+  padding: 0.8rem 1rem;
+  padding-right: 3.5rem; /* Leaves room for the SHOW/HIDE toggle */
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-field:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 10px var(--accent-purple-glow);
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease;
+}
+
+.toggle-password:hover {
+  color: var(--accent-purple);
+}
+
+.auth-btn {
+  width: 100%;
+  background: var(--accent-purple);
+  border: none;
+  color: #fff;
+  padding: 0.85rem;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-btn:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 0 14px var(--accent-purple-glow);
+}
+
+.auth-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-msg {
+  font-size: 0.8rem;
+  text-align: center;
+  display: none;
+  word-break: break-word;
+}
+
+.switch-mode {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.switch-link {
+  color: var(--accent-purple);
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.switch-link:hover {
+  color: #c4b5fd;
+  text-decoration: underline;
+}
