@@ -21,10 +21,11 @@
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Prevent Android blue tap highlight for native feel */
+  -webkit-tap-highlight-color: transparent; 
 }
 
 html, body {
-  min-height: 100vh;
   background-color: var(--bg-color);
   color: var(--text-main);
   display: flex;
@@ -37,11 +38,10 @@ html, body {
    2. AUTHENTICATION (AUTH.HTML)
    ========================================================================== */
 body.auth-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 1rem;
+  overflow-y: auto; /* Allow scroll on very tiny screens */
 }
 
 .auth-card {
@@ -64,6 +64,7 @@ body.auth-body {
   letter-spacing: 3px;
   color: var(--accent-purple);
   text-shadow: 0 0 16px var(--accent-purple-glow);
+  user-select: none;
 }
 
 .auth-subtitle {
@@ -109,6 +110,7 @@ body.auth-body {
   user-select: none;
   letter-spacing: 0.5px;
   transition: color 0.2s ease;
+  touch-action: manipulation;
 }
 
 .toggle-password:hover {
@@ -127,6 +129,8 @@ body.auth-body {
   cursor: pointer;
   margin-top: 0.5rem;
   transition: background 0.2s ease, box-shadow 0.2s ease;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .auth-btn:hover {
@@ -153,6 +157,7 @@ body.auth-body {
   justify-content: center;
   gap: 0.4rem;
   margin-top: 0.5rem;
+  user-select: none;
 }
 
 .switch-link {
@@ -160,6 +165,7 @@ body.auth-body {
   font-weight: 700;
   cursor: pointer;
   transition: color 0.2s ease;
+  touch-action: manipulation;
 }
 
 .switch-link:hover {
@@ -171,16 +177,20 @@ body.auth-body {
    3. INBOX PAGE (INDEX.HTML)
    ========================================================================== */
 body.inbox-page {
-  align-items: flex-start;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden; /* Lock body scrolling for native app feel */
 }
 
 .inbox-app-wrapper {
   width: 100%;
   max-width: 480px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1rem;
+  /* Account for iOS notch and home bar */
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)) 1rem;
 }
 
 .inbox-header {
@@ -188,6 +198,8 @@ body.inbox-page {
   justify-content: space-between;
   align-items: center;
   padding-top: 0.5rem;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .inbox-brand {
@@ -213,17 +225,12 @@ body.inbox-page {
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 .inbox-user-pill:hover, .inbox-logout-btn:hover {
   border-color: var(--accent-purple);
   background: rgba(168, 85, 247, 0.1);
-}
-
-.inbox-title {
-  font-size: 1.8rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
 }
 
 .code-search-box {
@@ -234,6 +241,7 @@ body.inbox-page {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .code-input-wrapper {
@@ -270,6 +278,8 @@ body.inbox-page {
   cursor: pointer;
   transition: background 0.2s ease;
   white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .join-btn:hover {
@@ -288,9 +298,11 @@ body.inbox-page {
 }
 
 .inbox-section {
+  flex: 1; /* Take up remaining height */
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  min-height: 0; /* Critical fix for nested flexbox scrolling */
 }
 
 .inbox-section-title {
@@ -301,12 +313,31 @@ body.inbox-page {
   font-weight: 700;
   letter-spacing: 1px;
   color: var(--text-sub);
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .chat-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  overflow-y: auto; /* Scroll only this container */
+  -webkit-overflow-scrolling: touch; /* Momentum scrolling for iOS */
+  padding-bottom: 1rem; /* Space at the bottom of the list */
+  padding-right: 4px; /* Space for scrollbar */
+}
+
+/* Custom Scrollbar for Inbox List */
+.chat-list::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-list::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 10px;
+}
+.chat-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .chat-card {
@@ -319,6 +350,9 @@ body.inbox-page {
   gap: 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .chat-card:hover {
@@ -382,6 +416,7 @@ body.inbox-page {
   border: 1px dashed var(--glass-border);
   border-radius: 10px;
   text-align: center;
+  user-select: none;
 }
 
 /* ==========================================================================
@@ -394,6 +429,7 @@ body.inbox-page {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -429,6 +465,8 @@ body.inbox-page {
   font-weight: 700;
   cursor: pointer;
   width: 100%;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .modal-submit-btn:hover {
