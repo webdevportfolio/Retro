@@ -15,7 +15,7 @@
 
   <!-- Top Navigation Header -->
   <header class="chat-header">
-    <a href="index.html" class="back-link">&#8592; Back</a>
+    <a href="inbox.html" class="back-link">&#8592; Back</a>
     
     <div class="header-group-info" id="open-drawer-btn">
       <div class="header-avatar" id="header-avatar">G</div>
@@ -31,32 +31,31 @@
   </main>
 
   <!-- Fixed Bottom Message Input Bar -->
- <footer class="chat-input-bar">
-  <div id="reply-preview-bar" class="reply-preview-bar" style="display: none;">
-    <div>
-      <div id="reply-user-label" class="reply-preview-user">Replying to</div>
-      <div id="reply-text-label" class="reply-preview-content"></div>
+  <footer class="chat-input-bar">
+    <div id="reply-preview-bar" class="reply-preview-bar" style="display: none;">
+      <div>
+        <div id="reply-user-label" class="reply-preview-user">Replying to</div>
+        <div id="reply-text-label" class="reply-preview-content"></div>
+      </div>
+      <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
     </div>
-    <button type="button" class="close-reply-btn" onclick="cancelReply()">✕</button>
-  </div>
 
-  <!-- Hidden File Inputs -->
-  <input type="file" id="image-file-input" accept="image/*" style="display: none;" onchange="handleImageSelected(event)">
-  <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
+    <!-- Hidden File Inputs -->
+    <input type="file" id="image-file-input" accept="image/*" style="display: none;" onchange="handleImageSelected(event)">
+    <input type="file" id="sticker-file-input" accept="image/*" style="display: none;" onchange="handleStickerSelected(event)">
 
-  <form id="chat-form">
-    <div class="input-pill-container">
-      <button type="button" class="pill-icon-btn" onclick="document.getElementById('image-file-input').click()" title="Attach File">📎</button>
-      <button type="button" class="pill-icon-btn" onclick="toggleStickerDrawer()" title="Emojis / Stickers">😀</button>
-      
-      <input type="text" id="message-input" class="input-field chat-field" placeholder="Message..." autocomplete="off">
-      
-      <button type="button" class="pill-icon-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">🎙️</button>
-      <button type="submit" class="send-pill-btn" title="Send">➤</button>
-    </div>
-  </form>
-</footer>
-
+    <form id="chat-form">
+      <div class="input-pill-container">
+        <button type="button" class="pill-icon-btn" onclick="document.getElementById('image-file-input').click()" title="Attach File">📎</button>
+        <button type="button" class="pill-icon-btn" onclick="toggleStickerDrawer()" title="Emojis / Stickers">😀</button>
+        
+        <input type="text" id="message-input" class="input-field chat-field" placeholder="Message..." autocomplete="off">
+        
+        <button type="button" class="pill-icon-btn" id="vn-btn" onclick="toggleVoiceRecording()" title="Record Voice Note">🎙️</button>
+        <button type="submit" id="send-btn" class="send-pill-btn" title="Send">➤</button>
+      </div>
+    </form>
+  </footer>
 
   <!-- Sticker Drawer Sheet -->
   <div id="sticker-drawer" class="sticker-drawer">
@@ -64,9 +63,7 @@
       <span>Your Stickers (<span id="sticker-count">0</span>/10)</span>
       <button type="button" class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button>
     </div>
-    <div class="sticker-grid" id="sticker-grid">
-      <!-- Dynamically generated sticker list & '+' button -->
-    </div>
+    <div class="sticker-grid" id="sticker-grid"></div>
   </div>
 
   <!-- Image Preview Modal -->
@@ -100,9 +97,7 @@
     </div>
 
     <div class="members-section-title">Members</div>
-    <div class="member-list" id="member-list">
-      <!-- Dynamically injected via JavaScript -->
-    </div>
+    <div class="member-list" id="member-list"></div>
 
     <div class="admin-controls">
       <button class="btn-secondary" id="add-members-btn">Add Members</button>
@@ -116,19 +111,17 @@
     let activeReplyTo = null;
     let isUserScrolling = false;
 
-    // Resolve user session & URL parameters
-    const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || 'MRWEBDEV';
+    const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
     const activeUser = rawActive.trim().replace('@', '');
 
     const urlParams = new URLSearchParams(window.location.search);
-    const groupId = urlParams.get('groupId') || 'demo-group-id';
+    const groupId = urlParams.get('groupId');
 
     const messagesContainer = document.getElementById('chat-messages');
     const loadingState = document.getElementById('loading-state');
     const messageInput = document.getElementById('message-input');
     const chatForm = document.getElementById('chat-form');
 
-    // Drawer Controls
     const drawer = document.getElementById('group-drawer');
     const openDrawerBtn = document.getElementById('open-drawer-btn');
     const closeDrawerBtn = document.getElementById('close-drawer-btn');
@@ -142,29 +135,38 @@
     if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', () => toggleDrawer(false));
 
     async function loadGroupDetails() {
+      if (!groupId) return;
       try {
         const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}`);
         if (!res.ok) return;
-        const group = await res.json();
+        const data = await res.json();
+        const group = data.group || data;
+        const members = data.members || [];
 
         if (group) {
           document.getElementById('header-group-name').textContent = group.name || 'Group Chat';
           document.getElementById('drawer-group-name').textContent = group.name || 'Group Chat';
           
-          const members = group.members || [];
+          if (group.avatar) {
+            document.getElementById('header-avatar').innerHTML = `<img src="${group.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+            document.getElementById('drawer-avatar').innerHTML = `<img src="${group.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+          } else {
+            document.getElementById('header-avatar').textContent = (group.name || 'G').charAt(0).toUpperCase();
+            document.getElementById('drawer-avatar').textContent = (group.name || 'G').charAt(0).toUpperCase();
+          }
+
           document.getElementById('drawer-member-count').textContent = `${members.length} members`;
 
           const memberListEl = document.getElementById('member-list');
           memberListEl.innerHTML = members.map(m => {
-            const cleanM = m.replace('@', '');
-            const isAdmin = group.created_by && group.created_by.toLowerCase() === cleanM.toLowerCase();
+            const cleanM = (m.username || m).replace('@', '');
+            const isAdmin = m.role === 'admin' || (group.created_by && group.created_by.toLowerCase() === cleanM.toLowerCase());
             return `
               <div class="member-item">
                 <div class="member-info">
                   <span class="member-username">@${cleanM}</span>
                   ${isAdmin ? '<span class="admin-badge">Admin</span>' : ''}
                 </div>
-                ${!isAdmin && activeUser.toLowerCase() === (group.created_by || '').toLowerCase() ? '<button class="remove-member-btn">Remove</button>' : ''}
               </div>
             `;
           }).join('');
@@ -175,31 +177,37 @@
     }
 
     async function fetchGroupMessages() {
+      if (!groupId) return;
       try {
         const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/messages`);
         if (!res.ok) return;
-        const messages = await res.json();
+        const data = await res.json();
+        
+        const messages = Array.isArray(data) ? data : (data.messages || []);
 
         if (loadingState) loadingState.style.display = 'none';
 
-        if (!messages || messages.length === 0) {
+        if (messages.length === 0) {
           messagesContainer.innerHTML = '<div class="loading-notice">No messages yet. Send a message to get started!</div>';
           return;
         }
 
         messagesContainer.innerHTML = messages.map(msg => {
-          if (msg.is_system) {
+          const sender = (msg.sender_username || msg.sender || '').replace('@', '');
+          
+          if (msg.is_system || sender.toUpperCase() === 'SYSTEM') {
             return `<div class="system-msg">${msg.content}</div>`;
           }
 
-          const sender = (msg.sender || msg.sender_username || '').replace('@', '');
           const isSent = sender.toLowerCase() === activeUser.toLowerCase();
           const time = new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
           let quotedHtml = '';
           let displayContent = msg.content || '';
 
-          if (displayContent.startsWith('[img]')) {
+          if (msg.image_url) {
+            displayContent = `<img src="${msg.image_url}" class="msg-image" alt="Shared Image">`;
+          } else if (displayContent.startsWith('[img]')) {
             const base64Data = displayContent.substring(5);
             displayContent = `<img src="${base64Data}" class="msg-image" alt="Shared Image">`;
           } else if (displayContent.startsWith('[sticker]')) {
@@ -244,7 +252,6 @@
       }
     }
 
-    // Scroll Detection
     if (messagesContainer) {
       messagesContainer.addEventListener('scroll', () => {
         const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 50;
@@ -252,7 +259,6 @@
       });
     }
 
-    // Form Submission
     if (chatForm) {
       chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -283,16 +289,15 @@
       });
     }
 
-    // Unified Media Dispatcher
-    async function postGroupMessagePayload(contentPayload) {
+    async function postGroupMessagePayload(contentPayload, imageUrl = null) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/groups/${groupId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            sender: activeUser, 
+            sender_username: activeUser, 
             content: contentPayload,
-            expires_in: '24h'
+            image_url: imageUrl
           })
         });
 
@@ -306,7 +311,6 @@
       }
     }
 
-    // Reply UI Handlers
     function triggerReplyUI(sender, text) {
       activeReplyTo = { sender, text };
       const bar = document.getElementById('reply-preview-bar');
@@ -328,7 +332,6 @@
       if (bar) bar.style.display = 'none';
     }
 
-    // Image Upload Handlers
     let selectedImageFile = null;
 
     function handleImageSelected(event) {
@@ -371,7 +374,6 @@
       reader.readAsDataURL(selectedImageFile);
     }
 
-    // Sticker System
     function getSavedStickers() {
       return JSON.parse(localStorage.getItem('retro_stickers') || '[]');
     }
@@ -446,7 +448,6 @@
       await postGroupMessagePayload(`[sticker]${dataUrl}`);
     }
 
-    // Voice Recorder Component
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
@@ -474,18 +475,17 @@
 
           mediaRecorder.start();
           isRecording = true;
-          if (vnBtn) vnBtn.classList.add('recording');
+          if (vnBtn) vnBtn.style.color = '#ff5555';
         } catch (err) {
           alert('Microphone access is required to record voice notes.');
         }
       } else {
         if (mediaRecorder) mediaRecorder.stop();
         isRecording = false;
-        if (vnBtn) vnBtn.classList.remove('recording');
+        if (vnBtn) vnBtn.style.color = '';
       }
     }
 
-    // Execution Cycles
     loadGroupDetails();
     fetchGroupMessages();
     setInterval(fetchGroupMessages, 3000);
