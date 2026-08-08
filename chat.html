@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Chat</title>
 <link rel="stylesheet" href="chat.css">
 <link rel="manifest" href="manifest.json">
@@ -15,17 +15,18 @@ html,body{height:100%;height:100dvh;margin:0}.chat-app-container{height:100%;hei
 </style>
 </head>
 <body>
+
 <div class="chat-app-container">
 <header class="nav-bar">
 <a href="index.html" class="nav-btn">← Back</a>
 <div class="chat-header-user" onclick="openAvatarView()">
 <div class="chat-header-avatar-wrapper">
-<div class="chat-header-avatar" id="header-avatar-container"><img id="header-avatar-img" src="" alt="Avatar" style="display:none"><span id="header-avatar-initial">?</span></div>
-<div class="online-dot" id="online-dot" style="display:none" title="Active"></div>
+<div class="chat-header-avatar" id="header-avatar-container"><img id="header-avatar-img" src="" style="display:none"><span id="header-avatar-initial">?</span></div>
+<div class="online-dot" id="online-dot" style="display:none"></div>
 </div>
 <div><div id="chat-with-user" class="chat-header-title">Loading...</div><div id="typing-indicator" class="typing-indicator"></div></div>
 </div>
-<button type="button" class="three-dots-btn" onclick="openAvatarView()">⋮</button>
+<button class="three-dots-btn" onclick="openAvatarView()">⋮</button>
 </header>
 
 <main class="chat-container" id="chat-container"><div id="messages-list" class="messages-list"></div></main>
@@ -56,13 +57,14 @@ html,body{height:100%;height:100dvh;margin:0}.chat-app-container{height:100%;hei
 </footer>
 </div>
 
+<!-- IMAGE PREVIEW / VIEW -->
 <div id="image-preview-modal" class="image-preview-modal" style="display:none">
-<div class="image-preview-card">
-<div class="sheet-header"><div id="preview-modal-title" class="sheet-title">Preview Image</div><button class="close-reply-btn" onclick="closeImagePreview()">✕</button></div>
-<div class="image-preview-container"><img id="image-preview-elem" src=""></div>
+<div class="image-preview-card" id="image-preview-card">
+<div class="image-preview-container" id="image-preview-container">
+<img id="image-preview-elem" src="">
+</div>
 <div id="preview-modal-actions" class="image-preview-actions">
 <button class="nav-btn" onclick="closeImagePreview()">Cancel</button>
-<button class="nav-btn" id="crop-image-btn" onclick="cropPreviewImage()" style="color:var(--text-main)">Crop Square</button>
 <button id="image-send-btn" class="send-btn" onclick="sendSelectedImage()">Send Image</button>
 </div>
 </div>
@@ -81,43 +83,20 @@ html,body{height:100%;height:100dvh;margin:0}.chat-app-container{height:100%;hei
 <div id="demure-toast" class="demure-toast"></div>
 
 <script>
-function escapeHTML(s){return s?String(s).replace(/[&<>'"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[x])):''}
-const API_BASE_URL='https://retro-backend-hnsv.onrender.com',socket=typeof io==='function'?io(API_BASE_URL,{autoConnect:true}):null;
-let activeReplyTo=null,isUserScrolling=false,previousMessageCount=0,lastFetchedPfpUrl=null,globalAudioCtx=null,loadingChat=false;
-const activeUser=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
-const urlParams=new URLSearchParams(location.search);
-let targetUser=(urlParams.get('user')||urlParams.get('username')||urlParams.get('u')||'').trim().replace('@','');
-if(!activeUser)location.href='auth.html';
-if(!targetUser||targetUser.toLowerCase()===activeUser.toLowerCase())location.href='index.html';
+const API='https://retro-backend-hnsv.onrender.com',socket=typeof io==='function'?io(API):null;
+const esc=s=>s?String(s).replace(/[&<>'"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[x])):'';
+let reply=null,scrolling=false,lastCount=0,pfp=null,loading=false,audioCtx=null,selectedImage=null;
+const me=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
+const params=new URLSearchParams(location.search),target=(params.get('user')||params.get('username')||params.get('u')||'').trim().replace('@','');
+if(!me)location.href='auth.html';
+if(!target||target.toLowerCase()===me.toLowerCase())location.href='index.html';
 
-const chatTitleElem=document.getElementById('chat-with-user'),avatarImg=document.getElementById('header-avatar-img'),avatarInitial=document.getElementById('header-avatar-initial'),chatContainer=document.getElementById('chat-container'),messagesList=document.getElementById('messages-list'),chatForm=document.getElementById('chat-form');
-chatTitleElem.textContent=targetUser;avatarInitial.textContent=targetUser[0]?.toUpperCase()||'?';
+const title=document.getElementById('chat-with-user'),avatar=document.getElementById('header-avatar-img'),initial=document.getElementById('header-avatar-initial'),container=document.getElementById('chat-container'),list=document.getElementById('messages-list'),form=document.getElementById('chat-form');
+title.textContent=target;initial.textContent=target[0]?.toUpperCase()||'?';
 
-const cached=localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`);
-if(cached){avatarImg.src=cached;avatarImg.style.display='block';avatarInitial.style.display='none';lastFetchedPfpUrl=cached}
+const cached=localStorage.getItem(`retro_pfp_${target.toLowerCase()}`);
+if(cached){avatar.src=cached;avatar.style.display='block';initial.style.display='none';pfp=cached}
 loadTargetUserProfile();
-
-if(socket){
-socket.on('connect',()=>{socket.emit('register_user',activeUser);socket.emit('join_room',{sender:activeUser,receiver:targetUser});socket.emit('check_online',targetUser)});
-socket.on('receive_message',()=>loadChat());
-socket.on('user_typing',({sender,isTyping})=>{if(sender?.toLowerCase()===targetUser.toLowerCase())document.getElementById('typing-indicator').textContent=isTyping?`${targetUser} is typing...`:''});
-socket.on('online_status',({username,online})=>{if(username?.toLowerCase()===targetUser.toLowerCase())updateOnlineDot(online)});
-socket.on('user_presence',({username,online})=>{if(username?.toLowerCase()===targetUser.toLowerCase())updateOnlineDot(online)});
-}
-
-function updateOnlineDot(on){document.getElementById('online-dot').style.display=on?'block':'none'}
-function showToast(msg){const t=document.getElementById('demure-toast');t.textContent=msg;t.classList.add('show');clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove('show'),2400)}
-async function updateAppBadge(n){if('setAppBadge'in navigator){try{n?await navigator.setAppBadge(n):await navigator.clearAppBadge()}catch{}}}
-window.addEventListener('focus',()=>updateAppBadge(0));
-
-function playNotificationSound(){
-try{if(!globalAudioCtx)globalAudioCtx=new(window.AudioContext||window.webkitAudioContext)();if(globalAudioCtx.state==='suspended')globalAudioCtx.resume();const o=globalAudioCtx.createOscillator(),g=globalAudioCtx.createGain();o.type='sine';o.frequency.value=587.33;g.gain.value=.15;g.gain.exponentialRampToValueAtTime(.0001,globalAudioCtx.currentTime+.35);o.connect(g).connect(globalAudioCtx.destination);o.start();o.stop(globalAudioCtx.currentTime+.35)}catch{}
-}
-
-function showPopUpNotification(sender,msg){
-if(Notification.permission==='granted'&&'serviceWorker'in navigator)navigator.serviceWorker.ready.then(r=>r.showNotification(`New message from ${sender}`,{body:formatSnippetText(msg),icon:'icon.png',badge:'icon.png',vibrate:[200,100,200],data:{url:`chat.html?user=${encodeURIComponent(sender)}`}}))
-}
-document.addEventListener('click',()=>{if(Notification.permission==='default')Notification.requestPermission()},{once:true});
 
 function applyAvatar(img,ini,url,name){
 if(!img||!ini)return;
@@ -127,31 +106,27 @@ else{img.style.display='none';ini.style.display='block';ini.textContent=name?.[0
 
 async function loadTargetUserProfile(){
 try{
-let url=null,res=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(targetUser)}?t=${Date.now()}`);
-if(res.ok){const d=await res.json();url=d.pfpUrl||d.profile_picture||d.photoURL||d.pfp||d.avatar||d.image}
-if(url&&url!==lastFetchedPfpUrl){lastFetchedPfpUrl=url;applyAvatar(avatarImg,avatarInitial,url,targetUser);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),url,targetUser);localStorage.setItem(`retro_pfp_${targetUser.toLowerCase()}`,url)}
+const r=await fetch(`${API}/api/users/${encodeURIComponent(target)}?t=${Date.now()}`);
+if(!r.ok)return;
+const d=await r.json(),url=d.pfpUrl||d.profile_picture||d.photoURL||d.pfp||d.avatar||d.image;
+if(url&&url!==pfp){pfp=url;applyAvatar(avatar,initial,url,target);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),url,target);localStorage.setItem(`retro_pfp_${target.toLowerCase()}`,url)}
 }catch{}
 }
 
-function getChatCode(u){let h=0,s=u.toLowerCase()+'_retro_secret_salt';for(let i=0;i<s.length;i++)h=(h<<5)-h+s.charCodeAt(i),h|=0;return`RETRO-${Math.abs(h).toString(36).toUpperCase().slice(0,5)}`}
-function openAvatarView(){const s=document.getElementById('partner-profile-sheet');document.getElementById('sheet-username').textContent=targetUser;document.getElementById('sheet-chat-code').value=getChatCode(targetUser);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),avatarImg.src||localStorage.getItem(`retro_pfp_${targetUser.toLowerCase()}`),targetUser);s.classList.add('active')}
-function closeAvatarView(){document.getElementById('partner-profile-sheet').classList.remove('active')}
-document.getElementById('partner-profile-sheet').onclick=e=>{if(e.target.id==='partner-profile-sheet')closeAvatarView()};
-document.getElementById('partner-profile-card').onclick=e=>e.stopPropagation();
-
-async function copyPartnerCode(){const i=document.getElementById('sheet-chat-code'),b=document.getElementById('sheet-copy-btn');try{await navigator.clipboard.writeText(i.value)}catch{i.select();document.execCommand('copy')}const t=b.innerText;b.innerText='Copied!';setTimeout(()=>b.innerText=t,2000)}
-
-async function clearCurrentChat(){
-if(!confirm(`Clear chat with ${targetUser}? This will permanently delete all messages for both sides.`))return;
-try{const res=await fetch(`${API_BASE_URL}/api/messages/conversation`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user1:activeUser,user2:targetUser})}),d=await res.json().catch(()=>({}));if(!res.ok)throw Error(d.error||'Failed to clear chat');messagesList.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">Chat cleared.</div>';previousMessageCount=0;localStorage.removeItem(`read_${targetUser.toLowerCase()}`);closeAvatarView();showToast('Chat permanently deleted')}catch(e){showToast(e.message||'Failed to clear chat')}
+if(socket){
+socket.on('connect',()=>{socket.emit('register_user',me);socket.emit('join_room',{sender:me,receiver:target});socket.emit('check_online',target)});
+socket.on('receive_message',loadChat);
+socket.on('user_typing',d=>{if(d.sender?.toLowerCase()===target.toLowerCase())document.getElementById('typing-indicator').textContent=d.isTyping?`${target} is typing...`:''});
+socket.on('online_status',d=>{if(d.username?.toLowerCase()===target.toLowerCase())updateOnline(d.online)});
+socket.on('user_presence',d=>{if(d.username?.toLowerCase()===target.toLowerCase())updateOnline(d.online)});
 }
 
-chatContainer.onscroll=()=>{isUserScrolling=chatContainer.scrollHeight-chatContainer.scrollTop-chatContainer.clientHeight>=50};
+function updateOnline(x){document.getElementById('online-dot').style.display=x?'block':'none'}
+function toast(x){const t=document.getElementById('demure-toast');t.textContent=x;t.classList.add('show');clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove('show'),2400)}
+function formatSnippet(c){if(!c)return'';if(c.startsWith('[audio]'))return'🎤 Voice note';if(c.startsWith('[sticker]')||c.startsWith('data:image/'))return'🎨 Sticker';if(c.startsWith('[img]'))return'🖼 Image';return c}
+function audioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`}
 
-function formatSnippetText(c){if(!c)return'';if(c.startsWith('[audio]'))return'🎤 Voice note';if(c.startsWith('[sticker]')||c.startsWith('data:image/'))return'🎨 Sticker';if(c.startsWith('[img]'))return'🖼 Image';return c}
-function formatAudioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`}
-
-function parseReplyContent(c){
+function parseReply(c){
 if(!c?.startsWith('[reply:'))return null;
 const m=c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);if(!m)return null;
 let r=m[2];if(r.startsWith('[audio]')||r.includes('data:audio/'))r='🎤 Voicenote';else if(r.startsWith('[sticker]')||r.includes('data:image/'))r='🎨 Sticker';else if(r.startsWith('[img]'))r='🖼 Image';
@@ -159,89 +134,144 @@ return{replyUser:m[1],replySnippet:r,messageText:m[3]}
 }
 
 async function loadChat(){
-if(!activeUser||!targetUser||loadingChat)return;
-loadingChat=true;
+if(loading)return;loading=true;
 try{
-const res=await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);if(!res.ok)return;
-const all=await res.json(),a=activeUser.toLowerCase(),t=targetUser.toLowerCase(),now=Date.now();
-const msgs=all.filter(m=>{const s=(m.sender_username||m.sender||'').toLowerCase(),r=(m.receiver_username||m.receiver||'').toLowerCase();return((s===a&&r===t)||(s===t&&r===a))&&(!m.expires_at||new Date(m.expires_at).getTime()>now)}).sort((x,y)=>new Date(x.created_at)-new Date(y.created_at));
+const r=await fetch(`${API}/api/messages/${encodeURIComponent(me)}`);if(!r.ok)return;
+const all=await r.json(),a=me.toLowerCase(),t=target.toLowerCase(),now=Date.now();
+const msgs=all.filter(m=>{const s=(m.sender_username||m.sender||'').toLowerCase(),q=(m.receiver_username||m.receiver||'').toLowerCase();return((s===a&&q===t)||(s===t&&q===a))&&(!m.expires_at||new Date(m.expires_at)>now)}).sort((x,y)=>new Date(x.created_at)-new Date(y.created_at));
+lastCount=msgs.length;
+if(!msgs.length){list.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">No messages yet. Say hi!</div>';return}
 
-if(msgs.length>previousMessageCount&&previousMessageCount){
-const last=msgs.at(-1);
-if((last.sender_username||last.sender||'').toLowerCase()===t){playNotificationSound();navigator.vibrate?.([100,50,100]);updateAppBadge(1);if(document.hidden)showPopUpNotification(targetUser,parseReplyContent(last.content)?.messageText||last.content)}
-}
-previousMessageCount=msgs.length;
-
-if(!msgs.length){messagesList.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">No messages yet. Say hi!</div>';return}
-
-const lastIn=[...msgs].reverse().find(m=>(m.sender_username||m.sender||'').toLowerCase()===t);
-if(lastIn){localStorage.setItem(`read_${t}`,lastIn.created_at);fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}/mark-read`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({other_user:targetUser})}).catch(()=>{})}
-
-messagesList.innerHTML=msgs.map(m=>{
-const s=(m.sender_username||m.sender||'').trim(),sent=s.toLowerCase()===a,time=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read=m.is_read||new Date(localStorage.getItem(`read_${t}`)||0)>=new Date(m.created_at);
-let c=m.content||'',q='',p=parseReplyContent(c);
-if(p){q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${escapeHTML(p.replyUser)}</div><div>${escapeHTML(p.replySnippet)}</div></div>`;c=p.messageText}
-let rendered='';
-if(c.startsWith('[sticker]')||c.startsWith('data:image/')){
-const d=c.startsWith('[sticker]')?c.slice(9):c,id=`stk_${Math.random().toString(36).slice(2,9)}`;
-rendered=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${escapeHTML(d)}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${escapeHTML(d)}')">Add to stickerpack</div></div>`;
-}else if(c.startsWith('[img]')){const image=escapeHTML(c.slice(5));rendered=`<img src="${image}" class="msg-image" onclick="openChatImageViewer('${image}')" loading="lazy">`}
-else if(c.startsWith('[audio]')){const id=`vn_${m.id||Math.random().toString(36).slice(2,9)}`;rendered=`<div class="custom-audio-player" id="player_${id}"><button class="play-btn" onclick="toggleCustomAudio('${id}')">▶</button><div class="audio-track"><div id="progress_${id}" class="audio-progress"></div></div><span id="time_${id}" class="audio-time">0:00</span><audio id="${id}" src="${escapeHTML(c.slice(7))}" onloadedmetadata="initAudioDuration('${id}')" ontimeupdate="updateAudioProgress('${id}')" onended="resetAudioPlayer('${id}')"></audio></div>`}
-else rendered=escapeHTML(c);
-return`<div class="message-wrapper ${sent?'sent':'received'}" data-sender="${escapeHTML(s)}" data-content="${escapeHTML(m.content||'')}"><div class="message-bubble">${q}<div class="message-text">${rendered}</div><div class="message-meta"><span class="timer-clock">${time}</span>${sent?`<span class="read-status ${read?'read':''}">${read?'✓✓':'✓'}</span>`:''}</div></div></div>`
+const readAt=new Date(localStorage.getItem(`read_${t}`)||0);
+list.innerHTML=msgs.map(m=>{
+const s=(m.sender_username||m.sender||'').trim(),sent=s.toLowerCase()===a,time=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read=m.is_read||new Date(m.created_at)<=readAt;
+let c=m.content||'',q='',p=parseReply(c);
+if(p){q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${esc(p.replyUser)}</div><div>${esc(p.replySnippet)}</div></div>`;c=p.messageText}
+let out='';
+if(c.startsWith('[sticker]')||c.startsWith('data:image/')){const d=c.startsWith('[sticker]')?c.slice(9):c,id='stk_'+Math.random().toString(36).slice(2,8);out=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${esc(d)}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${esc(d)}')">Add to stickerpack</div></div>`}
+else if(c.startsWith('[img]')){const d=esc(c.slice(5));out=`<img src="${d}" class="msg-image" onclick="openChatImageViewer('${d}')" loading="lazy">`}
+else if(c.startsWith('[audio]')){const id=`vn_${m.id||Math.random().toString(36).slice(2,8)}`;out=`<div class="custom-audio-player" id="player_${id}"><button class="play-btn" onclick="toggleCustomAudio('${id}')">▶</button><div class="audio-track"><div id="progress_${id}" class="audio-progress"></div></div><span id="time_${id}" class="audio-time">0:00</span><audio id="${id}" src="${esc(c.slice(7))}" onloadedmetadata="initAudioDuration('${id}')" ontimeupdate="updateAudioProgress('${id}')" onended="resetAudioPlayer('${id}')"></audio></div>`}
+else out=esc(c);
+return`<div class="message-wrapper ${sent?'sent':'received'}" data-sender="${esc(s)}" data-content="${esc(m.content||'')}"><div class="message-bubble">${q}<div class="message-text">${out}</div><div class="message-meta"><span>${time}</span>${sent?`<span class="read-status ${read?'read':''}">${read?'✓✓':'✓'}</span>`:''}</div></div></div>`
 }).join('');
-attachSwipeListeners();if(!isUserScrolling)setTimeout(()=>chatContainer.scrollTop=chatContainer.scrollHeight,50);
-}catch(e){console.error('loadChat error:',e)}finally{loadingChat=false}
+attachSwipe();
+const last=[...msgs].reverse().find(m=>(m.sender_username||m.sender||'').toLowerCase()===t);
+if(last){localStorage.setItem(`read_${t}`,last.created_at);fetch(`${API}/api/messages/${encodeURIComponent(me)}/mark-read`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({other_user:target})}).catch(()=>{})}
+if(!scrolling)setTimeout(()=>container.scrollTop=container.scrollHeight,30);
+}catch(e){console.error(e)}finally{loading=false}
 }
 
-function toggleCustomAudio(id){const a=document.getElementById(id),p=document.getElementById(`player_${id}`),b=p.querySelector('.play-btn');document.querySelectorAll('audio').forEach(x=>{if(x.id!==id&&!x.paused){x.pause();const o=document.querySelector(`#player_${x.id} .play-btn`);if(o)o.textContent='▶'}});if(a.paused){a.play();b.textContent='❚'}else{a.pause();b.textContent='▶'}}
-function initAudioDuration(id){const a=document.getElementById(id),t=document.getElementById(`time_${id}`);if(a&&t)t.textContent=formatAudioTime(a.duration)}
-function updateAudioProgress(id){const a=document.getElementById(id),p=document.getElementById(`progress_${id}`),t=document.getElementById(`time_${id}`);if(!a||!p||!t)return;p.style.width=`${a.duration?a.currentTime/a.duration*100:0}%`;t.textContent=formatAudioTime(a.currentTime)}
-function resetAudioPlayer(id){const p=document.querySelector(`#player_${id} .play-btn`),progress=document.getElementById(`progress_${id}`),time=document.getElementById(`time_${id}`),audio=document.getElementById(id);if(p)p.textContent='▶';if(progress)progress.style.width='0%';if(time)time.textContent=formatAudioTime(audio?.duration||0)}
-
-function attachSwipeListeners(){
-document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0,sw=false;w.ontouchstart=e=>{sx=e.touches[0].clientX;sw=true;w.style.transition='none'};w.ontouchmove=e=>{if(!sw)return;cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{if(!sw)return;sw=false;w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender,p=parseReplyContent(c);if(p)c=p.messageText;if(c.startsWith('[sticker]')||c.startsWith('data:image/'))c='[sticker]';triggerReplyUI(s,c);navigator.vibrate?.(25)}w.style.transform='translateX(0)';cx=0}})
+function attachSwipe(){
+document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0;w.ontouchstart=e=>{sx=e.touches[0].clientX;w.style.transition='none'};w.ontouchmove=e=>{cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender,p=parseReply(c);if(p)c=p.messageText;if(c.startsWith('[sticker]')||c.startsWith('data:image/'))c='[sticker]';triggerReply(s,c)}w.style.transform='translateX(0)';cx=0}})
 }
 
-function triggerReplyUI(sender,text){let d=text||'';if(d.startsWith('[audio]')||d.includes('data:audio/'))d='🎤 Voicenote';else if(d.startsWith('[sticker]')||d.includes('data:image/'))d='🎨 Sticker';else if(d.startsWith('[img]'))d='🖼 Image';else d=formatSnippetText(d);activeReplyTo={sender,text:d};document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;document.getElementById('reply-text-label').textContent=d;document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()}
-function cancelReply(){activeReplyTo=null;document.getElementById('reply-preview-bar').style.display='none'}
+function triggerReply(sender,text){
+let d=text||'';if(d.startsWith('[audio]')||d.includes('data:audio/'))d='🎤 Voicenote';else if(d.startsWith('[sticker]')||d.includes('data:image/'))d='🎨 Sticker';else if(d.startsWith('[img]'))d='🖼 Image';else d=formatSnippet(d);
+reply={sender,text:d};document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;document.getElementById('reply-text-label').textContent=d;document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()
+}
+function cancelReply(){reply=null;document.getElementById('reply-preview-bar').style.display='none'}
 
-chatForm.onsubmit=async e=>{
-e.preventDefault();const i=document.getElementById('message-input'),btn=document.getElementById('send-btn');let c=i.value.trim();if(!c||!targetUser||!activeUser)return;
-if(activeReplyTo){let s=activeReplyTo.text||'';s=s==='🎨 Sticker'?'[sticker]':s.slice(0,40).replace(/\|/g,' ');c=`[reply:${activeReplyTo.sender}|${s}] ${c}`}
-btn.disabled=true;try{await postMessagePayload(c);i.value='';cancelReply()}catch(e){showToast('Failed to send message')}btn.disabled=false
+form.onsubmit=async e=>{
+e.preventDefault();const i=document.getElementById('message-input'),b=document.getElementById('send-btn');let c=i.value.trim();if(!c)return;
+if(reply){let s=reply.text==='🎨 Sticker'?'[sticker]':reply.text.slice(0,40).replace(/\|/g,' ');c=`[reply:${reply.sender}|${s}] ${c}`}
+b.disabled=true;try{await post(c);i.value='';cancelReply()}catch{toast('Failed to send message')}b.disabled=false
 };
 
-let typingTimeout;
-document.getElementById('message-input').oninput=()=>{if(socket)socket.emit('typing',{sender:activeUser,receiver:targetUser,isTyping:true});clearTimeout(typingTimeout);typingTimeout=setTimeout(()=>{if(socket)socket.emit('typing',{sender:activeUser,receiver:targetUser,isTyping:false})},2000)};
+let typingTimer;
+document.getElementById('message-input').oninput=()=>{if(socket)socket.emit('typing',{sender:me,receiver:target,isTyping:true});clearTimeout(typingTimer);typingTimer=setTimeout(()=>socket?.emit('typing',{sender:me,receiver:target,isTyping:false}),2000)};
 
-loadChat();setInterval(loadChat,5000);setInterval(()=>{if(document.visibilityState==='visible')loadTargetUserProfile()},10000);
+container.onscroll=()=>scrolling=container.scrollHeight-container.scrollTop-container.clientHeight>=50;
 
-let selectedCompressedImage=null;
-function handleImageSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.src=ev.target.result;img.onload=()=>{let w=img.width,h=img.height,max=1200;if(w>h&&w>max){h=h*max/w;w=max}else if(h>w&&h>max){w=w*max/h;h=max}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);selectedCompressedImage=c.toDataURL('image/jpeg',.85);document.getElementById('preview-modal-title').textContent='Preview Image';document.getElementById('image-preview-elem').src=selectedCompressedImage;document.getElementById('preview-modal-actions').style.display='flex';document.getElementById('image-preview-modal').style.display='flex'}};r.readAsDataURL(f)}
-function cropPreviewImage(){if(!selectedCompressedImage)return;const img=new Image();img.src=selectedCompressedImage;img.onload=()=>{const c=document.createElement('canvas'),s=Math.min(img.width,img.height);c.width=c.height=s;c.getContext('2d').drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,s);selectedCompressedImage=c.toDataURL('image/jpeg',.85);document.getElementById('image-preview-elem').src=selectedCompressedImage;showToast('Cropped Square')}}
-function openChatImageViewer(src){document.getElementById('preview-modal-title').textContent='View Photo';document.getElementById('image-preview-elem').src=src;document.getElementById('preview-modal-actions').style.display='none';document.getElementById('image-preview-modal').style.display='flex'}
-function closeImagePreview(){document.getElementById('image-preview-modal').style.display='none';document.getElementById('image-file-input').value='';selectedCompressedImage=null}
-async function sendSelectedImage(){if(!selectedCompressedImage)return;const b=document.getElementById('image-send-btn'),o=b.textContent;b.disabled=true;b.textContent='Sending...';try{await postMessagePayload(`[img]${selectedCompressedImage}`);closeImagePreview()}catch{showToast('Failed to send image')}b.textContent=o;b.disabled=false}
-
-const getSavedStickers=()=>{try{return JSON.parse(localStorage.getItem('retro_stickers')||'[]')}catch{return[]}};
-function toggleStickerDrawer(){const d=document.getElementById('sticker-drawer');d.classList.toggle('active');if(d.classList.contains('active'))renderStickerDrawer()}
-function renderStickerDrawer(){const g=document.getElementById('sticker-grid'),s=getSavedStickers();document.getElementById('sticker-count').textContent=s.length;g.innerHTML=s.map((d,i)=>`<div class="sticker-item-wrapper"><img src="${escapeHTML(d)}" onclick="sendSticker('${escapeHTML(d)}')"><button class="remove-sticker-btn" onclick="removeSticker(event,${i})">✕</button></div>`).join('');if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`}
-function removeSticker(e,i){e.stopPropagation();const s=getSavedStickers();s.splice(i,1);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickerDrawer();showToast('Removed')}
-function handleStickerSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.src=ev.target.result;img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=150;c.getContext('2d').drawImage(img,0,0,150,150);const d=c.toDataURL('image/webp',.7),s=getSavedStickers();if(s.length>=10)return showToast('Full');s.push(d);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickerDrawer();showToast('Added');e.target.value=''}};r.readAsDataURL(f)}
-function toggleStickerSaveTooltip(e,id){e.stopPropagation();document.querySelectorAll('.add-to-pack-tooltip').forEach(t=>{if(t.id!==id)t.classList.remove('active')});document.getElementById(id)?.classList.toggle('active')}
-function saveStickerToDrawer(e,d){e.stopPropagation();const s=getSavedStickers();if(s.includes(d))return showToast('Already added');if(s.length>=10)return showToast('Full');s.push(d);localStorage.setItem('retro_stickers',JSON.stringify(s));showToast('Added ✨');e.target.classList.remove('active')}
-async function sendSticker(d){toggleStickerDrawer();await postMessagePayload(`[sticker]${d}`)}
-document.onclick=()=>document.querySelectorAll('.add-to-pack-tooltip').forEach(t=>t.classList.remove('active'));
-
-let mediaRecorder,audioChunks=[],recording=false;
-async function toggleVoiceRecording(){
-const btn=document.getElementById('vn-btn');
-if(!recording){try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(stream);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=()=>{const blob=new Blob(audioChunks,{type:'audio/webm'}),r=new FileReader();r.onload=()=>postMessagePayload(`[audio]${r.result}`).catch(()=>showToast('Failed to send voice note'));r.readAsDataURL(blob);stream.getTracks().forEach(t=>t.stop())};mediaRecorder.start();recording=true;btn.classList.add('recording')}catch{showToast('Microphone permission denied')}}else{mediaRecorder.stop();recording=false;btn.classList.remove('recording')}}
-async function postMessagePayload(content){
-const data={sender:activeUser,receiver:targetUser,sender_username:activeUser,receiver_username:targetUser,content};
-const res=await fetch(`${API_BASE_URL}/api/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(!res.ok){const d=await res.json().catch(()=>({}));throw Error(d.error||'Message failed')}isUserScrolling=false;await loadChat();setTimeout(()=>chatContainer.scrollTop=chatContainer.scrollHeight,50)
+async function post(content){
+const r=await fetch(`${API}/api/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sender:me,receiver:target,sender_username:me,receiver_username:target,content})});
+if(!r.ok)throw Error();scrolling=false;await loadChat();setTimeout(()=>container.scrollTop=container.scrollHeight,30)
 }
+
+/* IMAGE: NO CROPPING */
+function handleImageSelected(e){
+const f=e.target.files[0];if(!f)return;
+const r=new FileReader();r.onload=ev=>{
+const img=new Image();img.onload=()=>{
+let w=img.width,h=img.height,max=1200;
+if(w>max){h*=max/w;w=max}if(h>max){w*=max/h;h=max}
+const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+selectedImage=c.toDataURL('image/jpeg',.85);
+document.getElementById('image-preview-elem').src=selectedImage;
+document.getElementById('preview-modal-actions').style.display='flex';
+document.getElementById('image-preview-modal').style.display='flex';
+};img.src=ev.target.result
+};r.readAsDataURL(f)
+}
+
+function openChatImageViewer(src){
+document.getElementById('image-preview-elem').src=src;
+document.getElementById('preview-modal-actions').style.display='none';
+document.getElementById('image-preview-modal').style.display='flex';
+}
+
+function closeImagePreview(){
+document.getElementById('image-preview-modal').style.display='none';
+document.getElementById('image-file-input').value='';
+selectedImage=null;
+}
+
+document.getElementById('image-preview-modal').onclick=e=>{
+if(e.target.id==='image-preview-modal'||e.target.id==='image-preview-container')closeImagePreview()
+};
+
+async function sendSelectedImage(){
+if(!selectedImage)return;
+const b=document.getElementById('image-send-btn');b.disabled=true;b.textContent='Sending...';
+try{await post(`[img]${selectedImage}`);closeImagePreview()}catch{toast('Failed to send image')}
+b.disabled=false;b.textContent='Send Image'
+}
+
+/* STICKERS */
+const getStickers=()=>{try{return JSON.parse(localStorage.getItem('retro_stickers')||'[]')}catch{return[]}};
+function toggleStickerDrawer(){const d=document.getElementById('sticker-drawer');d.classList.toggle('active');if(d.classList.contains('active'))renderStickers()}
+function renderStickers(){
+const g=document.getElementById('sticker-grid'),s=getStickers();document.getElementById('sticker-count').textContent=s.length;
+g.innerHTML=s.map((d,i)=>`<div class="sticker-item-wrapper"><img src="${esc(d)}" onclick="sendSticker('${esc(d)}')"><button class="remove-sticker-btn" onclick="removeSticker(event,${i})">✕</button></div>`).join('');
+if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`
+}
+function removeSticker(e,i){e.stopPropagation();const s=getStickers();s.splice(i,1);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickers();toast('Removed')}
+function handleStickerSelected(e){
+const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=150;c.getContext('2d').drawImage(img,0,0,150,150);const s=getStickers();if(s.length>=10)return toast('Full');s.push(c.toDataURL('image/webp',.7));localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickers();toast('Added');e.target.value=''};img.src=ev.target.result};r.readAsDataURL(f)
+}
+function toggleStickerSaveTooltip(e,id){e.stopPropagation();document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.id!==id&&x.classList.remove('active'));document.getElementById(id)?.classList.toggle('active')}
+function saveStickerToDrawer(e,d){e.stopPropagation();const s=getStickers();if(s.includes(d))return toast('Already added');if(s.length>=10)return toast('Full');s.push(d);localStorage.setItem('retro_stickers',JSON.stringify(s));toast('Added ✨');e.target.classList.remove('active')}
+async function sendSticker(d){toggleStickerDrawer();await post(`[sticker]${d}`)}
+document.addEventListener('click',()=>document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.classList.remove('active')));
+
+/* AUDIO */
+function toggleCustomAudio(id){
+const a=document.getElementById(id),p=document.getElementById(`player_${id}`),b=p.querySelector('.play-btn');
+document.querySelectorAll('audio').forEach(x=>{if(x.id!==id&&!x.paused){x.pause();document.querySelector(`#player_${x.id} .play-btn`)?.replaceChildren(document.createTextNode('▶'))}});
+if(a.paused){a.play();b.textContent='❚'}else{a.pause();b.textContent='▶'}
+}
+function initAudioDuration(id){const a=document.getElementById(id),t=document.getElementById(`time_${id}`);if(a&&t)t.textContent=audioTime(a.duration)}
+function updateAudioProgress(id){const a=document.getElementById(id),p=document.getElementById(`progress_${id}`),t=document.getElementById(`time_${id}`);if(!a||!p||!t)return;p.style.width=`${a.duration?a.currentTime/a.duration*100:0}%`;t.textContent=audioTime(a.currentTime)}
+function resetAudioPlayer(id){document.querySelector(`#player_${id} .play-btn`)?.replaceChildren(document.createTextNode('▶'));document.getElementById(`progress_${id}`)?.style.setProperty('width','0%')}
+
+let recorder,chunks=[],recording=false;
+async function toggleVoiceRecording(){
+const b=document.getElementById('vn-btn');
+if(!recording){try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});recorder=new MediaRecorder(stream);chunks=[];recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=()=>{const r=new FileReader();r.onload=()=>post(`[audio]${r.result}`).catch(()=>toast('Failed to send voice note'));r.readAsDataURL(new Blob(chunks,{type:'audio/webm'}));stream.getTracks().forEach(t=>t.stop())};recorder.start();recording=true;b.classList.add('recording')}catch{toast('Microphone permission denied')}}else{recorder.stop();recording=false;b.classList.remove('recording')}
+}
+
+/* PROFILE */
+function getChatCode(u){let h=0,s=u.toLowerCase()+'_retro_secret_salt';for(let i=0;i<s.length;i++)h=(h<<5)-h+s.charCodeAt(i),h|=0;return`RETRO-${Math.abs(h).toString(36).toUpperCase().slice(0,5)}`}
+function openAvatarView(){const s=document.getElementById('partner-profile-sheet');document.getElementById('sheet-username').textContent=target;document.getElementById('sheet-chat-code').value=getChatCode(target);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),pfp,target);s.classList.add('active')}
+function closeAvatarView(){document.getElementById('partner-profile-sheet').classList.remove('active')}
+document.getElementById('partner-profile-sheet').onclick=e=>{if(e.target.id==='partner-profile-sheet')closeAvatarView()};
+document.getElementById('partner-profile-card').onclick=e=>e.stopPropagation();
+async function copyPartnerCode(){const i=document.getElementById('sheet-chat-code'),b=document.getElementById('sheet-copy-btn');try{await navigator.clipboard.writeText(i.value)}catch{i.select();document.execCommand('copy')}b.textContent='Copied!';setTimeout(()=>b.textContent='Copy Code',2000)}
+async function clearCurrentChat(){
+if(!confirm(`Clear chat with ${target}? This will permanently delete all messages for both sides.`))return;
+try{const r=await fetch(`${API}/api/messages/conversation`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user1:me,user2:target})});if(!r.ok)throw Error();list.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">Chat cleared.</div>';localStorage.removeItem(`read_${target.toLowerCase()}`);closeAvatarView();toast('Chat permanently deleted')}catch{toast('Failed to clear chat')}
+}
+
+loadChat();setInterval(loadChat,5000);setInterval(()=>document.visibilityState==='visible'&&loadTargetUserProfile(),10000);
 </script>
 </body>
 </html>
