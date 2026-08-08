@@ -1,352 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Inbox</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
-  <meta name="theme-color" content="#000000">
-    <meta property="og:title" content="Retro">
-    <meta property="og:description" content="Chat freely and securely">
-    <meta property="og:image" content="icon.png">
-    <meta property="og:type" content="webapp">
-    
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Inbox</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="Retro">
+<meta property="og:description" content="Chat freely and securely">
+<meta property="og:image" content="icon.png">
+<meta property="og:type" content="webapp">
 </head>
 <body class="inbox-page">
 
-  <div class="inbox-app-wrapper">
-    <!-- Header -->
-    <header class="inbox-header">
-      <div class="inbox-brand">RETRO</div>
-      <div class="inbox-header-actions">
-        <button id="profile-btn" class="inbox-user-pill">User</button>
-        <button id="logout-btn" class="inbox-logout-btn">Logout</button>
-      </div>
-    </header>
+<div class="inbox-app-wrapper">
+<header class="inbox-header">
+<div class="inbox-brand">RETRO</div>
+<div class="inbox-header-actions">
+<button id="profile-btn" class="inbox-user-pill">User</button>
+<button id="logout-btn" class="inbox-logout-btn">Logout</button>
+</div>
+</header>
 
-  
+<div class="code-search-box">
+<div class="code-input-wrapper">
+<input type="text" id="join-code-input" class="code-join-field" placeholder="ENTER CHAT CODE..." maxlength="12">
+<button id="join-code-btn" class="join-btn">Search</button>
+</div>
+<div id="code-error" class="code-error-msg"></div>
+</div>
 
-    <!-- Chat Code Search Box -->
-    <div class="code-search-box">
-      <div class="code-input-wrapper">
-        <input type="text" id="join-code-input" class="code-join-field" placeholder="ENTER CHAT CODE..." maxlength="12" />
-        <button id="join-code-btn" class="join-btn">Search</button>
-      </div>
-      <div id="code-error" class="code-error-msg"></div>
-    </div>
+<div class="inbox-section">
+<div class="inbox-section-title"><span>DIRECT MESSAGES</span></div>
+<div id="inbox-list" class="chat-list"><div class="empty-state">No direct messages yet.</div></div>
+</div>
+</div>
 
-    <!-- Direct Messages Section -->
-    <div class="inbox-section">
-      <div class="inbox-section-title">
-        <span>DIRECT MESSAGES</span>
-      </div>
-      <div id="inbox-list" class="chat-list">
-        <div class="empty-state">No direct messages yet.</div>
-      </div>
-    </div>
-  </div>
+<div id="avatar-modal" class="retro-modal-overlay">
+<div class="retro-modal-content avatar-view-content"><img id="modal-avatar-img" src="" alt="Avatar View"></div>
+</div>
 
-  <!-- AVATAR MODAL -->
-  <div id="avatar-modal" class="retro-modal-overlay">
-    <div class="retro-modal-content avatar-view-content">
-      <img id="modal-avatar-img" src="" alt="Avatar View" />
-    </div>
-  </div>
+<div id="notif-modal" class="retro-modal-overlay">
+<div class="retro-modal-content">
+<h3>Enable Notifications</h3>
+<p class="notif-modal-text">Get notified instantly when someone messages you on RETRO.</p>
+<div class="modal-actions-row">
+<button id="enable-notifs-btn" class="modal-submit-btn">Enable</button>
+<button id="dismiss-notifs-btn" class="inbox-user-pill">Dismiss</button>
+</div>
+</div>
+</div>
 
-  <!-- NOTIFICATION MODAL -->
-  <div id="notif-modal" class="retro-modal-overlay">
-    <div class="retro-modal-content">
-      <h3>Enable Notifications</h3>
-      <p class="notif-modal-text">
-        Get notified instantly when someone messages you on RETRO.
-      </p>
-      <div class="modal-actions-row">
-        <button id="enable-notifs-btn" class="modal-submit-btn">Enable</button>
-        <button id="dismiss-notifs-btn" class="inbox-user-pill">Dismiss</button>
-      </div>
-    </div>
-  </div>
+<script>
+const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+let activeUser='';
 
-  <!-- JavaScript Application Logic -->
-  <script>
-    const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
-    let activeUser = '';
+function logout(){localStorage.removeItem('username');localStorage.removeItem('retro_session');window.location.href='auth.html'}
 
-    function logout() {
-      localStorage.removeItem('username');
-      localStorage.removeItem('retro_session');
-      window.location.href = 'auth.html';
-    }
-
-    function cleanPreviewText(text) {
-  if (!text) return '';
-  let clean = text.trim();
-
-  // Strip reply prefixes if present
-  if (clean.startsWith('[reply:')) {
-    const splitIdx = clean.indexOf(']');
-    if (splitIdx !== -1) clean = clean.substring(splitIdx + 1).trim();
-  }
-
-  // Catch raw base64 image/sticker data strings
-  if (clean.includes('data:image/') || clean.startsWith('data:image')) {
-    return '🎨 Sticker';
-  }
-
-  if (clean.startsWith('[img]')) return '📷 Photo';
-  if (clean.startsWith('[sticker]')) return '🎨 Sticker';
-  if (clean.startsWith('[audio]')) return '🎙️ Voice note';
-
-  return clean;
+function cleanPreviewText(text){
+if(!text)return'';
+let clean=text.trim();
+if(clean.startsWith('[reply:')){const i=clean.indexOf(']');if(i!==-1)clean=clean.substring(i+1).trim()}
+if(clean.includes('data:image/')||clean.startsWith('data:image'))return'🎨 Sticker';
+if(clean.startsWith('[img]'))return'📷 Photo';
+if(clean.startsWith('[sticker]'))return'🎨 Sticker';
+if(clean.startsWith('[audio]'))return'🎙️ Voice note';
+return clean;
 }
 
+async function fetchWithRetry(url,options={},retries=2,delay=1500){
+let lastError;
+for(let i=0;i<=retries;i++){
+try{
+const res=await fetch(url,options);
+if(res.ok)return res;
+lastError=new Error(`Server returned ${res.status}`);
+}catch(err){lastError=err}
+if(i<retries)await new Promise(r=>setTimeout(r,delay));
+}
+throw lastError||new Error('Network request failed');
+}
 
-    async function fetchWithRetry(url, options = {}, retries = 2, delay = 1500) {
-      for (let i = 0; i <= retries; i++) {
-        try {
-          const res = await fetch(url, options);
-          if (res.ok) return res;
-        } catch (err) {
-          if (i === retries) throw err;
-        }
-        await new Promise(res => setTimeout(res, delay));
-      }
-      throw new Error('Network request failed');
-    }
+function getChatCode(user){
+let hash=0,str=user.toLowerCase().replace('@','')+'_retro_secret_salt';
+for(let i=0;i<str.length;i++){hash=(hash<<5)-hash+str.charCodeAt(i);hash|=0}
+return`RETRO-${Math.abs(hash).toString(36).toUpperCase().substring(0,5)}`;
+}
 
-    function getChatCode(user) {
-      let hash = 0;
-      const str = user.toLowerCase() + "_retro_secret_salt";
-      for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
-        hash |= 0;
-      }
-      const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
-      return `RETRO-${cleanHash}`;
-    }
+window.addEventListener('DOMContentLoaded',()=>{
+const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
+activeUser=rawActive.trim().replace('@','');
+if(!activeUser){window.location.href='auth.html';return}
 
-    window.addEventListener('DOMContentLoaded', () => {
-      const rawActive = localStorage.getItem('username') || localStorage.getItem('retro_session') || '';
-      activeUser = rawActive.trim().replace('@', '');
+const profileBtn=document.getElementById('profile-btn'),logoutBtn=document.getElementById('logout-btn');
+if(profileBtn){profileBtn.textContent=activeUser;profileBtn.addEventListener('click',()=>window.location.href='profile.html')}
+if(logoutBtn)logoutBtn.addEventListener('click',logout);
 
-      if (!activeUser) {
-        window.location.href = 'auth.html';
-        return;
-      }
+const joinCodeInput=document.getElementById('join-code-input'),joinCodeBtn=document.getElementById('join-code-btn'),codeError=document.getElementById('code-error');
 
-      // Header Bindings
-      const profileBtn = document.getElementById('profile-btn');
-      const logoutBtn = document.getElementById('logout-btn');
-      if (profileBtn) {
-        profileBtn.textContent = `${activeUser}`;
-        profileBtn.addEventListener('click', () => window.location.href = 'profile.html');
-      }
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-      }
+async function handleCodeJoin(){
+const inputCode=joinCodeInput.value.trim().toUpperCase();
+if(!inputCode)return;
+joinCodeBtn.disabled=true;
+joinCodeBtn.textContent='Searching...';
+if(codeError)codeError.style.display='none';
 
-      // Join Code Handling
-      const joinCodeInput = document.getElementById('join-code-input');
-      const joinCodeBtn = document.getElementById('join-code-btn');
-      const codeError = document.getElementById('code-error');
+try{
+const res=await fetchWithRetry(`${API_BASE_URL}/api/users`);
+const users=await res.json();
+const userList=Array.isArray(users)?users:(users.users||users.data||[]);
 
-      async function handleCodeJoin() {
-        const inputCode = joinCodeInput.value.trim().toUpperCase();
-        if (!inputCode) return;
+const matchedUser=userList.find(u=>{
+const username=(typeof u==='string'?u:u.username||u.name||'').trim().replace('@','');
+return username&&getChatCode(username)===inputCode;
+});
 
-        joinCodeBtn.disabled = true;
-        joinCodeBtn.textContent = 'Searching...';
-        if (codeError) codeError.style.display = 'none';
+if(matchedUser){
+const targetUsername=(typeof matchedUser==='string'?matchedUser:(matchedUser.username||matchedUser.name)).trim().replace('@','');
+if(targetUsername.toLowerCase()===activeUser.toLowerCase()){
+if(codeError){codeError.textContent='You cannot chat with yourself!';codeError.style.display='block'}
+joinCodeBtn.disabled=false;
+joinCodeBtn.textContent='Search';
+return;
+}
+window.location.href=`chat.html?user=${encodeURIComponent(targetUsername)}`;
+}else{
+if(codeError){codeError.textContent='Invalid Chat Code. Please check and try again.';codeError.style.display='block'}
+joinCodeBtn.disabled=false;
+joinCodeBtn.textContent='Search';
+}
+}catch(err){
+console.error('Error resolving code:',err);
+if(codeError){
+codeError.textContent=err.message?.includes('Server returned')?'Server error. Try Search again in a moment.':'Server connecting... Try clicking Search again.';
+codeError.style.display='block';
+}
+joinCodeBtn.disabled=false;
+joinCodeBtn.textContent='Search';
+}
+}
 
-        try {
-          const res = await fetchWithRetry(`${API_BASE_URL}/api/users`);
-          const users = await res.json();
+if(joinCodeBtn)joinCodeBtn.addEventListener('click',handleCodeJoin);
+if(joinCodeInput)joinCodeInput.addEventListener('keypress',e=>{if(e.key==='Enter')handleCodeJoin()});
 
-          const matchedUser = users.find(u => {
-            const username = (typeof u === 'string' ? u : u.username || u.name || '').trim().replace( '');
-            return getChatCode(username) === inputCode;
-          });
+const dismissNotifsBtn=document.getElementById('dismiss-notifs-btn');
+if(dismissNotifsBtn)dismissNotifsBtn.addEventListener('click',()=>document.getElementById('notif-modal')?.classList.remove('active'));
 
-          if (matchedUser) {
-            const targetUsername = typeof matchedUser === 'string' ? matchedUser : (matchedUser.username || matchedUser.name);
+loadInbox();
+setInterval(loadInbox,4000);
+});
 
-            if (targetUsername.toLowerCase() === activeUser.toLowerCase()) {
-              if (codeError) {
-                codeError.textContent = 'You cannot chat with yourself!';
-                codeError.style.display = 'block';
-              }
-              joinCodeBtn.disabled = false;
-              joinCodeBtn.textContent = 'Search';
-              return;
-            }
+async function loadInbox(){
+if(!activeUser)return;
+const inboxList=document.getElementById('inbox-list');
+if(!inboxList)return;
+const emptyNoticeHtml='<div class="empty-state">No direct messages yet.</div>';
 
-            window.location.href = `chat.html?user=${encodeURIComponent(targetUsername)}`;
-          } else {
-            if (codeError) {
-              codeError.textContent = 'Invalid Chat Code. Please check and try again.';
-              codeError.style.display = 'block';
-            }
-            joinCodeBtn.disabled = false;
-            joinCodeBtn.textContent = 'Search';
-          }
-        } catch (err) {
-          console.error('Error resolving code:', err);
-          if (codeError) {
-            codeError.textContent = 'Server connecting... Try clicking Search again.';
-            codeError.style.display = 'block';
-          }
-          joinCodeBtn.disabled = false;
-          joinCodeBtn.textContent = 'Search';
-        }
-      }
+try{
+const response=await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
+if(!response.ok)return;
+const data=await response.json(),conversations=data.conversations||[];
+if(!conversations.length){inboxList.innerHTML=emptyNoticeHtml;return}
 
-      if (joinCodeBtn) joinCodeBtn.addEventListener('click', handleCodeJoin);
-      if (joinCodeInput) {
-        joinCodeInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') handleCodeJoin();
-        });
-      }
+const conversationData=await Promise.all(conversations.map(async conv=>{
+const otherUser=conv.other_user;
+let pfpUrl=localStorage.getItem(`retro_pfp_${otherUser.toLowerCase()}`);
 
-      const dismissNotifsBtn = document.getElementById('dismiss-notifs-btn');
-      if (dismissNotifsBtn) dismissNotifsBtn.addEventListener('click', () => {
-        document.getElementById('notif-modal')?.classList.remove('active');
-      });
+try{
+const userRes=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(otherUser)}?t=${Date.now()}`);
+if(userRes.ok){
+const userData=await userRes.json();
+const freshPfp=userData.pfpUrl||userData.photoURL||userData.pfp||userData.avatar||userData.profile_picture||userData.profilePic||userData.image;
+if(freshPfp){pfpUrl=freshPfp;localStorage.setItem(`retro_pfp_${otherUser.toLowerCase()}`,freshPfp)}
+}
+}catch(err){console.error(`Error loading avatar for ${otherUser}:`,err)}
 
-      loadInbox();
-      setInterval(loadInbox, 4000);
-    });
+return{...conv,pfpUrl};
+}));
 
-    async function loadInbox() {
-  if (!activeUser) return;
-
-  const inboxList = document.getElementById('inbox-list');
-  const emptyNoticeHtml =
-    '<div class="empty-state">No direct messages yet.</div>';
-
-  if (!inboxList) return;
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`
-    );
-
-    if (!response.ok) return;
-
-    const data = await response.json();
-    const conversations = data.conversations || [];
-
-    if (!conversations || conversations.length === 0) {
-      inboxList.innerHTML = emptyNoticeHtml;
-      return;
-    }
-
-    /*
-      Fetch profile pictures for all conversation users.
-      This makes the inbox independent from the chat page
-      having already been opened.
-    */
-
-    const conversationData = await Promise.all(
-      conversations.map(async conv => {
-        const otherUser = conv.other_user;
-
-        let pfpUrl = localStorage.getItem(
-          `retro_pfp_${otherUser.toLowerCase()}`
-        );
-
-        try {
-          const userRes = await fetch(
-            `${API_BASE_URL}/api/users/${encodeURIComponent(otherUser)}?t=${Date.now()}`
-          );
-
-          if (userRes.ok) {
-            const userData = await userRes.json();
-
-            const freshPfp =
-              userData.pfpUrl ||
-              userData.photoURL ||
-              userData.pfp ||
-              userData.avatar ||
-              userData.profile_picture ||
-              userData.profilePic ||
-              userData.image;
-
-            if (freshPfp) {
-              pfpUrl = freshPfp;
-
-              localStorage.setItem(
-                `retro_pfp_${otherUser.toLowerCase()}`,
-                freshPfp
-              );
-            }
-          }
-        } catch (profileErr) {
-          console.error(
-            `Error loading avatar for ${otherUser}:`,
-            profileErr
-          );
-        }
-
-        return {
-          ...conv,
-          pfpUrl
-        };
-      })
-    );
-
-    inboxList.innerHTML = conversationData.map(conv => {
-      const otherUser = conv.other_user;
-      const cachedPfp = conv.pfpUrl;
-
-      return `
-        <div
-          class="chat-card"
-          onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'"
-        >
-          <div class="inbox-card-avatar">
-            ${
-              cachedPfp
-                ? `
-                  <img
-                    src="${cachedPfp}"
-                    class="inbox-avatar-img"
-                    alt="${otherUser}"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                  >
-                  <span style="display:none;">
-                    ${otherUser.charAt(0).toUpperCase()}
-                  </span>
-                `
-                : `
-                  <span>
-                    ${otherUser.charAt(0).toUpperCase()}
-                  </span>
-                `
-            }
-          </div>
-
-          <div class="inbox-card-content">
-            <div class="inbox-card-header">
-              <div class="inbox-card-username">
-                ${otherUser}
-              </div>
-            </div>
-
-            <div class="inbox-card-preview">
-              ${cleanPreviewText(conv.last_message)}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (err) {
-    console.error('Error loading inbox:', err);
-  }
-            }
-  </script>
+inboxList.innerHTML=conversationData.map(conv=>{
+const otherUser=conv.other_user,cachedPfp=conv.pfpUrl;
+return`<div class="chat-card" onclick="window.location.href='chat.html?user=${encodeURIComponent(otherUser)}'">
+<div class="inbox-card-avatar">
+${cachedPfp?`<img src="${cachedPfp}" class="inbox-avatar-img" alt="${otherUser}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none;">${otherUser.charAt(0).toUpperCase()}</span>`:`<span>${otherUser.charAt(0).toUpperCase()}</span>`}
+</div>
+<div class="inbox-card-content">
+<div class="inbox-card-header"><div class="inbox-card-username">${otherUser}</div></div>
+<div class="inbox-card-preview">${cleanPreviewText(conv.last_message)}</div>
+</div>
+</div>`;
+}).join('');
+}catch(err){console.error('Error loading inbox:',err)}
+}
+</script>
 </body>
 </html>
