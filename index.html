@@ -128,8 +128,7 @@ return;
 }
 window.location.href=`chat.html?user=${encodeURIComponent(targetUsername)}`;
 }else{
-if(codeError){codeError.textContent='Invalid Chat Code. Please check and try again.';codeError.style.display='block'}
-joinCodeBtn.disabled=false;
+if(codeError){codeError.textContent='Invalid Code';codeError.style.display='block'}joinCodeBtn.disabled=false;
 joinCodeBtn.textContent='Search';
 }
 }catch(err){
