@@ -128,18 +128,11 @@ return;
 }
 window.location.href=`chat.html?user=${encodeURIComponent(targetUsername)}`;
 }else{
-if(codeError){codeError.textContent='Invalid Code';codeError.style.display='block'}joinCodeBtn.disabled=false;
-joinCodeBtn.textContent='Search';
-}
 }catch(err){
 console.error('Error resolving code:',err);
-if(codeError){
-codeError.textContent=err.message?.includes('Server returned')?'Server error. Try Search again in a moment.':'Server connecting... Try clicking Search again.';
-codeError.style.display='block';
-}
+if(codeError){codeError.textContent='Invalid Code. Check and Try again';codeError.style.display='block'}
 joinCodeBtn.disabled=false;
 joinCodeBtn.textContent='Search';
-}
 }
 
 if(joinCodeBtn)joinCodeBtn.addEventListener('click',handleCodeJoin);
