@@ -11,8 +11,9 @@
 <meta name="theme-color" content="#000">
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
-html,body{width:100%;height:100%;height:100dvh;margin:0;overflow:hidden}
-.chat-app-container{width:100%;height:100%;height:100dvh;flex-direction:column;overflow:hidden}
+/* Locked viewport to prevent mobile shifting */
+html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;overflow:hidden;position:fixed;top:0;left:0}
+.chat-app-container{width:100%;max-width:480px;height:100%;height:100dvh;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden}
 </style>
 </head>
 <body>
@@ -78,6 +79,19 @@ html,body{width:100%;height:100%;height:100dvh;margin:0;overflow:hidden}
 <div class="sheet-code-container"><div class="sheet-code-label">PRIVATE CHAT CODE</div><div class="sheet-code-box"><input id="sheet-chat-code" readonly value="Generating..."><button id="sheet-copy-btn" onclick="copyPartnerCode()">Copy Code</button></div></div>
 <button class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
 </div>
+</div>
+
+<!-- CUSTOM CLEAR CHAT MODAL -->
+<div id="clear-chat-modal" class="confirm-modal-overlay">
+  <div class="confirm-modal-card">
+    <div class="confirm-modal-icon">⚠️</div>
+    <div class="confirm-modal-title">Clear Chat?</div>
+    <div class="confirm-modal-desc" id="confirm-modal-desc">This will permanently delete all messages for both sides.</div>
+    <div class="confirm-modal-actions">
+      <button type="button" class="confirm-modal-btn cancel" onclick="closeClearModal()">Cancel</button>
+      <button type="button" class="confirm-modal-btn delete" onclick="executeClearCurrentChat()">Delete</button>
+    </div>
+  </div>
 </div>
 
 <div id="demure-toast" class="demure-toast"></div>
@@ -269,9 +283,31 @@ function closeAvatarView(){document.getElementById('partner-profile-sheet').clas
 document.getElementById('partner-profile-sheet').onclick=e=>{if(e.target.id==='partner-profile-sheet')closeAvatarView()};
 document.getElementById('partner-profile-card').onclick=e=>e.stopPropagation();
 async function copyPartnerCode(){const i=document.getElementById('sheet-chat-code'),b=document.getElementById('sheet-copy-btn');try{await navigator.clipboard.writeText(i.value)}catch{i.select();document.execCommand('copy')}b.textContent='Copied!';setTimeout(()=>b.textContent='Copy Code',2000)}
-async function clearCurrentChat(){
-if(!confirm(`Clear chat with ${target}? This will permanently delete all messages for both sides.`))return;
-try{const r=await fetch(`${API}/api/messages/conversation`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user1:me,user2:target})});if(!r.ok)throw Error();list.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">Chat cleared.</div>';localStorage.removeItem(`read_${target.toLowerCase()}`);closeAvatarView();toast('Chat permanently deleted')}catch{toast('Failed to clear chat')}
+
+/* CUSTOM MODAL CLEAR CHAT FUNCTIONS */
+function clearCurrentChat() {
+  document.getElementById('confirm-modal-desc').textContent = `This will permanently delete all messages with ${target} for both sides.`;
+  document.getElementById('clear-chat-modal').classList.add('active');
+}
+function closeClearModal() {
+  document.getElementById('clear-chat-modal').classList.remove('active');
+}
+async function executeClearCurrentChat() {
+  closeClearModal();
+  try {
+    const r = await fetch(`${API}/api/messages/conversation`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user1: me, user2: target })
+    });
+    if (!r.ok) throw Error();
+    list.innerHTML = '<div style="text-align:center;color:#666;margin-top:20px">Chat cleared.</div>';
+    localStorage.removeItem(`read_${target.toLowerCase()}`);
+    closeAvatarView();
+    toast('Chat permanently deleted');
+  } catch {
+    toast('Failed to clear chat');
+  }
 }
 
 loadChat();setInterval(loadChat,5000);setInterval(()=>document.visibilityState==='visible'&&loadTargetUserProfile(),10000);
