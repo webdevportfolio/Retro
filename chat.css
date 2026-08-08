@@ -15,8 +15,7 @@ body{background:var(--bg-dark);color:var(--text-main);height:100vh;height:100dvh
 .typing-indicator{font-size:.72rem;color:var(--accent-purple);height:12px;font-weight:500}
 .three-dots-btn{background:transparent;border:none;color:var(--text-muted);font-size:1.4rem;cursor:pointer;padding:4px 8px;transition:color .2s;touch-action:manipulation}
 .three-dots-btn:hover{color:var(--text-main)}
-.chat-container{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;background:#000;width:100%;box-sizing:border-box;-webkit-overflow-scrolling:touch}
-.chat-container::-webkit-scrollbar{width:6px}
+.chat-container{flex:1;min-height:0;padding:12px;overflow-y:auto;display:flex;flex-direction:column;background:#000;width:100%;box-sizing:border-box;-webkit-overflow-scrolling:touch}.chat-container::-webkit-scrollbar{width:6px}
 .chat-container::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
 .chat-container::-webkit-scrollbar-track{background:transparent}
 .messages-list{display:flex;flex-direction:column;gap:10px;width:100%}
@@ -54,7 +53,7 @@ body{background:var(--bg-dark);color:var(--text-main);height:100vh;height:100dvh
 .reply-preview-user{font-weight:700;color:var(--accent-purple)}
 .reply-preview-content{color:var(--text-muted)}
 .close-reply-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.9rem;padding:4px;touch-action:manipulation}
-.chat-input-bar{background:rgba(18,18,20,.95);border-top:1px solid var(--glass-border);padding:10px 12px max(10px,env(safe-area-inset-bottom));width:100%;flex-shrink:0;display:flex;flex-direction:column}
+.chat-input-bar{background:rgba(18,18,20,.95);border-top:1px solid var(--glass-border);padding:10px 12px max(10px,env(safe-area-inset-bottom));width:100%;flex-shrink:0;display:flex;flex-direction:column;position:relative;z-index:20}
 #chat-form{width:100%;display:flex}
 .pill-input-container{display:flex;align-items:center;background:#18181b;border:1px solid var(--glass-border);border-radius:28px;padding:4px 6px;gap:6px;width:100%}
 .pill-btn{background:transparent;border:none;font-size:1.15rem;padding:6px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .15s,background .15s;flex-shrink:0;touch-action:manipulation}
