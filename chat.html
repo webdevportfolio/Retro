@@ -91,6 +91,7 @@
 <div class="image-preview-container"><img id="image-preview-elem" src=""></div>
 <div id="preview-modal-actions" class="image-preview-actions">
 <button class="nav-btn" onclick="closeImagePreview()">Cancel</button>
+<button class="nav-btn" id="crop-image-btn" onclick="cropPreviewImage()" style="color:var(--text-main)">Crop Square</button>
 <button id="image-send-btn" class="send-btn" onclick="sendSelectedImage()">Send Image</button>
 </div>
 </div>
@@ -130,7 +131,7 @@ function escapeHTML(str) {
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
 const socket=io(API_BASE_URL);
 let activeReplyTo=null,isUserScrolling=false,previousMessageCount=0,lastFetchedPfpUrl=null;
-let globalAudioCtx=null; // Fix for Audio Context leak
+let globalAudioCtx=null;
 
 const activeUser=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
 const urlParams=new URLSearchParams(location.search);
@@ -203,7 +204,7 @@ async function copyPartnerCode(){const i=document.getElementById('sheet-chat-cod
 async function clearCurrentChat(){if(confirm(`Clear chat with ${targetUser}?`)){messagesList.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">Chat cleared.</div>';closeAvatarView()}}
 chatContainer.onscroll=()=>{isUserScrolling=chatContainer.scrollHeight-chatContainer.scrollTop-chatContainer.clientHeight>=50};
 
-function formatSnippetText(c){if(!c)return'';if(c.startsWith('data:image/')||c.startsWith('[sticker]'))return'[sticker]';if(c.startsWith('[img]'))return'📷 Photo';if(c.startsWith('[audio]'))return'🎤 Voice note';return c}
+function formatSnippetText(c){if(!c)return'';if(c.startsWith('data:image/')&&!c.includes('sticker'))return'🖼 Image';if(c.startsWith('data:image/')||c.startsWith('[sticker]'))return'[sticker]';if(c.startsWith('[img]'))return'🖼 Image';if(c.startsWith('[audio]'))return'🎤 Voice note';return c}
 function formatAudioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`}
 
 // Safer regex parsing
@@ -215,20 +216,18 @@ function parseReplyContent(c) {
         let replySnippet = m[2];
         let messageText = m[3];
 
-        // Clean up any raw base64 leaking into old or incoming reply snippets
         if (replySnippet.includes('data:audio/') || replySnippet.startsWith('[audio]')) {
             replySnippet = '🎤 Voicenote';
-        } else if (replySnippet.includes('data:image/') || replySnippet.startsWith('[img]')) {
-            replySnippet = '🖼 Image';
         } else if (replySnippet.startsWith('[sticker]')) {
             replySnippet = '🎨 Sticker';
+        } else if (replySnippet.startsWith('[img]') || (replySnippet.includes('data:image/') && !replySnippet.includes('sticker'))) {
+            replySnippet = '🖼 Image';
         }
 
         return { replyUser, replySnippet, messageText };
     }
     return null;
 }
-
 
 async function loadChat(){
 if(!activeUser||!targetUser)return;
@@ -246,8 +245,7 @@ messagesList.innerHTML=msgs.map(m=>{
     const p=parseReplyContent(c);
     
     if(p){
-        // Safe string interpolation with escapeHTML
-        q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${escapeHTML(p.replyUser)}</div><div>${p.replySnippet==='[sticker]'?'[sticker]':escapeHTML(sanitizeMessageContent(p.replySnippet))}</div></div>`;
+        q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${escapeHTML(p.replyUser)}</div><div>${escapeHTML(p.replySnippet)}</div></div>`;
         c=p.messageText;
     }
     
@@ -282,23 +280,22 @@ function updateAudioProgress(id){const a=document.getElementById(id),p=document.
 function resetAudioPlayer(id){document.querySelector(`#player_${id}.play-btn`).textContent='▶';document.getElementById(`progress_${id}`).style.width='0%';document.getElementById(`time_${id}`).textContent=formatAudioTime(document.getElementById(id).duration||0)}
 
 function attachSwipeListeners(){document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0,sw=false;w.ontouchstart=e=>{sx=e.touches[0].clientX;sw=true;w.style.transition='none'};w.ontouchmove=e=>{if(!sw)return;cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{if(!sw)return;sw=false;w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender;const p=parseReplyContent(c);if(p)c=p.messageText;if(c.startsWith('[sticker]')||c.includes('data:image/'))c='[sticker]';triggerReplyUI(s,c);navigator.vibrate?.(25)}w.style.transform='translateX(0)';cx=0}})}
+
 function triggerReplyUI(sender, text) {
     text = text || '';
-    
-    // Clean up media snippets into friendly UI labels
     let displaySnippet = text;
+    
     if (text.startsWith('[audio]') || text.includes('data:audio/')) {
         displaySnippet = '🎤 Voicenote';
-    } else if (text.startsWith('[img]') || text.includes('data:image/')) {
-        displaySnippet = '🖼 Image';
     } else if (text.startsWith('[sticker]')) {
         displaySnippet = '🎨 Sticker';
+    } else if (text.startsWith('[img]') || (text.includes('data:image/') && !text.includes('sticker'))) {
+        displaySnippet = '🖼 Image';
     } else {
         displaySnippet = escapeHTML(formatSnippetText(text));
     }
 
     activeReplyTo = { sender, text: displaySnippet };
-    
     document.getElementById('reply-user-label').textContent = `Replying to ${escapeHTML(sender)}`;
     document.getElementById('reply-text-label').textContent = displaySnippet;
     document.getElementById('reply-preview-bar').style.display = 'flex';
@@ -313,7 +310,6 @@ let typingTimeout;document.getElementById('message-input').oninput=()=>{socket.e
 
 loadChat();
 
-// Smart Polling - only fetch if tab is active
 setInterval(() => {
     if (document.visibilityState === 'visible') {
         loadTargetUserProfile();
@@ -321,7 +317,27 @@ setInterval(() => {
 }, 10000);
 
 let selectedCompressedImage=null;
-function handleImageSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader;r.onload=ev=>{const img=new Image;img.src=ev.target.result;img.onload=()=>{let w=img.width,h=img.height;const max=1200;if(w>h){if(w>max){h=h*max/w;w=max}}else{if(h>max){w=w*max/h;h=max}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);selectedCompressedImage=c.toDataURL('image/jpeg',.75);document.getElementById('preview-modal-title').textContent='Preview Image';document.getElementById('image-preview-elem').src=selectedCompressedImage;document.getElementById('preview-modal-actions').style.display='flex';document.getElementById('image-preview-modal').style.display='flex'}};r.readAsDataURL(f)}
+function handleImageSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader;r.onload=ev=>{const img=new Image;img.src=ev.target.result;img.onload=()=>{let w=img.width,h=img.height;const max=1200;if(w>h){if(w>max){h=h*max/w;w=max}}else{if(h>max){w=w*max/h;h=max}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);selectedCompressedImage=c.toDataURL('image/jpeg',.85);document.getElementById('preview-modal-title').textContent='Preview Image';document.getElementById('image-preview-elem').src=selectedCompressedImage;document.getElementById('preview-modal-actions').style.display='flex';document.getElementById('image-preview-modal').style.display='flex'}};r.readAsDataURL(f)}
+
+function cropPreviewImage(){
+    if(!selectedCompressedImage)return;
+    const img=new Image();
+    img.src=selectedCompressedImage;
+    img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const size=Math.min(img.width,img.height);
+        canvas.width=size;
+        canvas.height=size;
+        const ctx=canvas.getContext('2d');
+        const startX=(img.width-size)/2;
+        const startY=(img.height-size)/2;
+        ctx.drawImage(img,startX,startY,size,size,0,0,size,size);
+        selectedCompressedImage=canvas.toDataURL('image/jpeg',.85);
+        document.getElementById('image-preview-elem').src=selectedCompressedImage;
+        showToast('Cropped Square');
+    }
+}
+
 function openChatImageViewer(src){document.getElementById('preview-modal-title').textContent='View Photo';document.getElementById('image-preview-elem').src=src;document.getElementById('preview-modal-actions').style.display='none';document.getElementById('image-preview-modal').style.display='flex'}
 function closeImagePreview(){document.getElementById('image-preview-modal').style.display='none';document.getElementById('image-file-input').value='';selectedCompressedImage=null}
 async function sendSelectedImage(){if(!selectedCompressedImage)return;document.getElementById('image-send-btn').disabled=true;await postMessagePayload(`[img]${selectedCompressedImage}`);closeImagePreview();document.getElementById('image-send-btn').disabled=false}
