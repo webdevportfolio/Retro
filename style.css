@@ -188,9 +188,9 @@ body.inbox-page {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  /* Account for iOS notch and home bar */
-  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)) 1rem;
+  gap: 1rem;
+  /* Safe area padding removed completely */
+  padding: 1rem;
 }
 
 .inbox-header {
@@ -198,9 +198,10 @@ body.inbox-page {
   justify-content: space-between;
   align-items: center;
   
-  /* The faint dividing line and spacing */
+  /* Optimized spacing and padding for the sticky layout */
+  padding-top: 4px;
   padding-bottom: 12px; 
-  margin-bottom: 10px;
+  margin-bottom: 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   
   /* Makes it static at the top like a native app */
@@ -214,7 +215,6 @@ body.inbox-page {
   flex-shrink: 0;
   user-select: none;
 }
-
 
 .inbox-brand {
   font-size: 1.5rem;
@@ -251,7 +251,7 @@ body.inbox-page {
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  padding: 0.85rem;
+  padding: 0.75rem 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -315,7 +315,7 @@ body.inbox-page {
   flex: 1; /* Take up remaining height */
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   min-height: 0; /* Critical fix for nested flexbox scrolling */
 }
 
@@ -329,6 +329,7 @@ body.inbox-page {
   color: var(--text-sub);
   flex-shrink: 0;
   user-select: none;
+  padding: 0 0.2rem;
 }
 
 .chat-list {
@@ -338,8 +339,9 @@ body.inbox-page {
   gap: 0.6rem;
   overflow-y: auto; /* Scroll only this container */
   -webkit-overflow-scrolling: touch; /* Momentum scrolling for iOS */
-  padding-bottom: 1rem; /* Space at the bottom of the list */
-  padding-right: 4px; /* Space for scrollbar */
+  padding-bottom: 1.25rem;
+  padding-right: 4px;
+  padding-left: 2px;
 }
 
 /* Custom Scrollbar for Inbox List */
@@ -357,7 +359,7 @@ body.inbox-page {
 .chat-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  padding: 0.8rem;
+  padding: 0.75rem 0.85rem;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -425,7 +427,7 @@ body.inbox-page {
   font-size: 0.82rem;
   color: var(--text-sub);
   font-style: italic;
-  padding: 0.8rem;
+  padding: 1rem;
   background: var(--glass-bg);
   border: 1px dashed var(--glass-border);
   border-radius: 10px;
@@ -495,4 +497,4 @@ body.inbox-page {
 .modal-actions-row {
   display: flex;
   gap: 10px;
-   }
+}
