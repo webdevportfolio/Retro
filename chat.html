@@ -209,6 +209,7 @@ function formatAudioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%6
 
 // Safer regex parsing
 function parseReplyContent(c) {
+function parseReplyContent(c) {
     if (!c?.startsWith('[reply:')) return null;
     let m = c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);
     if (m) {
@@ -301,7 +302,6 @@ function triggerReplyUI(sender, text) {
     document.getElementById('reply-preview-bar').style.display = 'flex';
     document.getElementById('message-input').focus();
 }
-
 function cancelReply(){activeReplyTo=null;document.getElementById('reply-preview-bar').style.display='none'}
 
 chatForm.onsubmit=async e=>{e.preventDefault();const i=document.getElementById('message-input'),btn=document.getElementById('send-btn');let c=i.value.trim();if(!c||!targetUser||!activeUser)return;if(activeReplyTo){let s=activeReplyTo.text||'';s=s.startsWith('[sticker]')||s.includes('data:image/')?'[sticker]':s.slice(0,40).replace(/\|/g,' ');c=`[reply:${activeReplyTo.sender}|${s}] ${c}`}btn.disabled=true;await postMessagePayload(c);i.value='';cancelReply();btn.disabled=false}
@@ -340,7 +340,21 @@ function cropPreviewImage(){
 
 function openChatImageViewer(src){document.getElementById('preview-modal-title').textContent='View Photo';document.getElementById('image-preview-elem').src=src;document.getElementById('preview-modal-actions').style.display='none';document.getElementById('image-preview-modal').style.display='flex'}
 function closeImagePreview(){document.getElementById('image-preview-modal').style.display='none';document.getElementById('image-file-input').value='';selectedCompressedImage=null}
-async function sendSelectedImage(){if(!selectedCompressedImage)return;document.getElementById('image-send-btn').disabled=true;await postMessagePayload(`[img]${selectedCompressedImage}`);closeImagePreview();document.getElementById('image-send-btn').disabled=false}
+async function sendSelectedImage(){
+    if(!selectedCompressedImage) return;
+    
+    const sendBtn = document.getElementById('image-send-btn');
+    const originalText = sendBtn.textContent;
+    
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending...';
+    
+    await postMessagePayload(`[img]${selectedCompressedImage}`);
+    
+    sendBtn.textContent = originalText;
+    sendBtn.disabled = false;
+    closeImagePreview();
+}
 
 const getSavedStickers=()=>JSON.parse(localStorage.getItem('retro_stickers')||'[]');
 function toggleStickerDrawer(){const d=document.getElementById('sticker-drawer');d.classList.toggle('active');if(d.classList.contains('active'))renderStickerDrawer()}
