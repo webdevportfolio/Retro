@@ -9,7 +9,6 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="theme-color" content="#000">
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
   /* Mobile 100vh fix */
   html, body {
@@ -129,7 +128,6 @@ function escapeHTML(str) {
 }
 
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
-const socket=io(API_BASE_URL);
 let activeReplyTo=null,isUserScrolling=false,previousMessageCount=0,lastFetchedPfpUrl=null;
 let globalAudioCtx=null;
 
@@ -229,7 +227,7 @@ function parseReplyContent(c) {
     }
     return null;
 }
-
+}
 async function loadChat(){
 if(!activeUser||!targetUser)return;
 const res=await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(activeUser)}`);if(!res.ok)return;
