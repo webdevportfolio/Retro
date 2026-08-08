@@ -207,12 +207,28 @@ function formatSnippetText(c){if(!c)return'';if(c.startsWith('data:image/')||c.s
 function formatAudioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`}
 
 // Safer regex parsing
-function parseReplyContent(c){
-    if(!c?.startsWith('[reply:')) return null;
+function parseReplyContent(c) {
+    if (!c?.startsWith('[reply:')) return null;
     let m = c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);
-    if(m) return {replyUser: m[1], replySnippet: m[2], messageText: m[3]};
+    if (m) {
+        let replyUser = m[1];
+        let replySnippet = m[2];
+        let messageText = m[3];
+
+        // Clean up any raw base64 leaking into old or incoming reply snippets
+        if (replySnippet.includes('data:audio/') || replySnippet.startsWith('[audio]')) {
+            replySnippet = '🎤 Voicenote';
+        } else if (replySnippet.includes('data:image/') || replySnippet.startsWith('[img]')) {
+            replySnippet = '🖼 Image';
+        } else if (replySnippet.startsWith('[sticker]')) {
+            replySnippet = '🎨 Sticker';
+        }
+
+        return { replyUser, replySnippet, messageText };
+    }
     return null;
 }
+
 
 async function loadChat(){
 if(!activeUser||!targetUser)return;
@@ -266,8 +282,29 @@ function updateAudioProgress(id){const a=document.getElementById(id),p=document.
 function resetAudioPlayer(id){document.querySelector(`#player_${id}.play-btn`).textContent='▶';document.getElementById(`progress_${id}`).style.width='0%';document.getElementById(`time_${id}`).textContent=formatAudioTime(document.getElementById(id).duration||0)}
 
 function attachSwipeListeners(){document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0,sw=false;w.ontouchstart=e=>{sx=e.touches[0].clientX;sw=true;w.style.transition='none'};w.ontouchmove=e=>{if(!sw)return;cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{if(!sw)return;sw=false;w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender;const p=parseReplyContent(c);if(p)c=p.messageText;if(c.startsWith('[sticker]')||c.includes('data:image/'))c='[sticker]';triggerReplyUI(s,c);navigator.vibrate?.(25)}w.style.transform='translateX(0)';cx=0}})}
+function triggerReplyUI(sender, text) {
+    text = text || '';
+    
+    // Clean up media snippets into friendly UI labels
+    let displaySnippet = text;
+    if (text.startsWith('[audio]') || text.includes('data:audio/')) {
+        displaySnippet = '🎤 Voicenote';
+    } else if (text.startsWith('[img]') || text.includes('data:image/')) {
+        displaySnippet = '🖼 Image';
+    } else if (text.startsWith('[sticker]')) {
+        displaySnippet = '🎨 Sticker';
+    } else {
+        displaySnippet = escapeHTML(formatSnippetText(text));
+    }
 
-function triggerReplyUI(sender,text){text=text||'';if(text.startsWith('[sticker]')||text.includes('data:image/'))text='[sticker]';activeReplyTo={sender,text};document.getElementById('reply-user-label').textContent=`Replying to ${escapeHTML(sender)}`;document.getElementById('reply-text-label').textContent=text==='[sticker]'?'[sticker]':escapeHTML(formatSnippetText(text));document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()}
+    activeReplyTo = { sender, text: displaySnippet };
+    
+    document.getElementById('reply-user-label').textContent = `Replying to ${escapeHTML(sender)}`;
+    document.getElementById('reply-text-label').textContent = displaySnippet;
+    document.getElementById('reply-preview-bar').style.display = 'flex';
+    document.getElementById('message-input').focus();
+}
+
 function cancelReply(){activeReplyTo=null;document.getElementById('reply-preview-bar').style.display='none'}
 
 chatForm.onsubmit=async e=>{e.preventDefault();const i=document.getElementById('message-input'),btn=document.getElementById('send-btn');let c=i.value.trim();if(!c||!targetUser||!activeUser)return;if(activeReplyTo){let s=activeReplyTo.text||'';s=s.startsWith('[sticker]')||s.includes('data:image/')?'[sticker]':s.slice(0,40).replace(/\|/g,' ');c=`[reply:${activeReplyTo.sender}|${s}] ${c}`}btn.disabled=true;await postMessagePayload(c);i.value='';cancelReply();btn.disabled=false}
