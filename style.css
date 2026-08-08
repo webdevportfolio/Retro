@@ -197,10 +197,24 @@ body.inbox-page {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 0.5rem;
+  
+  /* The faint dividing line and spacing */
+  padding-bottom: 12px; 
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  /* Makes it static at the top like a native app */
+  position: sticky;
+  top: 0;
+  
+  /* Prevents scrolling messages from showing behind the header */
+  background-color: var(--bg-color); 
+  z-index: 100; 
+  
   flex-shrink: 0;
   user-select: none;
 }
+
 
 .inbox-brand {
   font-size: 1.5rem;
