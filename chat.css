@@ -20,7 +20,6 @@
   margin: 0;
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  /* Prevent Android blue tap highlight for native feel */
   -webkit-tap-highlight-color: transparent; 
 }
 
@@ -59,7 +58,7 @@ body {
   z-index: 10;
   flex-shrink: 0;
   width: 100%;
-  user-select: none; /* Prevent accidental text highlighting */
+  user-select: none;
 }
 
 .nav-btn {
@@ -147,17 +146,16 @@ body {
 /* --- Chat Messages Main Stream --- */
 .chat-container {
   flex: 1;
-  padding: 16px;
+  padding: 12px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   background: #000;
   width: 100%;
-  /* Smooth scrolling for iOS */
+  box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Clean, modern scrollbars for chat stream */
 .chat-container::-webkit-scrollbar {
   width: 6px;
 }
@@ -232,9 +230,11 @@ body {
   color: var(--accent-purple);
 }
 
+/* Increased Sent Image Size */
 .msg-image {
   max-width: 100%;
-  max-height: 240px;
+  width: 250px;
+  max-height: 350px;
   border-radius: 10px;
   margin-top: 4px;
   display: block;
@@ -444,7 +444,6 @@ body {
 .chat-input-bar {
   background: rgba(18, 18, 20, 0.95);
   border-top: 1px solid var(--glass-border);
-  /* Added env(safe-area-inset-bottom) for iPhone Home Bar clearance */
   padding: 10px 12px max(10px, env(safe-area-inset-bottom));
   width: 100%;
   flex-shrink: 0;
@@ -752,13 +751,12 @@ body {
 
 .image-preview-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-top: 4px;
 }
 
-/* FIXED: Target the send-btn correctly */
 .send-btn {
   background: var(--accent-purple);
   border: none;
