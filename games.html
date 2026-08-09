@@ -27,7 +27,7 @@
 
 <section class="games-intro">
 <div class="games-label">RETRO GAMES</div>
-<h1>Play against your friends.</h1>
+<h1>Play with your friends.</h1>
 </section>
 
 <section class="games-section">
@@ -55,6 +55,7 @@
 
 <section class="games-footer-message">
 <div class="footer-line"></div>
+<span>YOU CAN ONLY PLAY WITH PEOPLE IN YOUR DMS</span>
 <div class="footer-line"></div>
 </section>
 
@@ -91,223 +92,108 @@
 
 <script>
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
-
-const params=new URLSearchParams(window.location.search);
-const opponent=params.get('opponent')||'Opponent';
-const gameId=params.get('game')||'';
-
-const cells=document.querySelectorAll('.ttt-cell');
-const turnText=document.getElementById('turn-text');
-const gameStatus=document.getElementById('game-status');
-const opponentTitle=document.getElementById('opponent-title');
-const restartBtn=document.getElementById('restart-btn');
-
 let activeUser='';
-let board=['','','','','','','','',''];
-let mySymbol='';
-let myTurn=false;
-let gameOver=false;
-let polling=false;
+let selectedGame='';
 
-opponentTitle.textContent=opponent;
-
-window.addEventListener('DOMContentLoaded',async()=>{
-const rawUser=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
-activeUser=rawUser.trim().replace('@','');
+window.addEventListener('DOMContentLoaded',()=>{
+const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
+activeUser=rawActive.trim().replace('@','');
 
 if(!activeUser){
 window.location.href='auth.html';
 return;
 }
+});
 
-if(!gameId){
-await createGame();
-}else{
-await loadGame();
+function selectGame(game){
+selectedGame=game;
+
+document.getElementById('game-selection').style.display='none';
+document.getElementById('opponent-selection').style.display='block';
+
+document.getElementById('selected-game-label').textContent=
+game==='chess'?'CHESS':'TIC TAC TOE';
+
+loadOpponents();
 }
 
-setInterval(loadGame,1500);
-});
+async function loadOpponents(){
+const list=document.getElementById('opponent-list');
 
-async function createGame(){
+list.innerHTML='<div class="games-loading">Loading...</div>';
+
 try{
-const res=await fetch(`${API_BASE_URL}/api/games/tictactoe`,{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-player1:activeUser,
-player2:opponent
-})
-});
+const response=await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
 
-const data=await res.json();
+if(!response.ok)throw new Error('Failed to load conversations');
 
-if(!res.ok){
-gameStatus.textContent=data.error||'Failed to start game.';
+const data=await response.json();
+const conversations=data.conversations||[];
+
+if(!conversations.length){
+list.innerHTML='<div class="games-empty">No friends in DM</div>';
 return;
 }
 
-const game=data.game;
-
-window.history.replaceState({},'',`tictactoe.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(opponent)}`);
-
-applyGame(game);
-}catch(err){
-console.error('Create game error:',err);
-gameStatus.textContent='Unable to start game.';
-}
-}
-
-async function loadGame(){
-if(!gameId){
-const currentUrl=new URL(window.location.href);
-gameId=currentUrl.searchParams.get('game')||'';
-}
-
-if(!gameId||polling)return;
-
-polling=true;
+const opponentData=await Promise.all(conversations.map(async conv=>{
+const username=conv.other_user;
+let pfp='';
 
 try{
-const res=await fetch(`${API_BASE_URL}/api/games/tictactoe/${encodeURIComponent(gameId)}?t=${Date.now()}`);
+const userRes=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(username)}?t=${Date.now()}`);
 
-if(!res.ok){
-polling=false;
-return;
+if(userRes.ok){
+const userData=await userRes.json();
+pfp=userData.profile_picture||userData.pfpUrl||userData.photoURL||userData.pfp||'';
 }
-
-const data=await res.json();
-
-if(data.game)applyGame(data.game);
-
 }catch(err){
-console.error('Load game error:',err);
+console.error('Avatar error:',err);
 }
 
-polling=false;
-}
+return{username,pfp};
+}));
 
-function applyGame(game){
-board=Array.isArray(game.board)?game.board:['','','','','','','','',''];
+list.innerHTML=opponentData.map(user=>`
+<div class="opponent-card" onclick="startGame('${escapeHtml(user.username)}')">
+<div class="opponent-avatar">
+${user.pfp
+?`<img src="${user.pfp}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span style="display:none">${user.username.charAt(0).toUpperCase()}</span>`
+:`<span>${user.username.charAt(0).toUpperCase()}</span>`}
+</div>
 
-mySymbol=game.player1.toLowerCase()===activeUser.toLowerCase()?'X':'O';
+<div class="opponent-info">
+<div class="opponent-name">${escapeHtml(user.username)}</div>
+<div class="opponent-preview">Tap to challenge</div>
+</div>
 
-myTurn=game.turn.toLowerCase()===activeUser.toLowerCase();
+<div class="opponent-arrow">→</div>
+</div>
+`).join('');
 
-gameOver=game.status!=='playing';
-
-renderBoard();
-
-if(game.status==='finished'){
-if(game.winner&&game.winner.toLowerCase()===activeUser.toLowerCase()){
-gameStatus.textContent='You win!';
-turnText.textContent='You won 🎉';
-}else{
-gameStatus.textContent=`${opponent} wins!`;
-turnText.textContent='Game over';
-}
-}else if(game.status==='draw'){
-gameStatus.textContent='Draw!';
-turnText.textContent='Game over';
-}else if(myTurn){
-turnText.textContent='Your turn';
-gameStatus.textContent='Your turn';
-}else{
-turnText.textContent=`${opponent}'s turn`;
-gameStatus.textContent=`${opponent}'s turn`;
+}catch(error){
+console.error('Opponent loading error:',error);
+list.innerHTML='<div class="games-empty">No friends in DM</div>';
 }
 }
 
-function renderBoard(){
-cells.forEach((cell,index)=>{
-cell.textContent=board[index]||'';
-
-cell.classList.remove('x','o','winning');
-
-if(board[index]){
-cell.classList.add(board[index].toLowerCase());
-}
-});
-}
-
-cells.forEach(cell=>{
-cell.addEventListener('click',async()=>{
-const index=Number(cell.dataset.index);
-
-if(gameOver||!myTurn||board[index])return;
-
-await makeMove(index);
-});
-});
-
-async function makeMove(index){
-try{
-cells[index].disabled=true;
-
-const res=await fetch(`${API_BASE_URL}/api/games/tictactoe/${encodeURIComponent(gameId)}/move`,{
-method:'PUT',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-username:activeUser,
-index
-})
-});
-
-const data=await res.json();
-
-if(!res.ok){
-console.error(data.error||'Move failed.');
-await loadGame();
-return;
-}
-
-if(data.game){
-applyGame(data.game);
-}
-
-}catch(err){
-console.error('Move error:',err);
-}finally{
-cells[index].disabled=false;
+function startGame(username){
+if(selectedGame==='tictactoe'){
+window.location.href=`tictactoe.html?opponent=${encodeURIComponent(username)}`;
+}else if(selectedGame==='chess'){
+window.location.href=`chess.html?opponent=${encodeURIComponent(username)}`;
 }
 }
 
-restartBtn.addEventListener('click',async()=>{
-if(!gameOver)return;
-
-restartBtn.disabled=true;
-restartBtn.textContent='Starting...';
-
-try{
-const res=await fetch(`${API_BASE_URL}/api/games/tictactoe`,{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-player1:activeUser,
-player2:opponent
-})
-});
-
-const data=await res.json();
-
-if(res.ok&&data.game){
-gameId=data.game.game_id;
-
-window.history.replaceState({},'',`tictactoe.html?game=${encodeURIComponent(gameId)}&opponent=${encodeURIComponent(opponent)}`);
-
-applyGame(data.game);
-}else{
-console.error(data.error||'Failed to start rematch.');
+function escapeHtml(text){
+return text.replace(/[&<>"']/g,char=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#039;'
+}[char]));
 }
-
-}catch(err){
-console.error('Rematch error:',err);
-}
-
-restartBtn.disabled=false;
-restartBtn.textContent='New Game';
-});
-          </script>
+</script>
 
 </body>
 </html>
