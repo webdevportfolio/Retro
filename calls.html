@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Calls</title>
+<link rel="stylesheet" href="calls.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#000000">
+</head>
+<body class="calls-page">
+
+<div class="calls-app">
+<header class="calls-header">
+<div class="calls-title">Calls</div>
+</header>
+
+<main class="calls-content">
+<div class="section-title">CONTACTS</div>
+<div id="calls-list" class="calls-list">
+<div class="empty-state">No contacts yet.</div>
+</div>
+</main>
+</div>
+
+<button id="new-call-btn" class="new-call-btn" aria-label="New Call">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M12 5v14M5 12h14"/>
+</svg>
+</button>
+
+<div id="call-modal" class="call-modal">
+<div class="call-modal-box">
+<div class="modal-title">New Call</div>
+<div class="modal-subtitle">Select a contact</div>
+<div id="contact-picker" class="contact-picker"></div>
+<button id="close-modal" class="cancel-btn">Cancel</button>
+</div>
+</div>
+
+<nav class="bottom-nav">
+<a href="index.html" class="bottom-nav-item">
+<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8 8 0 0 1-3.5-.8L4 20l1.8-4A7.5 7.5 0 1 1 20 11.5z"/>
+</svg>
+<span>Chats</span>
+</a>
+
+<a href="groups.html" class="bottom-nav-item">
+<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<circle cx="9" cy="8" r="3"/>
+<circle cx="17" cy="9" r="2.5"/>
+<path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+<path d="M15 15c3.3 0 5.5 2 6 5"/>
+</svg>
+<span>Groups</span>
+</a>
+
+<a href="calls.html" class="bottom-nav-item active">
+<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M7 4h3l1.5 4-2 1.5a12 12 0 0 0 5 5L16 12.5 20 14v3c0 1.1-.9 2-2 2C10.3 19 5 13.7 5 7c0-1.7.9-3 2-3z"/>
+</svg>
+<span>Calls</span>
+</a>
+
+<a href="profile.html" class="bottom-nav-item">
+<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<circle cx="12" cy="8" r="3.5"/>
+<path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/>
+</svg>
+<span>Profile</span>
+</a>
+</nav>
+
+<script>
+const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+let activeUser='';
+
+document.addEventListener('DOMContentLoaded',()=>{
+const rawUser=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
+activeUser=rawUser.trim().replace('@','');
+if(!activeUser){window.location.href='auth.html';return}
+
+loadContacts();
+
+document.getElementById('new-call-btn').addEventListener('click',()=>{
+document.getElementById('call-modal').classList.add('active');
+});
+
+document.getElementById('close-modal').addEventListener('click',closeModal);
+
+document.getElementById('call-modal').addEventListener('click',e=>{
+if(e.target.id==='call-modal')closeModal();
+});
+});
+
+function closeModal(){
+document.getElementById('call-modal').classList.remove('active');
+}
+
+async function loadContacts(){
+const list=document.getElementById('calls-list');
+const picker=document.getElementById('contact-picker');
+
+try{
+const response=await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
+if(!response.ok)return;
+
+const data=await response.json();
+const conversations=data.conversations||[];
+
+if(!conversations.length){
+list.innerHTML='<div class="empty-state">No contacts yet.</div>';
+picker.innerHTML='<div class="picker-empty">No contacts available.</div>';
+return;
+}
+
+const contacts=await Promise.all(conversations.map(async conv=>{
+const username=conv.other_user;
+let pfpUrl=localStorage.getItem(`retro_pfp_${username.toLowerCase()}`)||'';
+
+try{
+const res=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(username)}?t=${Date.now()}`);
+if(res.ok){
+const user=await res.json();
+const fresh=user.pfpUrl||user.photoURL||user.pfp||user.avatar||user.profile_picture||user.profilePic||user.image;
+if(fresh){
+pfpUrl=fresh;
+localStorage.setItem(`retro_pfp_${username.toLowerCase()}`,fresh);
+}
+}
+}catch(err){}
+
+return{username,pfpUrl};
+}));
+
+list.innerHTML=contacts.map(c=>`
+<div class="call-card">
+<div class="contact-avatar">
+${c.pfpUrl?`<img src="${c.pfpUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none">${c.username.charAt(0).toUpperCase()}</span>`:`<span>${c.username.charAt(0).toUpperCase()}</span>`}
+</div>
+<div class="contact-info">
+<div class="contact-name">${c.username}</div>
+<div class="contact-status">No recent call</div>
+</div>
+<button class="call-btn" onclick="startCall('${encodeURIComponent(c.username)}')">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M7 4h3l1.5 4-2 1.5a12 12 0 0 0 5 5L16 12.5 20 14v3c0 1.1-.9 2-2 2C10.3 19 5 13.7 5 7c0-1.7.9-3 2-3z"/>
+</svg>
+</button>
+</div>
+`).join('');
+
+picker.innerHTML=contacts.map(c=>`
+<button class="picker-contact" onclick="startCall('${encodeURIComponent(c.username)}')">
+<div class="picker-avatar">
+${c.pfpUrl?`<img src="${c.pfpUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span style="display:none">${c.username.charAt(0).toUpperCase()}</span>`:`<span>${c.username.charAt(0).toUpperCase()}</span>`}
+</div>
+<span>${c.username}</span>
+</button>
+`).join('');
+
+}catch(err){
+console.error('Error loading contacts:',err);
+}
+}
+
+function startCall(encodedUser){
+const username=decodeURIComponent(encodedUser);
+closeModal();
+alert(`Calling ${username}...\n\nCalling will be available soon.`);
+}
+</script>
+</body>
+  </html>
