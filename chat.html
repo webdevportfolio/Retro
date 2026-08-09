@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Chat</title>
-<link rel="stylesheet" href="chat.css">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="theme-color" content="#000">
+<link rel="stylesheet" href="chat.css">
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
@@ -406,7 +406,30 @@ async function executeClearCurrentChat() {
   }
 }
 
-loadChat();setInterval(loadChat,5000);setInterval(()=>document.visibilityState==='visible'&&loadTargetUserProfile(),10000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    scrolling = false;
+    loading = false;
+    loadChat().then(() => {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    });
+  }
+});
+
+loadChat();
+setInterval(() => {
+  if (document.visibilityState === 'visible') {
+    loadChat();
+  }
+}, 5000);
+
+setInterval(() => {
+  if (document.visibilityState === 'visible') {
+    loadTargetUserProfile();
+  }
+}, 10000);
 </script>
 </body>
 </html>
