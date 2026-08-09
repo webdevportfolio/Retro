@@ -15,16 +15,19 @@
 <div class="games-app">
 
 <header class="games-header">
-<a href="index.html" class="games-back">←</a>
+<button class="games-back" id="back-btn" onclick="goBack()">←</button>
 <div class="games-brand">RETRO</div>
 <div class="games-header-spacer"></div>
 </header>
 
 <main class="games-main">
 
+<!-- GAME SELECTION -->
+<div id="game-selection">
+
 <section class="games-intro">
 <div class="games-label">RETRO GAMES</div>
-<h1>Play with friends</h1>
+<h1>Play with your friends</h1>
 </section>
 
 <section class="games-section">
@@ -52,21 +55,218 @@
 
 <section class="games-footer-message">
 <div class="footer-line"></div>
-<span>YOU CAN ONLY PLAY WITH PEOPLE IN YOUR DMS</span>
+<span>ONLY PLAY WITH PEOPLE IN YOUR DMS</span>
 <div class="footer-line"></div>
 </section>
 
-</main>
+</div>
+
+<!-- OPPONENT SELECTION -->
+<div id="opponent-selection" style="display:none">
+
+<section class="games-intro">
+<div class="games-label" id="selected-game-label">TIC TAC TOE</div>
+<h1>Choose your opponent.</h1>
+<p>Pick someone you've already chatted with.</p>
+</section>
+
+<section class="games-section">
+<div class="games-section-title">YOUR DMS</div>
+
+<div id="opponent-list">
+<div class="games-loading">Loading your chats...</div>
+</div>
+
+</section>
+
+<section class="games-footer-message">
+<div class="footer-line"></div>
+<span>YOU CAN ONLY PLAY AGAINST PEOPLE IN YOUR DMS</span>
+<div class="footer-line"></div>
+</section>
 
 </div>
 
+</main>
+</div>
+
 <script>
-function selectGame(game){
-if(game==='tictactoe'){
-window.location.href='tictactoe.html';
-}else if(game==='chess'){
-window.location.href='chess.html';
+const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+let activeUser='';
+let selectedGame='';
+
+window.addEventListener('DOMContentLoaded',()=>{
+const raw=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
+activeUser=raw.trim().replace(/^@/,'');
+if(!activeUser){
+window.location.href='auth.html';
+return;
 }
+});
+
+function selectGame(game){
+selectedGame=game;
+
+document.getElementById('game-selection').style.display='none';
+document.getElementById('opponent-selection').style.display='block';
+
+document.getElementById('selected-game-label').textContent=
+game==='tictactoe'?'TIC TAC TOE':'CHESS';
+
+loadOpponents();
+}
+
+function goBack(){
+const gameScreen=document.getElementById('game-selection');
+const opponentScreen=document.getElementById('opponent-selection');
+
+if(opponentScreen.style.display!=='none'){
+opponentScreen.style.display='none';
+gameScreen.style.display='block';
+selectedGame='';
+}else{
+window.location.href='index.html';
+}
+}
+
+function cleanPreviewText(text){
+if(!text)return'';
+let clean=text.trim();
+
+if(clean.startsWith('[reply:')){
+const i=clean.indexOf(']');
+if(i!==-1)clean=clean.substring(i+1).trim();
+}
+
+if(clean.includes('data:image/')||clean.startsWith('data:image'))return'🎨 Sticker';
+if(clean.startsWith('[img]'))return'📷 Photo';
+if(clean.startsWith('[sticker]'))return'🎨 Sticker';
+if(clean.startsWith('[audio]'))return'🎙️ Voice note';
+
+return clean;
+}
+
+async function loadOpponents(){
+const list=document.getElementById('opponent-list');
+
+try{
+const response=await fetch(
+`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`
+);
+
+if(!response.ok)throw new Error();
+
+const data=await response.json();
+const conversations=data.conversations||[];
+
+if(!conversations.length){
+list.innerHTML=`
+<div class="games-empty">
+<div class="games-empty-icon">💬</div>
+<h3>No people to play with yet</h3>
+<p>Start a conversation first, then come back here to challenge them.</p>
+</div>`;
+return;
+}
+
+const users=await Promise.all(conversations.map(async conv=>{
+const username=conv.other_user;
+let pfp=localStorage.getItem(`retro_pfp_${username.toLowerCase()}`)||'';
+
+try{
+const r=await fetch(
+`${API_BASE_URL}/api/users/${encodeURIComponent(username)}?t=${Date.now()}`
+);
+
+if(r.ok){
+const d=await r.json();
+pfp=d.pfpUrl||d.profile_picture||d.photoURL||d.pfp||d.avatar||d.image||'';
+
+if(pfp){
+localStorage.setItem(`retro_pfp_${username.toLowerCase()}`,pfp);
+}
+}
+}catch{}
+
+return{
+username,
+pfp,
+preview:cleanPreviewText(conv.last_message)
+};
+}));
+
+list.innerHTML=users.map(user=>`
+<div class="opponent-card" onclick="challengePlayer('${escapeAttr(user.username)}')">
+
+<div class="opponent-avatar">
+${user.pfp?
+`<img src="${escapeAttr(user.pfp)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+:''}
+<span style="${user.pfp?'display:none':''}">
+${user.username.charAt(0).toUpperCase()}
+</span>
+</div>
+
+<div class="opponent-info">
+<div class="opponent-name">${escapeHtml(user.username)}</div>
+<div class="opponent-preview">${escapeHtml(user.preview||'Ready to play?')}</div>
+</div>
+
+<div class="opponent-arrow">→</div>
+
+</div>
+`).join('');
+
+}catch(error){
+console.error(error);
+
+list.innerHTML=`
+<div class="games-empty">
+<div class="games-empty-icon">⚠️</div>
+<h3>Couldn't load your chats</h3>
+<p>Check your connection and try again.</p>
+<button class="games-retry-btn" onclick="loadOpponents()">Try Again</button>
+</div>`;
+}
+}
+
+function challengePlayer(username){
+if(!selectedGame)return;
+
+const gameName=selectedGame==='tictactoe'?'Tic Tac Toe':'Chess';
+
+alert(`${gameName} challenge to ${username} coming next.`);
+
+/*
+NEXT STEP:
+
+This will eventually become:
+
+POST /api/games/challenge
+
+and then the opponent receives:
+
+🎮 Game Challenge
+[username] wants to play Tic Tac Toe
+
+Accept / Decline
+
+We are NOT connecting the game yet.
+*/
+}
+
+function escapeHtml(text){
+return String(text||'').replace(/[&<>'"]/g,x=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+"'":'&#39;',
+'"':'&quot;'
+}[x]));
+}
+
+function escapeAttr(text){
+return String(text||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 </script>
 
