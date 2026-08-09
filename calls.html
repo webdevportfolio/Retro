@@ -170,7 +170,35 @@ console.error('Error loading contacts:',err);
 function startCall(encodedUser){
 const username=decodeURIComponent(encodedUser);
 closeModal();
-alert(`Calling ${username}...\n\nCalling will be available soon.`);
+showCallNotice(`Calls aren't available yet.`);
+}
+
+function showCallNotice(message){
+let notice=document.getElementById('call-notice');
+
+if(!notice){
+notice=document.createElement('div');
+notice.id='call-notice';
+notice.className='call-notice';
+
+notice.innerHTML=`
+<div class="call-notice-box">
+<div class="call-notice-title">RETRO</div>
+<div class="call-notice-message"></div>
+<button class="call-notice-btn" onclick="closeCallNotice()">OK</button>
+</div>
+`;
+
+document.body.appendChild(notice);
+}
+
+notice.querySelector('.call-notice-message').textContent=message;
+notice.classList.add('active');
+}
+
+function closeCallNotice(){
+const notice=document.getElementById('call-notice');
+if(notice)notice.classList.remove('active');
 }
 </script>
 </body>
