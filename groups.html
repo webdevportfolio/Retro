@@ -94,10 +94,43 @@ if(e.target===modal)closeGroupModal();
 
 createBtn.addEventListener('click',()=>{
 const name=document.getElementById('group-name-input').value.trim();
-if(!name)return;
-alert('Group creation will be connected later.');
+
+if(!name){
+showGroupNotice('Enter a group name first.');
+return;
+}
+
+showGroupNotice('Group creation isn’t available yet.');
 });
-</script>
+
+function showGroupNotice(message){
+let notice=document.getElementById('group-notice');
+
+if(!notice){
+notice=document.createElement('div');
+notice.id='group-notice';
+notice.className='group-notice';
+
+notice.innerHTML=`
+<div class="group-notice-box">
+<div class="group-notice-title">RETRO</div>
+<div class="group-notice-message"></div>
+<button class="group-notice-btn" onclick="closeGroupNotice()">OK</button>
+</div>
+`;
+
+document.body.appendChild(notice);
+}
+
+notice.querySelector('.group-notice-message').textContent=message;
+notice.classList.add('active');
+}
+
+function closeGroupNotice(){
+const notice=document.getElementById('group-notice');
+if(notice)notice.classList.remove('active');
+}
+  </script>
 
 </body>
 </html>
