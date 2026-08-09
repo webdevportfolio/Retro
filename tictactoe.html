@@ -55,8 +55,11 @@
 </div>
 
 <script>
+const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+
 const params=new URLSearchParams(window.location.search);
 const opponent=params.get('opponent')||'Opponent';
+const gameId=params.get('game')||'';
 
 const cells=document.querySelectorAll('.ttt-cell');
 const turnText=document.getElementById('turn-text');
@@ -64,92 +67,212 @@ const gameStatus=document.getElementById('game-status');
 const opponentTitle=document.getElementById('opponent-title');
 const restartBtn=document.getElementById('restart-btn');
 
+let activeUser='';
 let board=['','','','','','','','',''];
-let currentPlayer='X';
+let mySymbol='';
+let myTurn=false;
 let gameOver=false;
+let polling=false;
 
 opponentTitle.textContent=opponent;
-updateStatus();
 
-cells.forEach(cell=>{
-cell.addEventListener('click',()=>{
-const index=Number(cell.dataset.index);
+window.addEventListener('DOMContentLoaded',async()=>{
+const rawUser=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
+activeUser=rawUser.trim().replace('@','');
 
-if(gameOver||board[index])return;
-
-board[index]=currentPlayer;
-cell.textContent=currentPlayer;
-cell.classList.add(currentPlayer.toLowerCase());
-
-const winner=checkWinner();
-
-if(winner){
-gameOver=true;
-gameStatus.textContent=winner+' wins!';
-turnText.textContent='Game over';
+if(!activeUser){
+window.location.href='auth.html';
 return;
 }
 
-if(board.every(cell=>cell)){
-gameOver=true;
+if(!gameId){
+await createGame();
+}else{
+await loadGame();
+}
+
+setInterval(loadGame,1500);
+});
+
+async function createGame(){
+try{
+const res=await fetch(`${API_BASE_URL}/api/games/tictactoe`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+player1:activeUser,
+player2:opponent
+})
+});
+
+const data=await res.json();
+
+if(!res.ok){
+gameStatus.textContent=data.error||'Failed to start game.';
+return;
+}
+
+const game=data.game;
+
+window.history.replaceState({},'',`tictactoe.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(opponent)}`);
+
+applyGame(game);
+}catch(err){
+console.error('Create game error:',err);
+gameStatus.textContent='Unable to start game.';
+}
+}
+
+async function loadGame(){
+if(!gameId){
+const currentUrl=new URL(window.location.href);
+gameId=currentUrl.searchParams.get('game')||'';
+}
+
+if(!gameId||polling)return;
+
+polling=true;
+
+try{
+const res=await fetch(`${API_BASE_URL}/api/games/tictactoe/${encodeURIComponent(gameId)}?t=${Date.now()}`);
+
+if(!res.ok){
+polling=false;
+return;
+}
+
+const data=await res.json();
+
+if(data.game)applyGame(data.game);
+
+}catch(err){
+console.error('Load game error:',err);
+}
+
+polling=false;
+}
+
+function applyGame(game){
+board=Array.isArray(game.board)?game.board:['','','','','','','','',''];
+
+mySymbol=game.player1.toLowerCase()===activeUser.toLowerCase()?'X':'O';
+
+myTurn=game.turn.toLowerCase()===activeUser.toLowerCase();
+
+gameOver=game.status!=='playing';
+
+renderBoard();
+
+if(game.status==='finished'){
+if(game.winner&&game.winner.toLowerCase()===activeUser.toLowerCase()){
+gameStatus.textContent='You win!';
+turnText.textContent='You won 🎉';
+}else{
+gameStatus.textContent=`${opponent} wins!`;
+turnText.textContent='Game over';
+}
+}else if(game.status==='draw'){
 gameStatus.textContent='Draw!';
 turnText.textContent='Game over';
+}else if(myTurn){
+turnText.textContent='Your turn';
+gameStatus.textContent='Your turn';
+}else{
+turnText.textContent=`${opponent}'s turn`;
+gameStatus.textContent=`${opponent}'s turn`;
+}
+}
+
+function renderBoard(){
+cells.forEach((cell,index)=>{
+cell.textContent=board[index]||'';
+
+cell.classList.remove('x','o','winning');
+
+if(board[index]){
+cell.classList.add(board[index].toLowerCase());
+}
+});
+}
+
+cells.forEach(cell=>{
+cell.addEventListener('click',async()=>{
+const index=Number(cell.dataset.index);
+
+if(gameOver||!myTurn||board[index])return;
+
+await makeMove(index);
+});
+});
+
+async function makeMove(index){
+try{
+cells[index].disabled=true;
+
+const res=await fetch(`${API_BASE_URL}/api/games/tictactoe/${encodeURIComponent(gameId)}/move`,{
+method:'PUT',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username:activeUser,
+index
+})
+});
+
+const data=await res.json();
+
+if(!res.ok){
+console.error(data.error||'Move failed.');
+await loadGame();
 return;
 }
 
-currentPlayer=currentPlayer==='X'?'O':'X';
-updateStatus();
-});
-});
-
-restartBtn.addEventListener('click',resetGame);
-
-function updateStatus(){
-const text=currentPlayer==='X'?'Your turn':`${opponent}'s turn`;
-turnText.textContent=text;
-gameStatus.textContent=text;
+if(data.game){
+applyGame(data.game);
 }
 
-function checkWinner(){
-const wins=[
-[0,1,2],
-[3,4,5],
-[6,7,8],
-[0,3,6],
-[1,4,7],
-[2,5,8],
-[0,4,8],
-[2,4,6]
-];
-
-for(const combination of wins){
-const[a,b,c]=combination;
-
-if(board[a]&&board[a]===board[b]&&board[a]===board[c]){
-cells[a].classList.add('winning');
-cells[b].classList.add('winning');
-cells[c].classList.add('winning');
-
-return board[a]==='X'?'You':'Opponent';
+}catch(err){
+console.error('Move error:',err);
+}finally{
+cells[index].disabled=false;
 }
 }
 
-return null;
-}
+restartBtn.addEventListener('click',async()=>{
+if(!gameOver)return;
 
-function resetGame(){
-board=['','','','','','','','',''];
-currentPlayer='X';
-gameOver=false;
+restartBtn.disabled=true;
+restartBtn.textContent='Starting...';
 
-cells.forEach(cell=>{
-cell.textContent='';
-cell.classList.remove('x','o','winning');
+try{
+const res=await fetch(`${API_BASE_URL}/api/games/tictactoe`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+player1:activeUser,
+player2:opponent
+})
 });
 
-updateStatus();
+const data=await res.json();
+
+if(res.ok&&data.game){
+gameId=data.game.game_id;
+
+window.history.replaceState({},'',`tictactoe.html?game=${encodeURIComponent(gameId)}&opponent=${encodeURIComponent(opponent)}`);
+
+applyGame(data.game);
+}else{
+console.error(data.error||'Failed to start rematch.');
 }
-</script>
+
+}catch(err){
+console.error('Rematch error:',err);
+}
+
+restartBtn.disabled=false;
+restartBtn.textContent='New Game';
+});
+  </script>
 
 </body>
 </html>
