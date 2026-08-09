@@ -1,0 +1,81 @@
+:root{
+--bg-color:#08080a;
+--card-bg:#121216;
+--card-border:#22222a;
+--accent-purple:#a855f7;
+--accent-purple-glow:rgba(168,85,247,.4);
+--accent-hover:#7c3aed;
+--text-main:#fff;
+--text-sub:rgba(255,255,255,.45);
+--glass-border:rgba(255,255,255,.08);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+
+html,body{background:var(--bg-color);color:var(--text-main);width:100%;overflow-x:hidden}
+
+body.groups-page{height:100vh;height:100dvh;overflow:hidden;background:var(--bg-color)}
+
+.groups-app-wrapper{height:100%;display:flex;flex-direction:column;padding:1rem 1rem 84px}
+
+.groups-header{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 14px;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+
+.groups-title{font-size:1.35rem;font-weight:900;letter-spacing:1.5px;color:#fff}
+
+.groups-add-btn{width:38px;height:38px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--accent-purple);font-size:1.6rem;line-height:1;cursor:pointer}
+
+.groups-add-btn:active{transform:scale(.94)}
+
+.groups-content{flex:1;min-height:0;padding-top:1rem}
+
+.groups-section-label{font-size:.72rem;font-weight:700;letter-spacing:1px;color:var(--text-sub);margin:0 2px .7rem}
+
+.groups-list{height:100%;overflow-y:auto}
+
+.groups-empty-state{margin-top:14vh;text-align:center;padding:1.5rem;color:var(--text-sub)}
+
+.groups-empty-icon{width:58px;height:58px;margin:0 auto 1rem;border:1px solid var(--card-border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--accent-purple);font-size:1.8rem;background:var(--card-bg)}
+
+.groups-empty-state h3{font-size:1rem;color:#fff;margin-bottom:.4rem}
+
+.groups-empty-state p{font-size:.8rem;line-height:1.5;max-width:270px;margin:0 auto 1rem}
+
+.create-group-empty-btn{background:var(--accent-purple);border:0;color:#fff;border-radius:9px;padding:.7rem 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer}
+
+.create-group-empty-btn:active{transform:scale(.97)}
+
+.groups-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:10000;align-items:center;justify-content:center;padding:1rem}
+
+.groups-modal-overlay.active{display:flex}
+
+.groups-modal{width:100%;max-width:380px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:1.3rem;box-shadow:0 15px 40px rgba(0,0,0,.7)}
+
+.groups-modal h2{font-size:1.1rem;margin-bottom:.4rem}
+
+.groups-modal p{font-size:.82rem;color:var(--text-sub);margin-bottom:1rem}
+
+.group-input{width:100%;background:#09090c;border:1px solid var(--card-border);border-radius:9px;padding:.75rem;color:#fff;font-size:.85rem;outline:none;margin-bottom:.65rem}
+
+.group-input:focus{border-color:var(--accent-purple);box-shadow:0 0 10px var(--accent-purple-glow)}
+
+.group-textarea{height:80px;resize:none;font-family:inherit}
+
+.groups-modal-actions{display:flex;gap:.6rem;margin-top:.35rem}
+
+.groups-cancel-btn,.groups-create-btn{flex:1;border:0;border-radius:9px;padding:.7rem;font-weight:700;cursor:pointer}
+
+.groups-cancel-btn{background:rgba(255,255,255,.08);color:#fff}
+
+.groups-create-btn{background:var(--accent-purple);color:#fff}
+
+.groups-create-btn:active,.groups-cancel-btn:active{transform:scale(.97)}
+
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:68px;background:rgba(12,12,15,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--glass-border);display:flex;align-items:stretch;justify-content:space-around;padding:5px 8px max(5px,env(safe-area-inset-bottom));z-index:9999}
+
+.bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(255,255,255,.45);text-decoration:none;font-size:.68rem;font-weight:600;transition:color .2s,transform .2s;touch-action:manipulation}
+
+.bottom-nav-icon{font-size:1.25rem;line-height:1}
+
+.bottom-nav-item.active{color:var(--accent-purple)}
+
+.bottom-nav-item:active{transform:scale(.92)}
