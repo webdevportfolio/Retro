@@ -75,3 +75,16 @@ body.calls-page{height:100vh;height:100dvh;overflow:hidden}
 .bottom-nav-item:active{transform:scale(.92)}
 
 .bottom-icon{width:22px;height:22px}
+.call-notice{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:20px;z-index:20000}
+
+.call-notice.active{display:flex}
+
+.call-notice-box{width:100%;max-width:340px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center;box-shadow:0 15px 40px rgba(0,0,0,.7)}
+
+.call-notice-title{font-size:1rem;font-weight:900;letter-spacing:1.5px;color:var(--purple);margin-bottom:8px}
+
+.call-notice-message{font-size:.85rem;line-height:1.5;color:var(--sub);margin-bottom:16px}
+
+.call-notice-btn{width:100%;border:0;border-radius:10px;background:var(--purple);color:#fff;padding:11px;font-weight:700;font-size:.8rem;cursor:pointer}
+
+.call-notice-btn:active{transform:scale(.97);background:var(--purple-dark)}
