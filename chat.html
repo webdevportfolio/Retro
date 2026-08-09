@@ -161,13 +161,13 @@ let snippet=reply.text;
 if(snippet==='🎨 Sticker'||snippet.startsWith('[sticker]'))snippet='🎨 Sticker';
 else if(snippet==='🖼 Image'||snippet.startsWith('[img]'))snippet='🖼 Image';
 else if(snippet==='🎤 Voice note'||snippet.startsWith('[audio]'))snippet='🎤 Voice note';
-else snippet=snippet.slice(0,40).replace(/[|\]]/g,' '); // Fixed: No longer breaks on closing brackets
+else snippet=snippet.slice(0,40).replace(/[|\]]/g,' '); 
 return `[reply:${reply.sender}|${snippet}] ${content}`;
 }
 
 async function loadChat(){
-const isAudioPlaying = !!document.querySelector('audio:not([paused])');
-if(loading || isAudioPlaying) return; // Prevent destroying DOM while listening to voice notes
+const isAudioPlaying = Array.from(document.querySelectorAll('audio')).some(a => !a.paused);
+if(loading || isAudioPlaying) return; 
 loading=true;
 try{
 const r=await fetch(`${API}/api/messages/${encodeURIComponent(me)}`);if(!r.ok)return;
@@ -338,7 +338,7 @@ recorder=new MediaRecorder(stream);chunks=[];cancelVn=false;
 recorder.ondataavailable=e=>chunks.push(e.data);
 recorder.onstop=()=>{
   clearInterval(recTimerInterval);
-  if (cancelVn) { // If cancelled, reset UI without sending payload
+  if (cancelVn) { 
       recording = false;
       b.classList.remove('recording');
       barElem.style.display='none';
