@@ -19,10 +19,6 @@
 <div class="inbox-app-wrapper">
 <header class="inbox-header">
 <div class="inbox-brand">RETRO</div>
-<div class="inbox-header-actions">
-<button id="profile-btn" class="inbox-user-pill">User</button>
-<button id="logout-btn" class="inbox-logout-btn">Logout</button>
-</div>
 </header>
 
 <div class="code-search-box">
@@ -58,7 +54,6 @@
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
 let activeUser='';
 
-function logout(){localStorage.removeItem('username');localStorage.removeItem('retro_session');window.location.href='auth.html'}
 
 function cleanPreviewText(text){
 if(!text)return'';
@@ -95,9 +90,6 @@ const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_se
 activeUser=rawActive.trim().replace('@','');
 if(!activeUser){window.location.href='auth.html';return}
 
-const profileBtn=document.getElementById('profile-btn'),logoutBtn=document.getElementById('logout-btn');
-if(profileBtn){profileBtn.textContent=activeUser;profileBtn.addEventListener('click',()=>window.location.href='profile.html')}
-if(logoutBtn)logoutBtn.addEventListener('click',logout);
 
 const joinCodeInput=document.getElementById('join-code-input'),joinCodeBtn=document.getElementById('join-code-btn'),codeError=document.getElementById('code-error');
 
@@ -211,5 +203,23 @@ console.error('Error loading inbox:',err);
 }
 }
 </script>
+  <nav class="bottom-nav">
+<a href="index.html" class="bottom-nav-item active">
+<span class="bottom-nav-icon">💬</span>
+<span>Chats</span>
+</a>
+<a href="groups.html" class="bottom-nav-item">
+<span class="bottom-nav-icon">👥</span>
+<span>Groups</span>
+</a>
+<a href="games.html" class="bottom-nav-item">
+<span class="bottom-nav-icon">🎮</span>
+<span>Games</span>
+</a>
+<a href="profile.html" class="bottom-nav-item">
+<span class="bottom-nav-icon">👤</span>
+<span>Profile</span>
+</a>
+  </nav>
 </body>
 </html>
