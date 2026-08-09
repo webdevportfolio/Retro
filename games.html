@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Games</title>
+<link rel="stylesheet" href="games.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#08080a">
+</head>
+<body class="games-page">
+
+<div class="games-app">
+
+<header class="games-header">
+<a href="index.html" class="games-back">←</a>
+<div class="games-brand">RETRO</div>
+<div class="games-header-spacer"></div>
+</header>
+
+<main class="games-main">
+
+<section class="games-intro">
+<div class="games-label">RETRO GAMES</div>
+<h1>Play with your people.</h1>
+<p>Challenge someone you've already chatted with.</p>
+</section>
+
+<section class="games-section">
+<div class="games-section-title">CHOOSE A GAME</div>
+
+<div class="game-card" onclick="selectGame('tictactoe')">
+<div class="game-icon tic-icon">×<span>○</span></div>
+<div class="game-info">
+<h2>Tic Tac Toe</h2>
+<p>Quick. Simple. Competitive.</p>
+</div>
+<div class="game-arrow">→</div>
+</div>
+
+<div class="game-card" onclick="selectGame('chess')">
+<div class="game-icon chess-icon">♟</div>
+<div class="game-info">
+<h2>Chess</h2>
+<p>Think ahead. Make your move.</p>
+</div>
+<div class="game-arrow">→</div>
+</div>
+
+</section>
+
+<section class="games-footer-message">
+<div class="footer-line"></div>
+<span>ONLY PLAY WITH PEOPLE IN YOUR DMS</span>
+<div class="footer-line"></div>
+</section>
+
+</main>
+
+</div>
+
+<script>
+function selectGame(game){
+if(game==='tictactoe'){
+window.location.href='tictactoe.html';
+}else if(game==='chess'){
+window.location.href='chess.html';
+}
+}
+</script>
+
+</body>
+</html>
