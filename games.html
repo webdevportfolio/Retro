@@ -23,7 +23,6 @@
 
 <main class="games-main">
 
-<!-- GAME SELECTION -->
 <div id="game-selection">
 
 <section class="games-intro">
@@ -31,7 +30,6 @@
 <h1>Play with your friends.</h1>
 </section>
 
-<!-- INCOMING CHALLENGES -->
 <section class="games-section" id="challenge-section" style="display:none">
 <div class="games-section-title">GAME CHALLENGES</div>
 <div id="challenge-list"></div>
@@ -68,8 +66,6 @@
 
 </div>
 
-
-<!-- OPPONENT SELECTION -->
 <div id="opponent-selection" style="display:none">
 
 <section class="games-intro">
@@ -94,6 +90,24 @@
 
 </div>
 
+<div id="game-toast" style="
+position:fixed;
+left:50%;
+bottom:28px;
+transform:translate(-50%,20px);
+background:#111114;
+color:#fff;
+padding:12px 18px;
+border:1px solid rgba(255,255,255,.12);
+border-radius:10px;
+font-size:14px;
+opacity:0;
+pointer-events:none;
+transition:all .25s ease;
+z-index:9999;
+white-space:nowrap;
+"></div>
+
 </main>
 </div>
 
@@ -102,6 +116,7 @@ const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
 
 let activeUser='';
 let selectedGame='';
+let redirectingToGame=false;
 
 window.addEventListener('DOMContentLoaded',async()=>{
 const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
@@ -113,8 +128,10 @@ return;
 }
 
 await loadChallenges();
+await checkAcceptedGames();
 
 setInterval(loadChallenges,5000);
+setInterval(checkAcceptedGames,1500);
 });
 
 function selectGame(game){
@@ -176,6 +193,41 @@ console.error('Challenge loading error:',error);
 }
 }
 
+async function checkAcceptedGames(){
+if(!activeUser||redirectingToGame)return;
+
+try{
+const response=await fetch(
+`${API_BASE_URL}/api/games/challenges/sent/${encodeURIComponent(activeUser)}?t=${Date.now()}`
+);
+
+if(!response.ok)return;
+
+const data=await response.json();
+const challenges=data.challenges||[];
+
+const accepted=challenges.find(challenge=>
+challenge.status==='accepted'&&
+challenge.game==='tictactoe'&&
+challenge.game&&
+challenge.game.game_id
+);
+
+if(!accepted)return;
+
+const gameId=accepted.game.game_id;
+const opponent=accepted.receiver;
+
+redirectingToGame=true;
+
+window.location.href=
+`tictactoe.html?game=${encodeURIComponent(gameId)}&opponent=${encodeURIComponent(opponent)}`;
+
+}catch(error){
+console.error('Accepted game check error:',error);
+}
+}
+
 async function respondChallenge(id,action){
 try{
 const response=await fetch(
@@ -192,7 +244,7 @@ action
 const data=await response.json();
 
 if(!response.ok){
-alert(data.error||'Failed to respond to challenge.');
+showToast(data.error||'Failed to respond to challenge.');
 return;
 }
 
@@ -211,7 +263,7 @@ if(game){
 window.location.href=
 `chess.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(challenge.sender)}`;
 }else{
-alert('Chess game support is not ready yet.');
+showToast('Chess game support is not ready yet.');
 }
 return;
 }
@@ -221,7 +273,7 @@ await loadChallenges();
 
 }catch(error){
 console.error('Challenge response error:',error);
-alert('Unable to respond to challenge.');
+showToast('Unable to respond to challenge.');
 }
 }
 
@@ -257,6 +309,7 @@ const userRes=await fetch(
 
 if(userRes.ok){
 const userData=await userRes.json();
+
 pfp=
 userData.profile_picture||
 userData.pfpUrl||
@@ -318,16 +371,31 @@ game:selectedGame
 const data=await response.json();
 
 if(!response.ok){
-alert(data.error||'Failed to send challenge.');
+showToast(data.error||'Failed to send challenge.');
 return;
 }
 
-alert(`Challenge sent to @${username}!`);
+showToast(`Challenge sent to @${username}`);
 
 }catch(error){
 console.error('Send challenge error:',error);
-alert('Unable to send challenge.');
+showToast('Unable to send challenge.');
 }
+}
+
+function showToast(message){
+const toast=document.getElementById('game-toast');
+
+toast.textContent=message;
+toast.style.opacity='1';
+toast.style.transform='translate(-50%,0)';
+
+clearTimeout(window.gameToastTimer);
+
+window.gameToastTimer=setTimeout(()=>{
+toast.style.opacity='0';
+toast.style.transform='translate(-50%,20px)';
+},2500);
 }
 
 function escapeHtml(text){
