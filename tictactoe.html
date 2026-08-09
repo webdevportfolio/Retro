@@ -86,10 +86,12 @@ return;
 }
 
 if(!gameId){
-await createGame();
-}else{
-await loadGame();
+gameStatus.textContent='Waiting for game...';
+turnText.textContent='Waiting for opponent';
+return;
 }
+
+await loadGame();
 
 setInterval(loadGame,1500);
 });
