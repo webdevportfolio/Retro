@@ -198,24 +198,40 @@ if(!activeUser||redirectingToGame)return;
 
 try{
 const response=await fetch(
-`${API_BASE_URL}/api/games/challenges/sent/${encodeURIComponent(activeUser)}?t=${Date.now()}`
+`${API_BASE_URL}/api/games/challenges/sent/${encodeURIComponent(activeUser)}?t=${Date.now()}`,
+{cache:'no-store'}
 );
 
-if(!response.ok)return;
+if(!response.ok){
+console.log('Sent challenges request failed:',response.status);
+return;
+}
 
 const data=await response.json();
 const challenges=data.challenges||[];
 
+console.log('SENT CHALLENGES:',challenges);
+
 const accepted=challenges.find(challenge=>
-challenge.status==='accepted'&&
-challenge.game==='tictactoe'&&
-challenge.game_id
+String(challenge.status||'').toLowerCase()==='accepted'&&
+String(challenge.game||'').toLowerCase()==='tictactoe'&&
+(challenge.game_id||challenge.game?.game_id)
 );
 
-if(!accepted)return;
+if(!accepted){
+console.log('No accepted Tic Tac Toe game found yet.');
+return;
+}
 
-const gameId=accepted.game_id;
+const gameId=accepted.game_id||accepted.game?.game_id;
 const opponent=accepted.receiver;
+
+console.log('ACCEPTED GAME FOUND:',gameId,'Opponent:',opponent);
+
+if(!gameId){
+console.log('Accepted challenge has no game_id.');
+return;
+}
 
 redirectingToGame=true;
 
