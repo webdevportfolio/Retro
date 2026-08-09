@@ -79,3 +79,16 @@ body.groups-page{height:100vh;height:100dvh;overflow:hidden;background:var(--bg-
 .bottom-nav-item.active{color:var(--accent-purple)}
 
 .bottom-nav-item:active{transform:scale(.92)}
+.group-notice{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:1rem;z-index:20000}
+
+.group-notice.active{display:flex}
+
+.group-notice-box{width:100%;max-width:340px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:1.3rem;text-align:center;box-shadow:0 15px 40px rgba(0,0,0,.7)}
+
+.group-notice-title{font-size:1rem;font-weight:900;letter-spacing:1.5px;color:var(--accent-purple);margin-bottom:.6rem}
+
+.group-notice-message{font-size:.85rem;line-height:1.5;color:var(--text-sub);margin-bottom:1rem}
+
+.group-notice-btn{width:100%;border:0;border-radius:9px;background:var(--accent-purple);color:#fff;padding:.7rem;font-weight:700;font-size:.8rem;cursor:pointer}
+
+.group-notice-btn:active{transform:scale(.97);background:var(--accent-hover)}
