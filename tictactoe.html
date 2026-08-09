@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Tic Tac Toe — Retro</title>
+<link rel="stylesheet" href="tictactoe.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#08080a">
+</head>
+
+<body class="ttt-page">
+
+<div class="ttt-app">
+
+<header class="ttt-header">
+<a href="games.html" class="ttt-back">←</a>
+<div class="ttt-brand">RETRO</div>
+<div class="ttt-header-spacer"></div>
+</header>
+
+<main class="ttt-main">
+
+<section class="ttt-top">
+<div class="ttt-label">TIC TAC TOE</div>
+<h1 id="opponent-title">Game</h1>
+<p id="turn-text">Your turn</p>
+</section>
+
+<section class="ttt-board" id="board">
+
+<button class="ttt-cell" data-index="0"></button>
+<button class="ttt-cell" data-index="1"></button>
+<button class="ttt-cell" data-index="2"></button>
+
+<button class="ttt-cell" data-index="3"></button>
+<button class="ttt-cell" data-index="4"></button>
+<button class="ttt-cell" data-index="5"></button>
+
+<button class="ttt-cell" data-index="6"></button>
+<button class="ttt-cell" data-index="7"></button>
+<button class="ttt-cell" data-index="8"></button>
+
+</section>
+
+<section class="ttt-status">
+<div id="game-status">Your turn</div>
+<button id="restart-btn">New Game</button>
+</section>
+
+</main>
+
+</div>
+
+<script>
+const params=new URLSearchParams(window.location.search);
+const opponent=params.get('opponent')||'Opponent';
+
+const cells=document.querySelectorAll('.ttt-cell');
+const turnText=document.getElementById('turn-text');
+const gameStatus=document.getElementById('game-status');
+const opponentTitle=document.getElementById('opponent-title');
+const restartBtn=document.getElementById('restart-btn');
+
+let board=['','','','','','','','',''];
+let currentPlayer='X';
+let gameOver=false;
+
+opponentTitle.textContent=opponent;
+updateStatus();
+
+cells.forEach(cell=>{
+cell.addEventListener('click',()=>{
+const index=Number(cell.dataset.index);
+
+if(gameOver||board[index])return;
+
+board[index]=currentPlayer;
+cell.textContent=currentPlayer;
+cell.classList.add(currentPlayer.toLowerCase());
+
+const winner=checkWinner();
+
+if(winner){
+gameOver=true;
+gameStatus.textContent=winner+' wins!';
+turnText.textContent='Game over';
+return;
+}
+
+if(board.every(cell=>cell)){
+gameOver=true;
+gameStatus.textContent='Draw!';
+turnText.textContent='Game over';
+return;
+}
+
+currentPlayer=currentPlayer==='X'?'O':'X';
+updateStatus();
+});
+});
+
+restartBtn.addEventListener('click',resetGame);
+
+function updateStatus(){
+const text=currentPlayer==='X'?'Your turn':`${opponent}'s turn`;
+turnText.textContent=text;
+gameStatus.textContent=text;
+}
+
+function checkWinner(){
+const wins=[
+[0,1,2],
+[3,4,5],
+[6,7,8],
+[0,3,6],
+[1,4,7],
+[2,5,8],
+[0,4,8],
+[2,4,6]
+];
+
+for(const combination of wins){
+const[a,b,c]=combination;
+
+if(board[a]&&board[a]===board[b]&&board[a]===board[c]){
+cells[a].classList.add('winning');
+cells[b].classList.add('winning');
+cells[c].classList.add('winning');
+
+return board[a]==='X'?'You':'Opponent';
+}
+}
+
+return null;
+}
+
+function resetGame(){
+board=['','','','','','','','',''];
+currentPlayer='X';
+gameOver=false;
+
+cells.forEach(cell=>{
+cell.textContent='';
+cell.classList.remove('x','o','winning');
+});
+
+updateStatus();
+}
+</script>
+
+</body>
+</html>
