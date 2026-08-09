@@ -209,13 +209,12 @@ const challenges=data.challenges||[];
 const accepted=challenges.find(challenge=>
 challenge.status==='accepted'&&
 challenge.game==='tictactoe'&&
-challenge.game&&
-challenge.game.game_id
+challenge.game_id
 );
 
 if(!accepted)return;
 
-const gameId=accepted.game.game_id;
+const gameId=accepted.game_id;
 const opponent=accepted.receiver;
 
 redirectingToGame=true;
