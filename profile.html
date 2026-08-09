@@ -1,310 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profile</title>
-  <link rel="stylesheet" href="profile.css">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
-  <meta name="theme-color" content="#000000">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Profile</title>
+<link rel="stylesheet" href="profile.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#000000">
 </head>
 <body class="inbox-body">
 
-  <!-- Top Navigation Header -->
-  <header class="nav-bar">
-    <a href="index.html" class="nav-btn">← Back</a>
-    <div class="chat-header-title">Profile</div>
-    <div style="width: 50px;"></div>
-  </header>
+<header class="nav-bar">
+<div class="chat-header-title">Profile</div>
+</header>
 
-  <main class="main-container">
-    <div class="auth-card glass-panel" style="max-width: 100%;">
-      
-      <!-- Profile Picture Setup -->
-      <div class="profile-avatar-wrapper">
-        <div class="profile-avatar" id="avatar-container">
-          <img id="avatar-img" src="" alt="Profile Picture" style="display: none;">
-          <span id="avatar-initial">M</span>
-        </div>
-        <label for="pfp-upload" class="pfp-edit-badge" title="Change Avatar">📷</label>
-        <input type="file" id="pfp-upload" accept="image/*" style="display: none;">
-      </div>
+<main class="main-container">
+<div class="auth-card glass-panel" style="max-width:100%;">
+<div class="profile-avatar-wrapper">
+<div class="profile-avatar" id="avatar-container">
+<img id="avatar-img" src="" alt="Profile Picture" style="display:none;">
+<span id="avatar-initial">M</span>
+</div>
+<label for="pfp-upload" class="pfp-edit-badge" title="Change Avatar">📷</label>
+<input type="file" id="pfp-upload" accept="image/*" style="display:none;">
+</div>
 
-      <h2 id="display-username" class="profile-name">username</h2>
-      <p class="profile-status">Status: Active</p>
+<h2 id="display-username" class="profile-name">username</h2>
+<p class="profile-status">Status: Active</p>
 
-      <!-- Chat Metrics Grid -->
-      <div class="profile-stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="stat-chats">0</div>
-          <div class="stat-label">Active Chats</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-messages">0</div>
-          <div class="stat-label">Total Messages</div>
-        </div>
-      </div>
+<div class="profile-stats-grid">
+<div class="stat-card"><div class="stat-value" id="stat-chats">0</div><div class="stat-label">Active Chats</div></div>
+<div class="stat-card"><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Total Messages</div></div>
+</div>
 
-      <!-- Secret Chat Code Box -->
-      <div class="link-box">
-        <label class="link-label">Your Private Chat Code</label>
-        <div class="link-input-group">
-          <input type="text" id="chat-code-input" readonly class="input-field link-field code-field" value="Generating...">
-          <button id="copy-code-btn" class="copy-btn">Copy Code</button>
-        </div>
-      </div>
+<div class="link-box">
+<label class="link-label">Your Private Chat Code</label>
+<div class="link-input-group">
+<input type="text" id="chat-code-input" readonly class="input-field link-field code-field" value="Generating...">
+<button id="copy-code-btn" class="copy-btn">Copy Code</button>
+</div>
+</div>
 
-      <div class="profile-meta-box">
-        <div class="meta-item">
-          <span class="meta-label">Password</span>
-          <span class="meta-value">••••••••</span>
-        </div>
-      </div>
+<div class="profile-meta-box">
+<div class="meta-item"><span class="meta-label">Password</span><span class="meta-value">••••••••</span></div>
+</div>
 
-      <button id="logout-btn" class="logout-btn">Log Out</button>
+<button id="logout-btn" class="logout-btn">Log Out</button>
 
-      <!-- Danger Zone -->
-      <div class="danger-zone">
-        <button id="open-delete-modal-btn" class="delete-btn">Delete Account</button>
-      </div>
-    </div>
-  </main>
+<div class="danger-zone">
+<button id="open-delete-modal-btn" class="delete-btn">Delete Account</button>
+</div>
+</div>
+</main>
 
-  <!-- Delete Account Confirmation Modal -->
-  <div id="delete-modal" class="modal-overlay">
-    <div class="modal-box">
-      <h3 style="color: #ef4444; margin-bottom: 8px;">Delete Account?</h3>
-      <p style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">
-        This action cannot be undone. Your profile and stored messages will be permanently removed.
-      </p>
-      <div class="modal-actions">
-        <button id="cancel-delete-btn" class="cancel-btn">Cancel</button>
-        <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
-      </div>
-    </div>
-  </div>
+<div id="delete-modal" class="modal-overlay">
+<div class="modal-box">
+<h3 style="color:#ef4444;margin-bottom:8px;">Delete Account?</h3>
+<p style="font-size:.85rem;color:rgba(255,255,255,.7);">This action cannot be undone. Your profile and stored messages will be permanently removed.</p>
+<div class="modal-actions">
+<button id="cancel-delete-btn" class="cancel-btn">Cancel</button>
+<button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
+</div>
+</div>
+</div>
 
-  <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const API_BASE_URL = 'https://retro-backend-hnsv.onrender.com';
+<nav class="bottom-nav">
+<a href="index.html" class="bottom-nav-item">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Chats</span>
+</a>
+<a href="groups.html" class="bottom-nav-item">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span><span>Groups</span>
+</a>
+<a href="calls.html" class="bottom-nav-item">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span><span>Calls</span>
+</a>
+<a href="profile.html" class="bottom-nav-item active">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/></svg></span><span>Profile</span>
+</a>
+</nav>
 
-  // 1. Session Auth Check
-  const rawUser = localStorage.getItem('retro_session') || localStorage.getItem('username');
-  if (!rawUser) {
-    window.location.href = 'auth.html';
-    return;
-  }
-  const currentUser = rawUser.trim().replace('@', '');
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+const rawUser=localStorage.getItem('retro_session')||localStorage.getItem('username');
+if(!rawUser){window.location.href='auth.html';return}
+const currentUser=rawUser.trim().replace('@','');
 
-  // 2. DOM Elements
-  const avatarImg = document.getElementById('avatar-img');
-  const avatarLetter = document.getElementById('avatar-initial');
-  const pfpUpload = document.getElementById('pfp-upload');
-  const usernameDisplay = document.getElementById('display-username');
-  const codeInput = document.getElementById('chat-code-input');
-  const copyCodeBtn = document.getElementById('copy-code-btn');
-  const logoutBtn = document.getElementById('logout-btn');
-  const statChats = document.getElementById('stat-chats');
-  const statMessages = document.getElementById('stat-messages');
+const avatarImg=document.getElementById('avatar-img'),avatarLetter=document.getElementById('avatar-initial'),pfpUpload=document.getElementById('pfp-upload');
+const usernameDisplay=document.getElementById('display-username'),codeInput=document.getElementById('chat-code-input'),copyCodeBtn=document.getElementById('copy-code-btn');
+const logoutBtn=document.getElementById('logout-btn'),statChats=document.getElementById('stat-chats'),statMessages=document.getElementById('stat-messages');
+const deleteModal=document.getElementById('delete-modal'),openDeleteModalBtn=document.getElementById('open-delete-modal-btn'),cancelDeleteBtn=document.getElementById('cancel-delete-btn'),confirmDeleteBtn=document.getElementById('confirm-delete-btn');
 
-  const deleteModal = document.getElementById('delete-modal');
-  const openDeleteModalBtn = document.getElementById('open-delete-modal-btn');
-  const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-  const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-// Sliding in whatever specific panel, modal, or overlay you actually built
-const activePanel = document.getElementById('your-actual-id');
-const appOverlay = document.getElementById('app-overlay');
+usernameDisplay.textContent=currentUser;
 
-function revealElement() {
-  activePanel.classList.add('slide-in-active');
-  appOverlay.classList.add('visible');
+async function loadSavedAvatar(){
+const key=`retro_pfp_${currentUser.toLowerCase()}`,saved=localStorage.getItem(key);
+if(saved){avatarImg.src=saved;avatarImg.style.display='block';avatarLetter.style.display='none';return}
+try{
+const res=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`);
+if(res.ok){
+const data=await res.json(),pfp=data['profile picture']||data.profile_picture||data.pfp||data.avatar;
+if(pfp){avatarImg.src=pfp;avatarImg.style.display='block';avatarLetter.style.display='none';localStorage.setItem(key,pfp);return}
 }
+}catch(err){console.error(err)}
+avatarImg.style.display='none';avatarLetter.style.display='block';avatarLetter.textContent=currentUser.charAt(0).toUpperCase();
+}
+loadSavedAvatar();
 
-  // 3. Render Profile Details & Avatar
-  if (usernameDisplay) usernameDisplay.textContent = currentUser;
+pfpUpload?.addEventListener('change',e=>{
+const file=e.target.files[0];if(!file)return;
+const reader=new FileReader();
+reader.onload=async event=>{
+const base64Img=event.target.result;
+localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`,base64Img);
+loadSavedAvatar();
+try{await fetch(`${API_BASE_URL}/api/users/profile`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,profile_picture:base64Img})})}catch(err){console.error(err)}
+};
+reader.readAsDataURL(file);
+});
 
-  async function loadSavedAvatar() {
-    const cacheKey = `retro_pfp_${currentUser.toLowerCase()}`;
-    const savedPfp = localStorage.getItem(cacheKey);
+function getChatCode(user){
+let hash=0,str=user.toLowerCase()+'_retro_secret_salt';
+for(let i=0;i<str.length;i++){hash=(hash<<5)-hash+str.charCodeAt(i);hash|=0}
+return`RETRO-${Math.abs(hash).toString(36).toUpperCase().substring(0,5)}`;
+}
+const userCode=getChatCode(currentUser);
+codeInput.value=userCode;
 
-    if (savedPfp) {
-      avatarImg.src = savedPfp;
-      avatarImg.style.display = 'block';
-      avatarLetter.style.display = 'none';
-      return;
-    }
+async function loadUserStats(){
+try{
+const response=await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`);
+if(!response.ok)return;
+const messages=await response.json();if(!Array.isArray(messages))return;
+const userLower=currentUser.toLowerCase(),contacts=new Set();
+messages.forEach(msg=>{
+const sender=(msg.sender_username||msg.sender||'').trim().replace('@','').toLowerCase();
+const receiver=(msg.receiver_username||msg.receiver||'').trim().replace('@','').toLowerCase();
+if(sender&&sender!==userLower)contacts.add(sender);
+if(receiver&&receiver!==userLower)contacts.add(receiver);
+});
+statChats.textContent=contacts.size;statMessages.textContent=messages.length;
+}catch(err){console.error(err)}
+}
+loadUserStats();
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`);
-      if (res.ok) {
-        const userData = await res.json();
-        const remotePfp = userData['profile picture'] || userData.profile_picture || userData.pfp || userData.avatar;
+copyCodeBtn?.addEventListener('click',async()=>{
+try{
+if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(userCode);
+else{codeInput.select();document.execCommand('copy')}
+const old=copyCodeBtn.innerText;copyCodeBtn.innerText='Copied!';
+setTimeout(()=>copyCodeBtn.innerText=old,2000);
+}catch(err){alert('Could not copy code automatically.')}
+});
 
-        if (remotePfp) {
-          avatarImg.src = remotePfp;
-          avatarImg.style.display = 'block';
-          avatarLetter.style.display = 'none';
-          localStorage.setItem(cacheKey, remotePfp);
-          return;
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load profile picture from server:', err);
-    }
+logoutBtn?.addEventListener('click',()=>{
+localStorage.clear();window.location.href='auth.html';
+});
 
-    avatarImg.style.display = 'none';
-    avatarLetter.style.display = 'block';
-    avatarLetter.textContent = currentUser.charAt(0).toUpperCase();
-  }
+openDeleteModalBtn?.addEventListener('click',()=>deleteModal.classList.add('active'));
+cancelDeleteBtn?.addEventListener('click',()=>deleteModal.classList.remove('active'));
 
-  loadSavedAvatar();
-
-  // Profile Picture Upload & Sync
-  if (pfpUpload) {
-    pfpUpload.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const base64Img = event.target.result;
-          
-          localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`, base64Img);
-          loadSavedAvatar();
-
-          try {
-            await fetch(`${API_BASE_URL}/api/users/profile`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                username: currentUser,
-                profile_picture: base64Img
-              })
-            });
-          } catch (err) {
-            console.error('Failed to sync profile picture with backend:', err);
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-
-  // 4. Generate Chat Code
-  function getChatCode(user) {
-    let hash = 0;
-    const str = user.toLowerCase() + "_retro_secret_salt";
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash |= 0;
-    }
-    const cleanHash = Math.abs(hash).toString(36).toUpperCase().substring(0, 5);
-    return `RETRO-${cleanHash}`;
-  }
-
-  const userCode = getChatCode(currentUser);
-  if (codeInput) codeInput.value = userCode;
-
-  // 5. Fetch Metrics
-  async function loadUserStats() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`);
-      if (!response.ok) return;
-
-      const messages = await response.json();
-      if (!messages || !Array.isArray(messages)) return;
-
-      const userLower = currentUser.toLowerCase();
-      const uniqueContacts = new Set();
-
-      messages.forEach(msg => {
-        const sender = (msg.sender_username || msg.sender || '').trim().replace('@', '').toLowerCase();
-        const receiver = (msg.receiver_username || msg.receiver || '').trim().replace('@', '').toLowerCase();
-
-        if (sender && sender !== userLower) uniqueContacts.add(sender);
-        if (receiver && receiver !== userLower) uniqueContacts.add(receiver);
-      });
-
-      if (statChats) statChats.textContent = uniqueContacts.size;
-      if (statMessages) statMessages.textContent = messages.length;
-    } catch (err) {
-      console.error('Error fetching user stats:', err);
-    }
-  }
-
-  loadUserStats();
-
-  // 6. Copy Code Action
-  if (copyCodeBtn) {
-    copyCodeBtn.addEventListener('click', async () => {
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(userCode);
-        } else if (codeInput) {
-          codeInput.select();
-          document.execCommand('copy');
-        }
-
-        const originalText = copyCodeBtn.innerText;
-        copyCodeBtn.innerText = 'Copied!';
-        copyCodeBtn.style.opacity = '0.8';
-
-        setTimeout(() => {
-          copyCodeBtn.innerText = originalText;
-          copyCodeBtn.style.opacity = '1';
-        }, 2000);
-      } catch (err) {
-        alert('Could not copy code automatically. Please select and copy manually.');
-      }
-    });
-  }
-
-  // 7. Logout Action
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      localStorage.clear();
-      window.location.href = 'auth.html';
-    });
-  }
-
-  // 8. Delete Account Modal & Backend Sync Logic
-  if (openDeleteModalBtn && deleteModal) {
-    openDeleteModalBtn.addEventListener('click', () => deleteModal.classList.add('active'));
-  }
-
-  if (cancelDeleteBtn && deleteModal) {
-    cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.remove('active'));
-  }
-
-  if (confirmDeleteBtn) {
-    confirmDeleteBtn.addEventListener('click', async () => {
-      confirmDeleteBtn.disabled = true;
-      confirmDeleteBtn.textContent = 'Deleting...';
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (response.ok || response.status === 404) {
-          localStorage.clear();
-          window.location.href = 'auth.html';
-        } else {
-          alert('Failed to delete account. Please try again.');
-          confirmDeleteBtn.disabled = false;
-          confirmDeleteBtn.textContent = 'Delete';
-        }
-      } catch (err) {
-        console.error('Error deleting account:', err);
-        localStorage.clear();
-        window.location.href = 'auth.html';
-      }
-    });
-  }
+confirmDeleteBtn?.addEventListener('click',async()=>{
+confirmDeleteBtn.disabled=true;confirmDeleteBtn.textContent='Deleting...';
+try{
+const response=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`,{method:'DELETE',headers:{'Content-Type':'application/json'}});
+if(response.ok||response.status===404){localStorage.clear();window.location.href='auth.html'}
+else{alert('Failed to delete account. Please try again.');confirmDeleteBtn.disabled=false;confirmDeleteBtn.textContent='Delete'}
+}catch(err){console.error(err);localStorage.clear();window.location.href='auth.html'}
+});
 });
 </script>
-
 </body>
 </html>
