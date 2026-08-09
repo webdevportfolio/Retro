@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="theme-color" content="#08080a">
 </head>
+
 <body class="games-page">
 
 <div class="games-app">
@@ -28,6 +29,12 @@
 <section class="games-intro">
 <div class="games-label">RETRO GAMES</div>
 <h1>Play with your friends.</h1>
+</section>
+
+<!-- INCOMING CHALLENGES -->
+<section class="games-section" id="challenge-section" style="display:none">
+<div class="games-section-title">GAME CHALLENGES</div>
+<div id="challenge-list"></div>
 </section>
 
 <section class="games-section">
@@ -92,17 +99,22 @@
 
 <script>
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+
 let activeUser='';
 let selectedGame='';
 
-window.addEventListener('DOMContentLoaded',()=>{
+window.addEventListener('DOMContentLoaded',async()=>{
 const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
-activeUser=rawActive.trim().replace('@','');
+activeUser=rawActive.trim().replace(/^@/,'');
 
 if(!activeUser){
 window.location.href='auth.html';
 return;
 }
+
+await loadChallenges();
+
+setInterval(loadChallenges,5000);
 });
 
 function selectGame(game){
@@ -117,13 +129,111 @@ game==='chess'?'CHESS':'TIC TAC TOE';
 loadOpponents();
 }
 
+async function loadChallenges(){
+try{
+const response=await fetch(
+`${API_BASE_URL}/api/games/challenges/${encodeURIComponent(activeUser)}?t=${Date.now()}`
+);
+
+if(!response.ok)return;
+
+const data=await response.json();
+const challenges=data.challenges||[];
+
+const section=document.getElementById('challenge-section');
+const list=document.getElementById('challenge-list');
+
+if(!challenges.length){
+section.style.display='none';
+list.innerHTML='';
+return;
+}
+
+section.style.display='block';
+
+list.innerHTML=challenges.map(challenge=>`
+<div class="opponent-card">
+<div class="opponent-avatar">
+<span>${escapeHtml((challenge.sender||'?').charAt(0).toUpperCase())}</span>
+</div>
+
+<div class="opponent-info">
+<div class="opponent-name">${escapeHtml(challenge.sender)}</div>
+<div class="opponent-preview">
+${challenge.game==='tictactoe'?'Tic Tac Toe':'Chess'} challenge
+</div>
+</div>
+
+<div style="display:flex;gap:8px;align-items:center">
+<button class="challenge-btn accept-btn" onclick="respondChallenge('${encodeURIComponent(challenge.id)}','accept')">✓</button>
+<button class="challenge-btn decline-btn" onclick="respondChallenge('${encodeURIComponent(challenge.id)}','decline')">×</button>
+</div>
+</div>
+`).join('');
+
+}catch(error){
+console.error('Challenge loading error:',error);
+}
+}
+
+async function respondChallenge(id,action){
+try{
+const response=await fetch(
+`${API_BASE_URL}/api/games/challenges/${id}/respond`,
+{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username:activeUser,
+action
+})
+});
+
+const data=await response.json();
+
+if(!response.ok){
+alert(data.error||'Failed to respond to challenge.');
+return;
+}
+
+if(action==='accept'){
+const challenge=data.challenge;
+const game=data.game;
+
+if(challenge.game==='tictactoe'&&game){
+window.location.href=
+`tictactoe.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(challenge.sender)}`;
+return;
+}
+
+if(challenge.game==='chess'){
+if(game){
+window.location.href=
+`chess.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(challenge.sender)}`;
+}else{
+alert('Chess game support is not ready yet.');
+}
+return;
+}
+}
+
+await loadChallenges();
+
+}catch(error){
+console.error('Challenge response error:',error);
+alert('Unable to respond to challenge.');
+}
+}
+
 async function loadOpponents(){
 const list=document.getElementById('opponent-list');
 
 list.innerHTML='<div class="games-loading">Loading...</div>';
 
 try{
-const response=await fetch(`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`);
+const response=await fetch(
+`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`
+);
 
 if(!response.ok)throw new Error('Failed to load conversations');
 
@@ -135,30 +245,42 @@ list.innerHTML='<div class="games-empty">No friends in DM</div>';
 return;
 }
 
-const opponentData=await Promise.all(conversations.map(async conv=>{
+const opponentData=await Promise.all(
+conversations.map(async conv=>{
 const username=conv.other_user;
 let pfp='';
 
 try{
-const userRes=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(username)}?t=${Date.now()}`);
+const userRes=await fetch(
+`${API_BASE_URL}/api/users/${encodeURIComponent(username)}?t=${Date.now()}`
+);
 
 if(userRes.ok){
 const userData=await userRes.json();
-pfp=userData.profile_picture||userData.pfpUrl||userData.photoURL||userData.pfp||'';
+pfp=
+userData.profile_picture||
+userData.pfpUrl||
+userData.photoURL||
+userData.pfp||
+'';
 }
 }catch(err){
 console.error('Avatar error:',err);
 }
 
 return{username,pfp};
-}));
+})
+);
 
 list.innerHTML=opponentData.map(user=>`
-<div class="opponent-card" onclick="startGame('${escapeHtml(user.username)}')">
+<div class="opponent-card" onclick="startGame('${encodeURIComponent(user.username)}')">
+
 <div class="opponent-avatar">
-${user.pfp
-?`<img src="${user.pfp}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span style="display:none">${user.username.charAt(0).toUpperCase()}</span>`
-:`<span>${user.username.charAt(0).toUpperCase()}</span>`}
+${
+user.pfp
+?`<img src="${escapeAttribute(user.pfp)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span style="display:none">${escapeHtml(user.username.charAt(0).toUpperCase())}</span>`
+:`<span>${escapeHtml(user.username.charAt(0).toUpperCase())}</span>`
+}
 </div>
 
 <div class="opponent-info">
@@ -167,6 +289,7 @@ ${user.pfp
 </div>
 
 <div class="opponent-arrow">→</div>
+
 </div>
 `).join('');
 
@@ -176,22 +299,49 @@ list.innerHTML='<div class="games-empty">No friends in DM</div>';
 }
 }
 
-function startGame(username){
-if(selectedGame==='tictactoe'){
-window.location.href=`tictactoe.html?opponent=${encodeURIComponent(username)}`;
-}else if(selectedGame==='chess'){
-window.location.href=`chess.html?opponent=${encodeURIComponent(username)}`;
+async function startGame(encodedUsername){
+const username=decodeURIComponent(encodedUsername);
+
+if(!selectedGame||!username)return;
+
+try{
+const response=await fetch(`${API_BASE_URL}/api/games/challenge`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+sender:activeUser,
+receiver:username,
+game:selectedGame
+})
+});
+
+const data=await response.json();
+
+if(!response.ok){
+alert(data.error||'Failed to send challenge.');
+return;
+}
+
+alert(`Challenge sent to @${username}!`);
+
+}catch(error){
+console.error('Send challenge error:',error);
+alert('Unable to send challenge.');
 }
 }
 
 function escapeHtml(text){
-return text.replace(/[&<>"']/g,char=>({
+return String(text||'').replace(/[&<>"']/g,char=>({
 '&':'&amp;',
 '<':'&lt;',
 '>':'&gt;',
 '"':'&quot;',
 "'":'&#039;'
 }[char]));
+}
+
+function escapeAttribute(text){
+return String(text||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
 </script>
 
