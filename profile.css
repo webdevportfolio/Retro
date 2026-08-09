@@ -368,3 +368,11 @@ body.inbox-body {
 .confirm-delete-btn:hover {
   background: #dc2626;
 }
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:68px;background:rgba(12,12,15,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:stretch;justify-content:space-around;padding:5px 8px max(5px,env(safe-area-inset-bottom));z-index:9999}
+.bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(255,255,255,.45);text-decoration:none;font-size:.68rem;font-weight:600;touch-action:manipulation;transition:color .2s,transform .2s}
+.bottom-nav-icon{height:24px;display:flex;align-items:center;justify-content:center}
+.bottom-nav-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bottom-nav-item.active{color:#a855f7}
+.bottom-nav-item:active{transform:scale(.92)}
+.main-container{padding-bottom:90px}
