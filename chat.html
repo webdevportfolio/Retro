@@ -10,11 +10,6 @@
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="theme-color" content="#000">
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<style>
-/* Locked viewport to prevent mobile shifting */
-html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;overflow:hidden;position:fixed;top:0;left:0}
-.chat-app-container{width:100%;max-width:480px;height:100%;height:100dvh;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden}
-</style>
 </head>
 <body>
 
@@ -51,7 +46,16 @@ html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;overflow:hidde
 <div class="pill-input-container">
 <button type="button" class="pill-btn" onclick="document.getElementById('image-file-input').click()">📎</button>
 <button type="button" class="pill-btn" onclick="toggleStickerDrawer()">😀</button>
+
+<!-- Text Input vs Voice Note Recording View Overlay -->
 <input type="text" id="message-input" class="pill-input" placeholder="Message..." autocomplete="off">
+<div id="recording-bar" class="recording-bar" style="display:none">
+  <button type="button" class="cancel-rec-btn" onclick="cancelVoiceRecording(event)">✕</button>
+  <span class="recording-dot"></span>
+  <span class="recording-label">Recording...</span>
+  <span id="recording-timer" class="recording-timer">0:00</span>
+</div>
+
 <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()">🎙️</button>
 <button type="submit" id="send-btn" class="circular-send-btn"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
 </div>
@@ -99,7 +103,7 @@ html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;overflow:hidde
 <script>
 const API='https://retro-backend-hnsv.onrender.com',socket=typeof io==='function'?io(API):null;
 const esc=s=>s?String(s).replace(/[&<>'"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[x])):'';
-let reply=null,scrolling=false,lastCount=0,pfp=null,loading=false,audioCtx=null,selectedImage=null;
+let reply=null,scrolling=false,lastCount=0,pfp=null,loading=false,selectedImage=null;
 const me=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
 const params=new URLSearchParams(location.search),target=(params.get('user')||params.get('username')||params.get('u')||'').trim().replace('@','');
 if(!me)location.href='auth.html';
@@ -142,13 +146,29 @@ function audioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toS
 
 function parseReply(c){
 if(!c?.startsWith('[reply:'))return null;
-const m=c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);if(!m)return null;
-let r=m[2];if(r.startsWith('[audio]')||r.includes('data:audio/'))r='🎤 Voicenote';else if(r.startsWith('[sticker]')||r.includes('data:image/'))r='🎨 Sticker';else if(r.startsWith('[img]'))r='🖼 Image';
+const m=c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);
+if(!m)return null;
+let r=m[2];
+if(r.startsWith('[audio]')||r.includes('data:audio/'))r='🎤 Voice note';
+else if(r.startsWith('[sticker]')||r.includes('data:image/'))r='🎨 Sticker';
+else if(r.startsWith('[img]'))r='🖼 Image';
 return{replyUser:m[1],replySnippet:r,messageText:m[3]}
 }
 
+function buildPayloadWithReply(content){
+if(!reply)return content;
+let snippet=reply.text;
+if(snippet==='🎨 Sticker'||snippet.startsWith('[sticker]'))snippet='🎨 Sticker';
+else if(snippet==='🖼 Image'||snippet.startsWith('[img]'))snippet='🖼 Image';
+else if(snippet==='🎤 Voice note'||snippet.startsWith('[audio]'))snippet='🎤 Voice note';
+else snippet=snippet.slice(0,40).replace(/[|\]]/g,' '); // Fixed: No longer breaks on closing brackets
+return `[reply:${reply.sender}|${snippet}] ${content}`;
+}
+
 async function loadChat(){
-if(loading)return;loading=true;
+const isAudioPlaying = !!document.querySelector('audio:not([paused])');
+if(loading || isAudioPlaying) return; // Prevent destroying DOM while listening to voice notes
+loading=true;
 try{
 const r=await fetch(`${API}/api/messages/${encodeURIComponent(me)}`);if(!r.ok)return;
 const all=await r.json(),a=me.toLowerCase(),t=target.toLowerCase(),now=Date.now();
@@ -176,18 +196,22 @@ if(!scrolling)setTimeout(()=>container.scrollTop=container.scrollHeight,30);
 }
 
 function attachSwipe(){
-document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0;w.ontouchstart=e=>{sx=e.touches[0].clientX;w.style.transition='none'};w.ontouchmove=e=>{cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender,p=parseReply(c);if(p)c=p.messageText;if(c.startsWith('[sticker]')||c.startsWith('data:image/'))c='[sticker]';triggerReply(s,c)}w.style.transform='translateX(0)';cx=0}})
+document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0;w.ontouchstart=e=>{sx=e.touches[0].clientX;w.style.transition='none'};w.ontouchmove=e=>{cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender,p=parseReply(c);if(p)c=p.messageText;triggerReply(s,c)}w.style.transform='translateX(0)';cx=0}})
 }
 
 function triggerReply(sender,text){
-let d=text||'';if(d.startsWith('[audio]')||d.includes('data:audio/'))d='🎤 Voicenote';else if(d.startsWith('[sticker]')||d.includes('data:image/'))d='🎨 Sticker';else if(d.startsWith('[img]'))d='🖼 Image';else d=formatSnippet(d);
-reply={sender,text:d};document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;document.getElementById('reply-text-label').textContent=d;document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()
+let d=formatSnippet(text||'');
+reply={sender,text:d};
+document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;
+document.getElementById('reply-text-label').textContent=d;
+document.getElementById('reply-preview-bar').style.display='flex';
+document.getElementById('message-input').focus()
 }
 function cancelReply(){reply=null;document.getElementById('reply-preview-bar').style.display='none'}
 
 form.onsubmit=async e=>{
 e.preventDefault();const i=document.getElementById('message-input'),b=document.getElementById('send-btn');let c=i.value.trim();if(!c)return;
-if(reply){let s=reply.text==='🎨 Sticker'?'[sticker]':reply.text.slice(0,40).replace(/\|/g,' ');c=`[reply:${reply.sender}|${s}] ${c}`}
+c=buildPayloadWithReply(c);
 b.disabled=true;try{await post(c);i.value='';cancelReply()}catch{toast('Failed to send message')}b.disabled=false
 };
 
@@ -239,7 +263,11 @@ if(e.target.id==='image-preview-modal')closeImagePreview()
 async function sendSelectedImage(){
 if(!selectedImage)return;
 const b=document.getElementById('image-send-btn');b.disabled=true;b.textContent='Sending...';
-try{await post(`[img]${selectedImage}`);closeImagePreview()}catch{toast('Failed to send image')}
+try{
+  await post(buildPayloadWithReply(`[img]${selectedImage}`));
+  cancelReply();
+  closeImagePreview();
+}catch{toast('Failed to send image')}
 b.disabled=false;b.textContent='Send Image'
 }
 
@@ -252,12 +280,30 @@ g.innerHTML=s.map((d,i)=>`<div class="sticker-item-wrapper"><img src="${esc(d)}"
 if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`
 }
 function removeSticker(e,i){e.stopPropagation();const s=getStickers();s.splice(i,1);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickers();toast('Removed')}
+
 function handleStickerSelected(e){
-const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=150;c.getContext('2d').drawImage(img,0,0,150,150);const s=getStickers();if(s.length>=10)return toast('Full');s.push(c.toDataURL('image/webp',.7));localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickers();toast('Added');e.target.value=''};img.src=ev.target.result};r.readAsDataURL(f)
+const f=e.target.files[0];if(!f)return;
+const r=new FileReader();r.onload=ev=>{
+const img=new Image();img.onload=()=>{
+const maxDim=150;let w=img.width,h=img.height;
+if(w>h){if(w>maxDim){h=Math.round(h*(maxDim/w));w=maxDim}}
+else{if(h>maxDim){w=Math.round(w*(maxDim/h));h=maxDim}}
+const c=document.createElement('canvas');c.width=w;c.height=h;
+c.getContext('2d').drawImage(img,0,0,w,h);
+const s=getStickers();if(s.length>=10)return toast('Full');
+s.push(c.toDataURL('image/webp',.8));localStorage.setItem('retro_stickers',JSON.stringify(s));
+renderStickers();toast('Added');e.target.value=''
+};img.src=ev.target.result
+};r.readAsDataURL(f)
 }
+
 function toggleStickerSaveTooltip(e,id){e.stopPropagation();document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.id!==id&&x.classList.remove('active'));document.getElementById(id)?.classList.toggle('active')}
 function saveStickerToDrawer(e,d){e.stopPropagation();const s=getStickers();if(s.includes(d))return toast('Already added');if(s.length>=10)return toast('Full');s.push(d);localStorage.setItem('retro_stickers',JSON.stringify(s));toast('Added ✨');e.target.classList.remove('active')}
-async function sendSticker(d){toggleStickerDrawer();await post(`[sticker]${d}`)}
+async function sendSticker(d){
+toggleStickerDrawer();
+await post(buildPayloadWithReply(`[sticker]${d}`));
+cancelReply();
+}
 document.addEventListener('click',()=>document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.classList.remove('active')));
 
 /* AUDIO */
@@ -270,10 +316,60 @@ function initAudioDuration(id){const a=document.getElementById(id),t=document.ge
 function updateAudioProgress(id){const a=document.getElementById(id),p=document.getElementById(`progress_${id}`),t=document.getElementById(`time_${id}`);if(!a||!p||!t)return;p.style.width=`${a.duration?a.currentTime/a.duration*100:0}%`;t.textContent=audioTime(a.currentTime)}
 function resetAudioPlayer(id){document.querySelector(`#player_${id} .play-btn`)?.replaceChildren(document.createTextNode('▶'));document.getElementById(`progress_${id}`)?.style.setProperty('width','0%')}
 
-let recorder,chunks=[],recording=false;
+let recorder,chunks=[],recording=false,recTimerInterval=null,recSeconds=0,cancelVn=false;
+
+function cancelVoiceRecording(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  cancelVn = true;
+  if(recorder && recording) recorder.stop();
+}
+
 async function toggleVoiceRecording(){
 const b=document.getElementById('vn-btn');
-if(!recording){try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});recorder=new MediaRecorder(stream);chunks=[];recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=()=>{const r=new FileReader();r.onload=()=>post(`[audio]${r.result}`).catch(()=>toast('Failed to send voice note'));r.readAsDataURL(new Blob(chunks,{type:'audio/webm'}));stream.getTracks().forEach(t=>t.stop())};recorder.start();recording=true;b.classList.add('recording')}catch{toast('Microphone permission denied')}}else{recorder.stop();recording=false;b.classList.remove('recording')}
+const inputElem=document.getElementById('message-input');
+const barElem=document.getElementById('recording-bar');
+const timerElem=document.getElementById('recording-timer');
+
+if(!recording){
+try{
+const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+recorder=new MediaRecorder(stream);chunks=[];cancelVn=false;
+recorder.ondataavailable=e=>chunks.push(e.data);
+recorder.onstop=()=>{
+  clearInterval(recTimerInterval);
+  if (cancelVn) { // If cancelled, reset UI without sending payload
+      recording = false;
+      b.classList.remove('recording');
+      barElem.style.display='none';
+      inputElem.style.display='block';
+      stream.getTracks().forEach(t=>t.stop());
+      return;
+  }
+  const r=new FileReader();
+  r.onload=()=>{
+    post(buildPayloadWithReply(`[audio]${r.result}`)).then(()=>cancelReply()).catch(()=>toast('Failed to send voice note'))
+  };
+  r.readAsDataURL(new Blob(chunks,{type:'audio/webm'}));
+  stream.getTracks().forEach(t=>t.stop())
+};
+recorder.start();recording=true;
+b.classList.add('recording');
+inputElem.style.display='none';
+barElem.style.display='flex';
+recSeconds=0;timerElem.textContent='0:00';
+recTimerInterval=setInterval(()=>{
+  recSeconds++;
+  timerElem.textContent=audioTime(recSeconds);
+},1000);
+}catch{toast('Microphone permission denied')}
+}else{
+recorder.stop();recording=false;
+b.classList.remove('recording');
+barElem.style.display='none';
+inputElem.style.display='block';
+clearInterval(recTimerInterval);
+}
 }
 
 /* PROFILE */
