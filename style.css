@@ -498,3 +498,12 @@ body.inbox-page {
   display: flex;
   gap: 10px;
 }
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:68px;background:rgba(12,12,15,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--glass-border);display:flex;align-items:stretch;justify-content:space-around;padding:5px 8px max(5px,env(safe-area-inset-bottom));z-index:9999}
+.bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(255,255,255,.45);text-decoration:none;font-size:.68rem;font-weight:600;transition:color .2s,transform .2s;touch-action:manipulation}
+.bottom-nav-icon{font-size:1.25rem;line-height:1}
+.bottom-nav-item.active{color:var(--accent-purple)}
+.bottom-nav-item:active{transform:scale(.92)}
+
+.inbox-app-wrapper{padding-bottom:84px}
+.chat-list{padding-bottom:1.25rem}
