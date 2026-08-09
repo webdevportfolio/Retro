@@ -61,6 +61,7 @@ text-decoration:none;
 font-size:1.5rem;
 border-radius:10px;
 transition:background .2s,color .2s
+  background:black;
 }
 
 .games-back:hover{
