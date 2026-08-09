@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Groups</title>
+<link rel="stylesheet" href="groups.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#000000">
+</head>
+<body class="groups-page">
+
+<div class="groups-app-wrapper">
+
+<header class="groups-header">
+<div class="groups-title">GROUPS</div>
+<button id="header-create-btn" class="groups-add-btn" aria-label="Create Group">+</button>
+</header>
+
+<main class="groups-content">
+<div class="groups-section-label">YOUR GROUPS</div>
+
+<div id="groups-list" class="groups-list">
+<div class="groups-empty-state">
+<div class="groups-empty-icon">+</div>
+<h3>Create your first group</h3>
+<p>Bring multiple people together in one RETRO chat.</p>
+<button id="empty-create-btn" class="create-group-empty-btn">Create Group</button>
+</div>
+</div>
+</main>
+
+</div>
+
+<div id="create-group-modal" class="groups-modal-overlay">
+<div class="groups-modal">
+<h2>Create Group</h2>
+<p>Set up your new RETRO group.</p>
+
+<input type="text" id="group-name-input" class="group-input" placeholder="Group name..." maxlength="30">
+<textarea id="group-description-input" class="group-input group-textarea" placeholder="Group description (optional)..." maxlength="100"></textarea>
+
+<div class="groups-modal-actions">
+<button id="close-group-modal" class="groups-cancel-btn">Cancel</button>
+<button id="create-group-btn" class="groups-create-btn">Create Group</button>
+</div>
+</div>
+</div>
+
+<nav class="bottom-nav">
+<a href="index.html" class="bottom-nav-item">
+<span class="bottom-nav-icon">💬</span>
+<span>Chats</span>
+</a>
+<a href="groups.html" class="bottom-nav-item active">
+<span class="bottom-nav-icon">👥</span>
+<span>Groups</span>
+</a>
+<a href="calls.html" class="bottom-nav-item">
+<span class="bottom-nav-icon">☎</span>
+<span>Calls</span>
+</a>
+<a href="profile.html" class="bottom-nav-item">
+<span class="bottom-nav-icon">👤</span>
+<span>Profile</span>
+</a>
+</nav>
+
+<script>
+const modal=document.getElementById('create-group-modal');
+const headerBtn=document.getElementById('header-create-btn');
+const emptyBtn=document.getElementById('empty-create-btn');
+const closeBtn=document.getElementById('close-group-modal');
+const createBtn=document.getElementById('create-group-btn');
+
+function openGroupModal(){
+modal.classList.add('active');
+document.getElementById('group-name-input').focus();
+}
+
+function closeGroupModal(){
+modal.classList.remove('active');
+}
+
+headerBtn.addEventListener('click',openGroupModal);
+emptyBtn.addEventListener('click',openGroupModal);
+closeBtn.addEventListener('click',closeGroupModal);
+
+modal.addEventListener('click',e=>{
+if(e.target===modal)closeGroupModal();
+});
+
+createBtn.addEventListener('click',()=>{
+const name=document.getElementById('group-name-input').value.trim();
+if(!name)return;
+alert('Group creation will be connected later.');
+});
+</script>
+
+</body>
+</html>
