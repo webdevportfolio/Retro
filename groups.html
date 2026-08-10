@@ -22,15 +22,7 @@
 
 <main class="groups-content">
 <div class="groups-section-label">YOUR GROUPS</div>
-
-<div id="groups-list" class="groups-list">
-<div class="groups-empty-state">
-<div class="groups-empty-icon">+</div>
-<h3>Create your first group</h3>
-<p>Bring multiple people together in one RETRO chat.</p>
-<button id="empty-create-btn" class="create-group-empty-btn">Create Group</button>
-</div>
-</div>
+<div id="groups-list" class="groups-list"></div>
 </main>
 
 </div>
@@ -40,7 +32,7 @@
 <h2>Create Group</h2>
 <p>Set up your new RETRO group.</p>
 
-<input type="text" id="group-name-input" class="group-input" placeholder="Group name..." maxlength="30">
+<input type="text" id="group-name-input" class="group-input" placeholder="Group name..." maxlength="30" autocomplete="off">
 <textarea id="group-description-input" class="group-input group-textarea" placeholder="Group description (optional)..." maxlength="100"></textarea>
 
 <div class="groups-modal-actions">
@@ -50,86 +42,204 @@
 </div>
 </div>
 
+<div id="notice-modal" class="groups-modal-overlay">
+<div class="groups-modal notice-modal">
+<h2 id="notice-title">RETRO</h2>
+<p id="notice-message"></p>
+<button id="notice-ok" class="groups-create-btn">OK</button>
+</div>
+</div>
+
 <nav class="bottom-nav">
+
 <a href="index.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Chats</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span>
+<span>Chats</span>
 </a>
 
 <a href="groups.html" class="bottom-nav-item active">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span><span>Groups</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span>
+<span>Groups</span>
 </a>
 
 <a href="calls.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span><span>Calls</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span>
+<span>Calls</span>
 </a>
 
 <a href="games.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/></svg></span><span>Games</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/></svg></span>
+<span>Games</span>
 </a>
+
 </nav>
 
 <script>
-const modal=document.getElementById('create-group-modal');
-const headerBtn=document.getElementById('header-create-btn');
-const emptyBtn=document.getElementById('empty-create-btn');
-const closeBtn=document.getElementById('close-group-modal');
-const createBtn=document.getElementById('create-group-btn');
+document.addEventListener('DOMContentLoaded',()=>{
 
-function openGroupModal(){
-modal.classList.add('active');
-document.getElementById('group-name-input').focus();
-}
+const API='https://retro-backend-hnsv.onrender.com';
+const raw=localStorage.getItem('retro_session')||localStorage.getItem('username');
 
-function closeGroupModal(){
-modal.classList.remove('active');
-}
-
-headerBtn.addEventListener('click',openGroupModal);
-emptyBtn.addEventListener('click',openGroupModal);
-closeBtn.addEventListener('click',closeGroupModal);
-
-modal.addEventListener('click',e=>{
-if(e.target===modal)closeGroupModal();
-});
-
-createBtn.addEventListener('click',()=>{
-const name=document.getElementById('group-name-input').value.trim();
-
-if(!name){
-showGroupNotice('Enter a group name first.');
+if(!raw){
+location.href='auth.html';
 return;
 }
 
-showGroupNotice('Group creation isn’t available yet.');
-});
+const username=raw.trim().replace(/^@/,'');
+const list=document.getElementById('groups-list');
+const modal=document.getElementById('create-group-modal');
+const nameInput=document.getElementById('group-name-input');
+const descriptionInput=document.getElementById('group-description-input');
+const notice=document.getElementById('notice-modal');
 
-function showGroupNotice(message){
-let notice=document.getElementById('group-notice');
-
-if(!notice){
-notice=document.createElement('div');
-notice.id='group-notice';
-notice.className='group-notice';
-
-notice.innerHTML=`
-<div class="group-notice-box">
-<div class="group-notice-title">RETRO</div>
-<div class="group-notice-message"></div>
-<button class="group-notice-btn" onclick="closeGroupNotice()">OK</button>
-</div>
-`;
-
-document.body.appendChild(notice);
-}
-
-notice.querySelector('.group-notice-message').textContent=message;
+function showNotice(message,title='RETRO'){
+document.getElementById('notice-title').textContent=title;
+document.getElementById('notice-message').textContent=message;
 notice.classList.add('active');
 }
 
-function closeGroupNotice(){
-const notice=document.getElementById('group-notice');
-if(notice)notice.classList.remove('active');
+document.getElementById('notice-ok').onclick=()=>notice.classList.remove('active');
+
+function openModal(){
+modal.classList.add('active');
+nameInput.focus();
 }
+
+function closeModal(){
+modal.classList.remove('active');
+nameInput.value='';
+descriptionInput.value='';
+}
+
+document.getElementById('header-create-btn').onclick=openModal;
+document.getElementById('close-group-modal').onclick=closeModal;
+
+modal.onclick=e=>{
+if(e.target===modal)closeModal();
+};
+
+async function loadGroups(){
+
+list.innerHTML='<div class="groups-loading">Loading groups...</div>';
+
+try{
+
+const res=await fetch(`${API}/api/groups/${encodeURIComponent(username)}`);
+const data=await res.json();
+
+if(!res.ok)throw new Error(data.error||'Failed to load groups.');
+
+const groups=data.groups||[];
+
+if(!groups.length){
+list.innerHTML=`
+<div class="groups-empty-state">
+<div class="groups-empty-icon">+</div>
+<h3>Create your first group</h3>
+<p>Bring multiple people together in one RETRO chat.</p>
+<button id="empty-create-btn" class="create-group-empty-btn">Create Group</button>
+</div>`;
+document.getElementById('empty-create-btn').onclick=openModal;
+return;
+}
+
+list.innerHTML=groups.map(group=>{
+
+const unread=Number(group.unread_count||0);
+
+return`
+<div class="group-card" onclick="openGroup('${group.id}')">
+<div class="group-avatar">${escapeHtml((group.name||'G').charAt(0).toUpperCase())}</div>
+<div class="group-info">
+<div class="group-name">${escapeHtml(group.name)}</div>
+<div class="group-last">${escapeHtml(group.last_message||'No messages yet')}</div>
+</div>
+<div class="group-right">
+<div class="group-members">${group.member_count||0} members</div>
+${unread>0?`<div class="group-unread">${unread>99?'99+':unread}</div>`:''}
+</div>
+</div>`;
+}).join('');
+
+}catch(e){
+
+console.error(e);
+list.innerHTML=`
+<div class="groups-empty-state">
+<div class="groups-empty-icon">!</div>
+<h3>Couldn't load groups</h3>
+<p>Check your connection and try again.</p>
+<button id="retry-groups" class="create-group-empty-btn">Retry</button>
+</div>`;
+document.getElementById('retry-groups').onclick=loadGroups;
+}
+}
+
+function escapeHtml(value){
+return String(value||'').replace(/[&<>"']/g,char=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#039;'
+}[char]));
+}
+
+window.openGroup=id=>{
+location.href=`groupchat.html?group=${encodeURIComponent(id)}`;
+};
+
+document.getElementById('create-group-btn').onclick=async()=>{
+
+const name=nameInput.value.trim();
+const description=descriptionInput.value.trim();
+
+if(!name){
+showNotice('Enter a group name first.');
+return;
+}
+
+const btn=document.getElementById('create-group-btn');
+btn.disabled=true;
+btn.textContent='Creating...';
+
+try{
+
+const res=await fetch(`${API}/api/groups`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+name,
+description,
+admin:username
+})
+});
+
+const data=await res.json();
+
+if(!res.ok){
+throw new Error(data.error||'Could not create group.');
+}
+
+closeModal();
+location.href=`groupchat.html?group=${encodeURIComponent(data.group.id)}`;
+
+}catch(e){
+
+showNotice(e.message||'Could not create group.');
+
+}finally{
+
+btn.disabled=false;
+btn.textContent='Create Group';
+
+}
+
+};
+
+loadGroups();
+
+});
 </script>
 
 </body>
