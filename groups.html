@@ -6,9 +6,9 @@
 <title>Groups</title>
 <link rel="stylesheet" href="groups.css">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon.png">
+<link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#000">
 <script src="theme.js"></script>
 </head>
 <body class="groups-page">
@@ -17,7 +17,7 @@
 
 <header class="groups-header">
 <div class="groups-title">GROUPS</div>
-<button id="header-create-btn" class="groups-add-btn" aria-label="Create Group">+</button>
+<button id="header-create-btn" class="groups-add-btn">+</button>
 </header>
 
 <main class="groups-content">
@@ -30,9 +30,9 @@
 <div id="create-group-modal" class="groups-modal-overlay">
 <div class="groups-modal">
 <h2>Create Group</h2>
-<p>Set up your new RETRO group.</p>
 
-<input type="text" id="group-name-input" class="group-input" placeholder="Group name..." maxlength="30" autocomplete="off">
+
+<input id="group-name-input" class="group-input" type="text" placeholder="Group name..." maxlength="30" autocomplete="off">
 <textarea id="group-description-input" class="group-input group-textarea" placeholder="Group description (optional)..." maxlength="100"></textarea>
 
 <div class="groups-modal-actions">
@@ -60,6 +60,7 @@
 <a href="groups.html" class="bottom-nav-item active">
 <span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span>
 <span>Groups</span>
+<span id="groups-nav-badge" class="nav-badge"></span>
 </a>
 
 <a href="calls.html" class="bottom-nav-item">
@@ -92,6 +93,10 @@ const nameInput=document.getElementById('group-name-input');
 const descriptionInput=document.getElementById('group-description-input');
 const notice=document.getElementById('notice-modal');
 
+const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+}[c]));
+
 function showNotice(message,title='RETRO'){
 document.getElementById('notice-title').textContent=title;
 document.getElementById('notice-message').textContent=message;
@@ -102,7 +107,7 @@ document.getElementById('notice-ok').onclick=()=>notice.classList.remove('active
 
 function openModal(){
 modal.classList.add('active');
-nameInput.focus();
+setTimeout(()=>nameInput.focus(),100);
 }
 
 function closeModal(){
@@ -118,52 +123,66 @@ modal.onclick=e=>{
 if(e.target===modal)closeModal();
 };
 
+window.openGroup=id=>{
+location.href=`groupchat.html?group=${encodeURIComponent(id)}`;
+};
+
 async function loadGroups(){
 
 list.innerHTML='<div class="groups-loading">Loading groups...</div>';
 
 try{
 
-const res=await fetch(`${API}/api/groups/${encodeURIComponent(username)}`);
-const data=await res.json();
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(username)}`);
+const d=await r.json();
 
-if(!res.ok)throw new Error(data.error||'Failed to load groups.');
+if(!r.ok)throw Error(d.error||'Failed to load groups.');
 
-const groups=data.groups||[];
+const groups=Array.isArray(d)?d:(d.groups||[]);
+let totalUnread=0;
 
 if(!groups.length){
 list.innerHTML=`
 <div class="groups-empty-state">
 <div class="groups-empty-icon">+</div>
-<h3>Create your first group</h3>
-<p>Bring multiple people together in one RETRO chat.</p>
+<h3>No groups yet</h3>
+<p>Create a group and start chatting with multiple people.</p>
 <button id="empty-create-btn" class="create-group-empty-btn">Create Group</button>
 </div>`;
 document.getElementById('empty-create-btn').onclick=openModal;
+updateBadge(0);
 return;
 }
 
-list.innerHTML=groups.map(group=>{
+list.innerHTML=groups.map(g=>{
 
-const unread=Number(group.unread_count||0);
+const unread=Number(g.unread_count||g.unread||0);
+totalUnread+=unread;
+
+const name=g.name||'Group';
+const members=Number(g.member_count||g.members_count||0);
+const last=g.last_message||g.last_message_content||'No messages yet';
 
 return`
-<div class="group-card" onclick="openGroup('${group.id}')">
-<div class="group-avatar">${escapeHtml((group.name||'G').charAt(0).toUpperCase())}</div>
+<div class="group-card" onclick="openGroup('${esc(g.id)}')">
+<div class="group-avatar">${esc(name.charAt(0).toUpperCase())}</div>
 <div class="group-info">
-<div class="group-name">${escapeHtml(group.name)}</div>
-<div class="group-last">${escapeHtml(group.last_message||'No messages yet')}</div>
+<div class="group-name">${esc(name)}</div>
+<div class="group-last">${esc(last)}</div>
 </div>
 <div class="group-right">
-<div class="group-members">${group.member_count||0} members</div>
-${unread>0?`<div class="group-unread">${unread>99?'99+':unread}</div>`:''}
+<div class="group-members">${members} ${members===1?'member':'members'}</div>
+${unread?`<div class="group-unread">${unread>99?'99+':unread}</div>`:''}
 </div>
 </div>`;
 }).join('');
 
+updateBadge(totalUnread);
+
 }catch(e){
 
 console.error(e);
+
 list.innerHTML=`
 <div class="groups-empty-state">
 <div class="groups-empty-icon">!</div>
@@ -171,23 +190,16 @@ list.innerHTML=`
 <p>Check your connection and try again.</p>
 <button id="retry-groups" class="create-group-empty-btn">Retry</button>
 </div>`;
+
 document.getElementById('retry-groups').onclick=loadGroups;
 }
 }
 
-function escapeHtml(value){
-return String(value||'').replace(/[&<>"']/g,char=>({
-'&':'&amp;',
-'<':'&lt;',
-'>':'&gt;',
-'"':'&quot;',
-"'":'&#039;'
-}[char]));
+function updateBadge(n){
+const b=document.getElementById('groups-nav-badge');
+b.textContent=n>99?'99+':n||'';
+b.classList.toggle('show',n>0);
 }
-
-window.openGroup=id=>{
-location.href=`groupchat.html?group=${encodeURIComponent(id)}`;
-};
 
 document.getElementById('create-group-btn').onclick=async()=>{
 
@@ -205,7 +217,7 @@ btn.textContent='Creating...';
 
 try{
 
-const res=await fetch(`${API}/api/groups`,{
+const r=await fetch(`${API}/api/groups`,{
 method:'POST',
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
@@ -215,29 +227,28 @@ admin:username
 })
 });
 
-const data=await res.json();
+const d=await r.json();
 
-if(!res.ok){
-throw new Error(data.error||'Could not create group.');
-}
+if(!r.ok)throw Error(d.error||'Could not create group.');
+
+if(!d.group?.id)throw Error('Group was created but no group ID was returned.');
 
 closeModal();
-location.href=`groupchat.html?group=${encodeURIComponent(data.group.id)}`;
+location.href=`groupchat.html?group=${encodeURIComponent(d.group.id)}`;
 
 }catch(e){
-
 showNotice(e.message||'Could not create group.');
-
 }finally{
-
 btn.disabled=false;
 btn.textContent='Create Group';
-
 }
-
 };
 
 loadGroups();
+
+setInterval(()=>{
+if(document.visibilityState==='visible')loadGroups();
+},5000);
 
 });
 </script>
