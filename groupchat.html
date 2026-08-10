@@ -1,1 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Group Chat</title>
+<link rel="stylesheet" href="groupchat.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<meta name="theme-color" content="#000">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="theme.js"></script>
+</head>
+<body>
 
+<div class="gc-app">
+
+<header class="gc-header">
+<a href="groups.html" class="back-btn">← Back</a>
+
+<div class="gc-title-box" onclick="openGroupInfo()">
+<div class="gc-avatar" id="group-avatar">G</div>
+<div>
+<div id="group-name">Loading...</div>
+<div id="group-members">Group</div>
+</div>
+</div>
+
+<button class="dots-btn" onclick="openGroupInfo()">⋮</button>
+</header>
+
+<main id="chat-container" class="gc-messages">
+<div id="messages-list"></div>
+</main>
+
+<div id="sticker-drawer" class="sticker-drawer">
+<div class="drawer-head">
+<span>Stickers</span>
+<button onclick="toggleStickerDrawer()">✕</button>
+</div>
+<div id="sticker-grid"></div>
+</div>
+
+<footer class="gc-input-bar">
+
+<div id="reply-preview" class="reply-preview">
+<div><b id="reply-user"></b><span id="reply-text"></span></div>
+<button onclick="cancelReply()">✕</button>
+</div>
+
+<input type="file" id="image-input" accept="image/*" hidden onchange="handleImage(event)">
+<input type="file" id="sticker-input" accept="image/*" hidden onchange="handleSticker(event)">
+
+<form id="chat-form">
+<div class="input-pill">
+<button type="button" onclick="document.getElementById('image-input').click()">📎</button>
+<button type="button" onclick="toggleStickerDrawer()">😀</button>
+<input id="message-input" placeholder="Message..." autocomplete="off">
+<button type="button" id="voice-btn" onclick="toggleVoice()">🎙️</button>
+<button type="submit" class="send-btn">➤</button>
+</div>
+</form>
+</footer>
+</div>
+
+<!-- GROUP INFO -->
+<div id="group-info" class="overlay" onclick="closeGroupInfo(event)">
+<div class="info-card" onclick="event.stopPropagation()">
+
+<div class="info-head">
+<button onclick="closeGroupInfo()">←</button>
+<b>Group Info</b>
+<span></span>
+</div>
+
+<div class="big-avatar" id="info-avatar">G</div>
+<h2 id="info-name">Group</h2>
+<p id="info-description"></p>
+
+<div class="member-title">
+<span>Members</span>
+<button id="add-member-btn" onclick="openAddMembers()">+ Add</button>
+</div>
+
+<div id="member-list"></div>
+
+</div>
+</div>
+
+<!-- ADD MEMBERS -->
+<div id="add-members" class="overlay" onclick="closeAddMembers(event)">
+<div class="info-card" onclick="event.stopPropagation()">
+
+<div class="info-head">
+<button onclick="closeAddMembers()">←</button>
+<b>Add Members</b>
+<span></span>
+</div>
+
+<p class="subtext">Choose people from your chats.</p>
+<div id="dm-list"></div>
+
+<button class="confirm-add" onclick="addSelectedMembers()">Add Selected</button>
+
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API='https://retro-backend-hnsv.onrender.com';
+const socket=typeof io==='function'?io(API):null;
+
+const me=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
+const id=new URLSearchParams(location.search).get('id');
+
+if(!me||!id)location.href='groups.html';
+
+const list=document.getElementById('messages-list');
+const container=document.getElementById('chat-container');
+let group=null,reply=null,selectedMembers=new Set(),loading=false;
+
+const esc=s=>String(s||'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+
+function toast(x){
+const t=document.getElementById('toast');
+t.textContent=x;t.classList.add('show');
+clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+async function loadGroup(){
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}?user=${encodeURIComponent(me)}`);
+if(!r.ok)throw Error();
+group=await r.json();
+
+document.getElementById('group-name').textContent=group.name;
+document.getElementById('group-members').textContent=`${(group.members||[]).length} members`;
+document.getElementById('group-avatar').textContent=(group.name||'G')[0].toUpperCase();
+
+document.getElementById('info-name').textContent=group.name;
+document.getElementById('info-description').textContent=group.description||'';
+document.getElementById('info-avatar').textContent=(group.name||'G')[0].toUpperCase();
+
+renderMembers();
+}catch(e){
+toast('Failed to load group');
+}
+}
+
+function renderMembers(){
+const box=document.getElementById('member-list');
+const admin=(group.admin_username||group.admin||'').toLowerCase()===me.toLowerCase();
+
+document.getElementById('add-member-btn').style.display=admin?'block':'none';
+
+box.innerHTML=(group.members||[]).map(u=>{
+const isAdmin=u.toLowerCase()===(group.admin_username||group.admin||'').toLowerCase();
+return `<div class="member">
+<div class="member-avatar">${esc(u[0]?.toUpperCase()||'?')}</div>
+<div class="member-name">${esc(u)}${isAdmin?' <small>ADMIN</small>':''}</div>
+${admin&&!isAdmin?`<button class="remove-btn" onclick="removeMember('${esc(u)}')">Remove</button>`:''}
+</div>`;
+}).join('');
+}
+
+async function loadMessages(){
+if(loading)return;
+loading=true;
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/messages`);
+if(!r.ok)return;
+const msgs=await r.json();
+
+list.innerHTML=msgs.map(m=>{
+const sender=m.sender_username||m.sender||'';
+const sent=sender.toLowerCase()===me.toLowerCase();
+let c=m.content||'';
+
+if(c.startsWith('[img]')){
+c=`<img class="msg-image" src="${esc(c.slice(5))}" onclick="viewImage(this.src)">`;
+}else if(c.startsWith('[sticker]')){
+c=`<img class="msg-sticker" src="${esc(c.slice(9))}">`;
+}else c=esc(c);
+
+return `<div class="msg ${sent?'sent':'received'}">
+${!sent?`<div class="sender">${esc(sender)}</div>`:''}
+<div class="bubble">${c}<div class="time">${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>
+</div>`;
+}).join('');
+
+container.scrollTop=container.scrollHeight;
+}catch(e){}
+finally{loading=false}
+}
+
+document.getElementById('chat-form').onsubmit=async e=>{
+e.preventDefault();
+const input=document.getElementById('message-input');
+let text=input.value.trim();
+if(!text)return;
+
+if(reply){
+text=`[reply:${reply.sender}|${reply.text.slice(0,50)}] ${text}`;
+}
+
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/messages`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({sender:me,content:text})
+});
+if(!r.ok)throw Error();
+input.value='';
+cancelReply();
+await loadMessages();
+}catch{toast('Failed to send')}
+};
+
+function openGroupInfo(){
+document.getElementById('group-info').classList.add('active');
+}
+
+function closeGroupInfo(e){
+if(!e||e.target.id==='group-info')document.getElementById('group-info').classList.remove('active');
+}
+
+function openAddMembers(){
+selectedMembers=new Set();
+document.getElementById('add-members').classList.add('active');
+loadDMUsers();
+}
+
+function closeAddMembers(e){
+if(!e||e.target.id==='add-members')document.getElementById('add-members').classList.remove('active');
+}
+
+async function loadDMUsers(){
+const box=document.getElementById('dm-list');
+box.innerHTML='<div class="subtext">Loading...</div>';
+
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/available-members?user=${encodeURIComponent(me)}`);
+const users=await r.json();
+
+box.innerHTML=users.map(u=>`
+<label class="dm-user">
+<input type="checkbox" value="${esc(u)}" onchange="toggleMember(this)">
+<div class="member-avatar">${esc(u[0]?.toUpperCase()||'?')}</div>
+<span>${esc(u)}</span>
+</label>`).join('')||'<div class="subtext">No available contacts.</div>';
+}catch{
+box.innerHTML='<div class="subtext">Failed to load contacts.</div>';
+}
+}
+
+function toggleMember(x){
+x.checked?selectedMembers.add(x.value):selectedMembers.delete(x.value);
+}
+
+async function addSelectedMembers(){
+if(!selectedMembers.size)return toast('Select someone first');
+
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/members`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({admin:me,members:[...selectedMembers]})
+});
+if(!r.ok)throw Error();
+
+document.getElementById('add-members').classList.remove('active');
+await loadGroup();
+toast('Members added');
+}catch{toast('Failed to add members')}
+}
+
+async function removeMember(username){
+if(!confirm(`Remove ${username} from this group?`))return;
+
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/members`,{
+method:'DELETE',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({admin:me,username})
+});
+if(!r.ok)throw Error();
+await loadGroup();
+toast('Member removed');
+}catch{toast('Failed to remove member')}
+}
+
+function cancelReply(){
+reply=null;
+document.getElementById('reply-preview').classList.remove('active');
+}
+
+function toggleStickerDrawer(){
+document.getElementById('sticker-drawer').classList.toggle('active');
+renderStickers();
+}
+
+function renderStickers(){
+const s=JSON.parse(localStorage.getItem('retro_stickers')||'[]');
+document.getElementById('sticker-grid').innerHTML=s.map(x=>
+`<img src="${esc(x)}" onclick="sendSticker('${esc(x)}')">`
+).join('')+`<button onclick="document.getElementById('sticker-input').click()">+</button>`;
+}
+
+async function sendSticker(x){
+toggleStickerDrawer();
+await sendContent('[sticker]'+x);
+}
+
+async function sendContent(content){
+try{
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/messages`,{
+method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({sender:me,content})
+});
+if(!r.ok)throw Error();
+await loadMessages();
+}catch{toast('Failed to send')}
+}
+
+function handleImage(e){
+const f=e.target.files[0];
+if(!f)return;
+const r=new FileReader();
+r.onload=()=>sendContent('[img]'+r.result);
+r.readAsDataURL(f);
+e.target.value='';
+}
+
+function handleSticker(e){
+const f=e.target.files[0];
+if(!f)return;
+const r=new FileReader();
+r.onload=ev=>sendContent('[sticker]'+ev.target.result);
+r.readAsDataURL(f);
+e.target.value='';
+}
+
+function viewImage(src){
+window.open(src,'_blank');
+}
+
+if(socket){
+socket.on('connect',()=>{
+socket.emit('register_user',me);
+socket.emit('join_group',{group_id:id,username:me});
+});
+socket.on('group_message',loadMessages);
+}
+
+loadGroup();
+loadMessages();
+setInterval(()=>document.visibilityState==='visible'&&loadMessages(),5000);
+</script>
+</body>
+  </html>
