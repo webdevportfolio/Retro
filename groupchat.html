@@ -28,6 +28,11 @@
 <button id="menu-btn" class="header-btn">⋮</button>
 </header>
 
+<div id="quick-menu" class="quick-menu">
+<button id="settings-btn">Settings</button>
+<button id="leave-btn" class="quick-danger">Leave group</button>
+</div>
+
 <main id="messages" class="messages">
 <div class="loading">Loading messages...</div>
 </main>
@@ -48,49 +53,114 @@
 
 </div>
 
-<div id="menu-modal" class="overlay">
-<div class="sheet">
-<div class="sheet-title">GROUP</div>
-<button id="members-btn" class="sheet-btn">Members</button>
-<button id="add-member-btn" class="sheet-btn admin-only">Add member</button>
-<button id="delete-group-btn" class="sheet-btn danger admin-only">Delete group</button>
-<button id="leave-group-btn" class="sheet-btn danger">Leave group</button>
-<button id="close-menu" class="sheet-btn cancel">Cancel</button>
+
+<!-- GROUP SETTINGS -->
+
+<div id="settings-page" class="settings-page">
+
+<div class="settings-header">
+<button id="settings-back" class="settings-back">‹</button>
+<div>Group info</div>
+<div></div>
+</div>
+
+<div class="settings-content">
+
+<div class="group-profile">
+
+<div class="profile-avatar-wrap">
+<div id="settings-avatar" class="settings-avatar">G</div>
+<label id="avatar-edit" class="avatar-edit">
+✎
+<input id="group-avatar-input" type="file" accept="image/*">
+</label>
+</div>
+
+<div class="group-title-wrap">
+<div id="settings-group-name" class="settings-group-name">Group</div>
+<button id="edit-name-btn" class="edit-btn">Edit</button>
+</div>
+
+<div id="name-editor" class="name-editor">
+<input id="group-name-input" type="text" maxlength="40">
+<button id="save-name-btn">Save</button>
+</div>
+
+<div id="admin-label" class="admin-label">ADMIN</div>
+
+</div>
+
+<section class="settings-section">
+
+<div class="section-top">
+<div>
+<h3>Members</h3>
+<span id="member-count">0 members</span>
+</div>
+
+<button id="add-members-btn" class="add-members-btn">+ Add</button>
+</div>
+
+<div id="settings-members" class="settings-members"></div>
+
+</section>
+
 </div>
 </div>
 
-<div id="members-modal" class="overlay">
-<div class="sheet">
-<div class="sheet-head">
-<span>Members</span>
-<button id="close-members">×</button>
+
+<!-- ADD MEMBERS -->
+
+<div id="add-members-modal" class="modal">
+<div class="modal-box">
+
+<div class="modal-head">
+<h3>Add members</h3>
+<button id="close-add-members">×</button>
 </div>
-<div id="members-list" class="members-list"></div>
+
+<div id="available-members" class="available-members"></div>
+
 </div>
 </div>
 
-<div id="add-modal" class="overlay">
-<div class="sheet">
-<div class="sheet-head">
-<span>Add member</span>
-<button id="close-add">×</button>
+
+<!-- LEAVE WARNING -->
+
+<div id="leave-modal" class="modal">
+<div class="warning-box">
+
+<div class="warning-icon">!</div>
+
+<h3>Leave group?</h3>
+
+<p>Are you sure you want to leave this group?</p>
+
+<span>Leaving a group will delete all messages for you.</span>
+
+<div class="warning-actions">
+<button id="cancel-leave">Cancel</button>
+<button id="confirm-leave">Leave group</button>
 </div>
-<div id="available-list" class="members-list"></div>
+
 </div>
 </div>
 
-<div id="notice-modal" class="overlay">
-<div class="notice">
+
+<div id="notice-modal" class="modal">
+<div class="notice-box">
 <h3 id="notice-title">RETRO</h3>
 <p id="notice-message"></p>
 <button id="notice-ok">OK</button>
 </div>
 </div>
 
+
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
 
 const API='https://retro-backend-hnsv.onrender.com';
+
 const raw=localStorage.getItem('retro_session')||localStorage.getItem('username');
 
 if(!raw){
@@ -106,39 +176,37 @@ location.href='groups.html';
 return;
 }
 
-const messages=document.getElementById('messages');
-const input=document.getElementById('message-input');
-const imageInput=document.getElementById('image-input');
-const imagePreview=document.getElementById('image-preview');
-const imagePreviewBar=document.getElementById('image-preview-bar');
+const $=id=>document.getElementById(id);
+const same=(a,b)=>(a||'').toLowerCase()===(b||'').toLowerCase();
+
+const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#039;'
+}[c]));
 
 let group=null;
 let members=[];
-let selectedImage=null;
-
-const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({
-'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-}[c]));
-
-const same=(a,b)=>(a||'').toLowerCase()===(b||'').toLowerCase();
-
-function notice(message,title='RETRO'){
-document.getElementById('notice-title').textContent=title;
-document.getElementById('notice-message').textContent=message;
-document.getElementById('notice-modal').classList.add('active');
-}
-
-document.getElementById('notice-ok').onclick=()=>{
-document.getElementById('notice-modal').classList.remove('active');
-};
-
-document.getElementById('back-btn').onclick=()=>location.href='groups.html';
+let selectedAvatar=null;
 
 function avatarHTML(name,picture=''){
 return picture
 ?`<img src="${esc(picture)}" alt="">`
 :`<span>${esc((name||'G').charAt(0).toUpperCase())}</span>`;
 }
+
+function notice(message,title='RETRO'){
+$('notice-title').textContent=title;
+$('notice-message').textContent=message;
+$('notice-modal').classList.add('active');
+}
+
+$('notice-ok').onclick=()=>{
+$('notice-modal').classList.remove('active');
+};
+
 
 async function loadGroup(){
 
@@ -158,15 +226,23 @@ return;
 }
 
 document.title=group.name||'Group';
-document.getElementById('group-name').textContent=group.name||'Group';
-document.getElementById('group-members').textContent=`${members.length} ${members.length===1?'member':'members'}`;
-document.getElementById('header-avatar').innerHTML=avatarHTML(group.name,group.profile_picture);
+
+$('group-name').textContent=group.name||'Group';
+$('group-members').textContent=`${members.length} ${members.length===1?'member':'members'}`;
+$('header-avatar').innerHTML=avatarHTML(group.name,group.profile_picture);
+
+$('settings-avatar').innerHTML=avatarHTML(group.name,group.profile_picture);
+$('settings-group-name').textContent=group.name||'Group';
+$('group-name-input').value=group.name||'';
 
 const admin=same(group.admin_username,username);
 
-document.querySelectorAll('.admin-only').forEach(el=>{
-el.style.display=admin?'flex':'none';
-});
+$('avatar-edit').style.display=admin?'flex':'none';
+$('edit-name-btn').style.display=admin?'block':'none';
+$('add-members-btn').style.display=admin?'flex':'none';
+$('admin-label').style.display=admin?'block':'none';
+
+renderMembers();
 
 await loadMessages();
 
@@ -178,11 +254,15 @@ notice(e.message||'Could not load group.');
 }
 }
 
+
 async function loadMessages(){
 
 try{
 
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/messages?username=${encodeURIComponent(username)}`);
+const r=await fetch(
+`${API}/api/groups/${encodeURIComponent(groupId)}/messages?username=${encodeURIComponent(username)}`
+);
+
 const d=await r.json();
 
 if(!r.ok)throw Error(d.error||'Could not load messages.');
@@ -190,11 +270,11 @@ if(!r.ok)throw Error(d.error||'Could not load messages.');
 const data=d.messages||[];
 
 if(!data.length){
-messages.innerHTML='<div class="empty-chat">No messages yet.<br>Start the conversation.</div>';
+$('messages').innerHTML='<div class="empty-chat">No messages yet.<br>Start the conversation.</div>';
 return;
 }
 
-messages.innerHTML=data.map(m=>{
+$('messages').innerHTML=data.map(m=>{
 
 const mine=same(m.sender_username,username);
 const sender=m.sender_username||'User';
@@ -211,26 +291,366 @@ ${m.content?`<div class="message-text">${esc(m.content)}</div>`:''}
 </div>`;
 }).join('');
 
-messages.scrollTop=messages.scrollHeight;
+$('messages').scrollTop=$('messages').scrollHeight;
 
 }catch(e){
 
-messages.innerHTML='<div class="empty-chat">Could not load messages.</div>';
+$('messages').innerHTML='<div class="empty-chat">Could not load messages.</div>';
 
 }
 }
+
 
 function formatTime(value){
 
 if(!value)return'';
 
-const d=new Date(value);
-
-return d.toLocaleTimeString([],{
+return new Date(value).toLocaleTimeString([],{
 hour:'numeric',
 minute:'2-digit'
 });
+
 }
+
+
+function renderMembers(){
+
+const admin=same(group.admin_username,username);
+
+$('member-count').textContent=
+`${members.length} ${members.length===1?'member':'members'}`;
+
+$('settings-members').innerHTML=members.map(m=>{
+
+const isAdmin=same(m.username,group.admin_username);
+const canRemove=admin&&!isAdmin&&!same(m.username,username);
+
+return`
+<div class="settings-member">
+
+<div class="member-avatar">
+${esc((m.username||'U').charAt(0).toUpperCase())}
+</div>
+
+<div class="member-info">
+<strong>${esc(m.username)}</strong>
+<span>${isAdmin?'Admin':'Member'}</span>
+</div>
+
+${canRemove
+?`<button class="remove-btn" data-user="${esc(m.username)}">Remove</button>`
+:''}
+
+</div>`;
+
+}).join('');
+
+document.querySelectorAll('.remove-btn').forEach(btn=>{
+btn.onclick=()=>removeMember(btn.dataset.user);
+});
+
+}
+
+
+$('back-btn').onclick=()=>location.href='groups.html';
+
+$('menu-btn').onclick=e=>{
+e.stopPropagation();
+$('quick-menu').classList.toggle('show');
+};
+
+document.addEventListener('click',e=>{
+if(!e.target.closest('#quick-menu')&&!e.target.closest('#menu-btn')){
+$('quick-menu').classList.remove('show');
+}
+});
+
+
+$('settings-btn').onclick=()=>{
+$('quick-menu').classList.remove('show');
+$('settings-page').classList.add('show');
+loadGroup();
+};
+
+$('settings-back').onclick=()=>{
+$('settings-page').classList.remove('show');
+};
+
+
+$('edit-name-btn').onclick=()=>{
+$('name-editor').classList.toggle('show');
+$('group-name-input').focus();
+};
+
+
+$('save-name-btn').onclick=async()=>{
+
+const name=$('group-name-input').value.trim();
+
+if(!name){
+notice('Group name cannot be empty.');
+return;
+}
+
+try{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}`,{
+method:'PUT',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username,
+name
+})
+});
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not update group.');
+
+$('name-editor').classList.remove('show');
+
+await loadGroup();
+
+notice('Group name updated.');
+
+}catch(e){
+
+notice(e.message||'Could not update group.');
+
+}
+};
+
+
+$('group-avatar-input').onchange=()=>{
+
+const file=$('group-avatar-input').files[0];
+
+if(!file)return;
+
+if(file.size>8*1024*1024){
+$('group-avatar-input').value='';
+notice('Image must be smaller than 8MB.');
+return;
+}
+
+const reader=new FileReader();
+
+reader.onload=async()=>{
+
+selectedAvatar=reader.result;
+
+try{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}`,{
+method:'PUT',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username,
+profile_picture:selectedAvatar
+})
+});
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not update group picture.');
+
+await loadGroup();
+
+}catch(e){
+
+notice(e.message||'Could not update group picture.');
+
+}
+
+};
+
+reader.readAsDataURL(file);
+
+};
+
+
+$('add-members-btn').onclick=async()=>{
+await loadAvailableMembers();
+$('add-members-modal').classList.add('active');
+};
+
+
+$('close-add-members').onclick=()=>{
+$('add-members-modal').classList.remove('active');
+};
+
+
+async function loadAvailableMembers(){
+
+$('available-members').innerHTML=
+'<div class="loading">Loading contacts...</div>';
+
+try{
+
+const r=await fetch(
+`${API}/api/groups/${encodeURIComponent(groupId)}/available-members/${encodeURIComponent(username)}`
+);
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not load contacts.');
+
+const users=d.users||[];
+
+if(!users.length){
+
+$('available-members').innerHTML=
+'<div class="loading">No available contacts.</div>';
+
+return;
+
+}
+
+$('available-members').innerHTML=users.map(user=>`
+<button class="available-row" data-user="${esc(user)}">
+
+<div class="member-avatar">
+${esc(user.charAt(0).toUpperCase())}
+</div>
+
+<span>${esc(user)}</span>
+
+<b>+</b>
+
+</button>
+`).join('');
+
+document.querySelectorAll('.available-row').forEach(btn=>{
+btn.onclick=()=>addMember(btn.dataset.user);
+});
+
+}catch(e){
+
+$('available-members').innerHTML=
+'<div class="loading">Could not load contacts.</div>';
+
+}
+}
+
+
+async function addMember(member){
+
+try{
+
+const r=await fetch(
+`${API}/api/groups/${encodeURIComponent(groupId)}/members`,
+{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+admin_username:username,
+member_username:member
+})
+}
+);
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not add member.');
+
+$('add-members-modal').classList.remove('active');
+
+await loadGroup();
+
+notice(`${member} was added to the group.`);
+
+}catch(e){
+
+notice(e.message||'Could not add member.');
+
+}
+}
+
+
+async function removeMember(member){
+
+if(!confirm(`Remove ${member} from this group?`))return;
+
+try{
+
+const r=await fetch(
+`${API}/api/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(member)}`,
+{
+method:'DELETE',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+admin_username:username
+})
+}
+);
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not remove member.');
+
+await loadGroup();
+
+}catch(e){
+
+notice(e.message||'Could not remove member.');
+
+}
+}
+
+
+$('leave-btn').onclick=()=>{
+$('quick-menu').classList.remove('show');
+
+if(same(group?.admin_username,username)){
+notice('The admin cannot leave the group. Delete the group instead.');
+return;
+}
+
+$('leave-modal').classList.add('active');
+};
+
+
+$('cancel-leave').onclick=()=>{
+$('leave-modal').classList.remove('active');
+};
+
+
+$('confirm-leave').onclick=async()=>{
+
+$('confirm-leave').disabled=true;
+
+try{
+
+const r=await fetch(
+`${API}/api/groups/${encodeURIComponent(groupId)}/leave`,
+{
+method:'DELETE',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({username})
+}
+);
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not leave group.');
+
+location.href='groups.html';
+
+}catch(e){
+
+$('leave-modal').classList.remove('active');
+$('confirm-leave').disabled=false;
+notice(e.message||'Could not leave group.');
+
+}
+
+};
+
+
+const imageInput=$('image-input');
+const imagePreview=$('image-preview');
+const imagePreviewBar=$('image-preview-bar');
+let selectedImage=null;
 
 imageInput.onchange=()=>{
 
@@ -253,30 +673,33 @@ imagePreviewBar.classList.add('show');
 };
 
 reader.readAsDataURL(file);
+
 };
 
-document.getElementById('remove-image').onclick=()=>{
+
+$('remove-image').onclick=()=>{
 selectedImage=null;
 imageInput.value='';
 imagePreview.src='';
 imagePreviewBar.classList.remove('show');
 };
 
-document.getElementById('message-form').onsubmit=async e=>{
+
+$('message-form').onsubmit=async e=>{
 
 e.preventDefault();
 
-const content=input.value.trim();
+const content=$('message-input').value.trim();
 
 if(!content&&!selectedImage)return;
 
-const btn=document.getElementById('send-btn');
-
-btn.disabled=true;
+$('send-btn').disabled=true;
 
 try{
 
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/messages`,{
+const r=await fetch(
+`${API}/api/groups/${encodeURIComponent(groupId)}/messages`,
+{
 method:'POST',
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
@@ -284,13 +707,14 @@ sender_username:username,
 content,
 image_url:selectedImage
 })
-});
+}
+);
 
 const d=await r.json();
 
 if(!r.ok)throw Error(d.error||'Could not send message.');
 
-input.value='';
+$('message-input').value='';
 selectedImage=null;
 imageInput.value='';
 imagePreview.src='';
@@ -304,244 +728,20 @@ notice(e.message||'Could not send message.');
 
 }finally{
 
-btn.disabled=false;
-input.focus();
+$('send-btn').disabled=false;
+$('message-input').focus();
 
 }
+
 };
 
-document.getElementById('menu-btn').onclick=()=>{
-document.getElementById('menu-modal').classList.add('active');
-};
-
-document.getElementById('close-menu').onclick=()=>{
-document.getElementById('menu-modal').classList.remove('active');
-};
-
-document.getElementById('members-btn').onclick=async()=>{
-document.getElementById('menu-modal').classList.remove('active');
-await loadMembers();
-document.getElementById('members-modal').classList.add('active');
-};
-
-document.getElementById('close-members').onclick=()=>{
-document.getElementById('members-modal').classList.remove('active');
-};
-
-async function loadMembers(){
-
-const list=document.getElementById('members-list');
-
-list.innerHTML='<div class="loading">Loading members...</div>';
-
-try{
-
-const r=await fetch(`${API}/api/groups/info/${encodeURIComponent(groupId)}`);
-const d=await r.json();
-
-if(!r.ok)throw Error(d.error||'Could not load members.');
-
-members=d.members||[];
-group=d.group;
-
-const admin=same(group.admin_username,username);
-
-list.innerHTML=members.map(m=>{
-
-const isAdmin=same(m.username,group.admin_username);
-const canRemove=admin&&!isAdmin&&!same(m.username,username);
-
-return`
-<div class="member-row">
-<div class="member-avatar">${esc(m.username.charAt(0).toUpperCase())}</div>
-<div class="member-details">
-<div>${esc(m.username)}</div>
-<div class="member-role">${isAdmin?'Admin':'Member'}</div>
-</div>
-${canRemove?`<button class="remove-member" data-user="${esc(m.username)}">Remove</button>`:''}
-</div>`;
-
-}).join('');
-
-list.querySelectorAll('.remove-member').forEach(btn=>{
-btn.onclick=()=>removeMember(btn.dataset.user);
-});
-
-document.getElementById('group-members').textContent=`${members.length} ${members.length===1?'member':'members'}`;
-
-}catch(e){
-
-list.innerHTML='<div class="loading">Could not load members.</div>';
-
-}
-}
-
-document.getElementById('add-member-btn').onclick=async()=>{
-document.getElementById('menu-modal').classList.remove('active');
-await loadAvailableMembers();
-document.getElementById('add-modal').classList.add('active');
-};
-
-document.getElementById('close-add').onclick=()=>{
-document.getElementById('add-modal').classList.remove('active');
-};
-
-async function loadAvailableMembers(){
-
-const list=document.getElementById('available-list');
-
-list.innerHTML='<div class="loading">Loading contacts...</div>';
-
-try{
-
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/available-members/${encodeURIComponent(username)}`);
-const d=await r.json();
-
-if(!r.ok)throw Error(d.error||'Could not load contacts.');
-
-const users=d.users||[];
-
-if(!users.length){
-list.innerHTML='<div class="loading">No available DM contacts.</div>';
-return;
-}
-
-list.innerHTML=users.map(user=>`
-<button class="available-member" data-user="${esc(user)}">
-<div class="member-avatar">${esc(user.charAt(0).toUpperCase())}</div>
-<span>${esc(user)}</span>
-<span class="add-symbol">+</span>
-</button>
-`).join('');
-
-list.querySelectorAll('.available-member').forEach(btn=>{
-btn.onclick=()=>addMember(btn.dataset.user);
-});
-
-}catch(e){
-
-list.innerHTML='<div class="loading">Could not load contacts.</div>';
-
-}
-}
-
-async function addMember(member){
-
-try{
-
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/members`,{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-admin_username:username,
-member_username:member
-})
-});
-
-const d=await r.json();
-
-if(!r.ok)throw Error(d.error||'Could not add member.');
-
-document.getElementById('add-modal').classList.remove('active');
-
-await loadGroup();
-
-notice(`${member} was added to the group.`);
-
-}catch(e){
-
-notice(e.message||'Could not add member.');
-
-}
-}
-
-async function removeMember(member){
-
-if(!confirm(`Remove ${member} from this group?`))return;
-
-try{
-
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(member)}`,{
-method:'DELETE',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-admin_username:username
-})
-});
-
-const d=await r.json();
-
-if(!r.ok)throw Error(d.error||'Could not remove member.');
-
-await loadGroup();
-await loadMembers();
-
-}catch(e){
-
-notice(e.message||'Could not remove member.');
-
-}
-}
-
-document.getElementById('delete-group-btn').onclick=async()=>{
-
-if(!confirm('Delete this group permanently?'))return;
-
-try{
-
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}`,{
-method:'DELETE',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({username})
-});
-
-const d=await r.json();
-
-if(!r.ok)throw Error(d.error||'Could not delete group.');
-
-location.href='groups.html';
-
-}catch(e){
-
-notice(e.message||'Could not delete group.');
-
-}
-};
-
-document.getElementById('leave-group-btn').onclick=async()=>{
-
-if(same(group?.admin_username,username)){
-notice('The admin cannot leave the group. Delete the group instead.');
-return;
-}
-
-if(!confirm('Leave this group?'))return;
-
-try{
-
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/leave`,{
-method:'DELETE',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({username})
-});
-
-const d=await r.json();
-
-if(!r.ok)throw Error(d.error||'Could not leave group.');
-
-location.href='groups.html';
-
-}catch(e){
-
-notice(e.message||'Could not leave group.');
-
-}
-};
 
 loadGroup();
 
 setInterval(()=>{
-if(document.visibilityState==='visible')loadMessages();
+if(document.visibilityState==='visible'&&!$('settings-page').classList.contains('show')){
+loadMessages();
+}
 },3000);
 
 });
