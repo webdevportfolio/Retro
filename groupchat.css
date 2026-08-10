@@ -6,7 +6,8 @@
 --text:#fff;
 --sub:rgba(255,255,255,.45);
 --accent:#a855f7;
---input:#09090c
+--input:#09090c;
+--danger:#ef4444
 }
 
 html[data-theme="white"]{
@@ -17,7 +18,8 @@ html[data-theme="white"]{
 --text:#111;
 --sub:rgba(0,0,0,.5);
 --accent:#9333ea;
---input:#f7f7f8
+--input:#f7f7f8;
+--danger:#dc2626
 }
 
 html[data-theme="pink"]{
@@ -28,7 +30,8 @@ html[data-theme="pink"]{
 --text:#fff;
 --sub:rgba(255,220,235,.58);
 --accent:#ec4899;
---input:#180b13
+--input:#180b13;
+--danger:#f87171
 }
 
 *{
@@ -42,6 +45,8 @@ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
 html,body{
 width:100%;
 height:100%;
+margin:0;
+padding:0;
 overflow:hidden;
 background:var(--bg);
 color:var(--text)
@@ -52,11 +57,12 @@ background:var(--bg)
 }
 
 .gc-app{
-height:100dvh;
+position:relative;
 width:100%;
 max-width:480px;
-margin:auto;
-position:relative;
+height:100dvh;
+min-height:100dvh;
+margin:0 auto;
 overflow:hidden;
 background:var(--bg)
 }
@@ -74,8 +80,8 @@ min-height:62px;
 display:flex;
 align-items:center;
 padding:8px 12px;
-border-bottom:1px solid var(--border);
 background:var(--card);
+border-bottom:1px solid var(--border);
 z-index:1000
 }
 
@@ -83,7 +89,12 @@ z-index:1000
 color:var(--accent);
 text-decoration:none;
 font-weight:600;
-white-space:nowrap
+font-size:.95rem;
+white-space:nowrap;
+display:flex;
+align-items:center;
+height:44px;
+flex-shrink:0
 }
 
 .gc-title-box{
@@ -120,12 +131,14 @@ min-width:0
 font-weight:700;
 white-space:nowrap;
 overflow:hidden;
-text-overflow:ellipsis
+text-overflow:ellipsis;
+display:block
 }
 
 #group-members{
 font-size:.7rem;
-color:var(--sub)
+color:var(--sub);
+display:block
 }
 
 .dots-btn,.info-head button,.drawer-head button,.reply-preview button{
@@ -133,11 +146,17 @@ background:none;
 border:0;
 color:var(--sub);
 font-size:1.3rem;
-cursor:pointer
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center
 }
 
 .dots-btn{
-font-size:1.5rem
+font-size:1.5rem;
+width:38px;
+height:38px;
+flex-shrink:0
 }
 
 /* MESSAGES */
@@ -152,7 +171,7 @@ width:100%;
 min-height:0;
 overflow-y:auto;
 overflow-x:hidden;
-padding:12px 12px 92px;
+padding:12px 12px 100px;
 background:var(--bg);
 -webkit-overflow-scrolling:touch
 }
@@ -174,7 +193,8 @@ background:transparent
 display:flex;
 flex-direction:column;
 gap:9px;
-width:100%
+width:100%;
+padding-bottom:4px
 }
 
 .msg{
@@ -207,7 +227,8 @@ border:1px solid var(--border);
 word-break:break-word;
 font-size:.9rem;
 line-height:1.4;
-position:relative
+position:relative;
+color:var(--text)
 }
 
 .sent .bubble{
@@ -245,6 +266,8 @@ cursor:pointer
 .msg-sticker{
 max-width:140px;
 max-height:140px;
+width:auto;
+height:auto;
 display:block;
 margin:0;
 object-fit:contain;
@@ -252,7 +275,7 @@ cursor:pointer;
 background:transparent!important
 }
 
-/* REMOVE SENT BUBBLE AROUND MEDIA */
+/* REMOVE MEDIA BUBBLE */
 
 .bubble:has(.msg-image),
 .bubble:has(.msg-sticker){
@@ -272,21 +295,25 @@ background:transparent!important
 padding:4px 4px 0
 }
 
-/* INPUT FOOTER */
+/* FOOTER */
 
-.gc-input-bar{
+.gc-input-bar,
+#gc-input-bar,
+.chat-input-bar,
+#chat-input-bar{
 position:absolute;
 left:0;
 right:0;
 bottom:0;
 width:100%;
-flex-shrink:0;
+min-height:62px;
 padding:7px 10px max(7px,env(safe-area-inset-bottom));
-border-top:1px solid var(--border);
 background:var(--card);
+border-top:1px solid var(--border);
 z-index:500
 }
 
+.gc-input-bar form,
 #chat-form{
 width:100%
 }
@@ -334,12 +361,14 @@ color:var(--sub)
 .send-btn{
 width:36px;
 height:36px;
+min-width:36px;
 border-radius:50%!important;
 background:var(--accent)!important;
 color:#000!important;
 display:flex;
 align-items:center;
-justify-content:center
+justify-content:center;
+border:0!important
 }
 
 /* REPLY */
@@ -384,12 +413,12 @@ position:absolute;
 left:0;
 right:0;
 bottom:65px;
-flex-shrink:0;
+width:100%;
 padding:10px;
 background:var(--card);
 border-top:1px solid var(--border);
 max-height:180px;
-overflow:auto;
+overflow-y:auto;
 z-index:400
 }
 
@@ -541,7 +570,7 @@ color:var(--accent)
 .remove-btn{
 border:0;
 background:rgba(239,68,68,.12);
-color:#ef4444;
+color:var(--danger);
 border-radius:6px;
 padding:6px;
 font-size:.7rem
@@ -609,7 +638,8 @@ transform:translateX(-50%)
 
 @media(min-width:481px){
 .gc-app{
-max-width:none
+max-width:none;
+width:100%
 }
 }
 
@@ -622,7 +652,7 @@ padding-right:8px
 .gc-messages{
 padding-left:8px;
 padding-right:8px;
-padding-bottom:92px
+padding-bottom:100px
 }
 
 .msg{
@@ -636,4 +666,8 @@ gap:3px
 .input-pill button{
 padding:5px
 }
+
+.gc-title-box{
+margin-left:8px
 }
+  }
