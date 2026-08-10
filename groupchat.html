@@ -112,8 +112,7 @@ const API='https://retro-backend-hnsv.onrender.com';
 const socket=typeof io==='function'?io(API):null;
 
 const me=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
-const id=new URLSearchParams(location.search).get('id');
-
+const id=new URLSearchParams(location.search).get('group');
 if(!me||!id)location.href='groups.html';
 
 const list=document.getElementById('messages-list');
