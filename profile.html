@@ -39,6 +39,7 @@
 <div class="stat-value" id="stat-chats">0</div>
 <div class="stat-label">Active Chats</div>
 </div>
+
 <div class="stat-card">
 <div class="stat-value" id="stat-messages">0</div>
 <div class="stat-label">Total Messages</div>
@@ -47,8 +48,9 @@
 
 <section class="link-box">
 <label class="link-label">Your Private Chat Code</label>
+
 <div class="link-input-group">
-<input type="text" id="chat-code-input" readonly class="input-field code-field" value="Generating...">
+<input type="text" id="chat-code-input" readonly class="input-field" value="Generating...">
 <button id="copy-code-btn" class="copy-btn">Copy</button>
 </div>
 </section>
@@ -60,28 +62,36 @@
 <div class="setting-card">
 <div class="setting-info">
 <div class="setting-icon">✎</div>
+
 <div>
 <div class="setting-title">Username</div>
 <div class="setting-description">Change the name shown on your profile</div>
 </div>
 </div>
+
 <button id="open-username-btn" class="setting-action">Change</button>
 </div>
 
 <div class="username-editor" id="username-editor">
+
 <div class="editor-title">Change Username</div>
+
 <div class="editor-input-row">
 <input type="text" id="new-username-input" class="input-field" placeholder="New username" maxlength="20" autocomplete="off">
 <button id="save-username-btn" class="save-btn">Save</button>
 </div>
+
 <p id="username-message" class="editor-message"></p>
+
 </div>
 
 <div class="section-title theme-title">Appearance</div>
 
 <div class="theme-card">
+
 <div class="setting-info">
 <div class="setting-icon">◐</div>
+
 <div>
 <div class="setting-title">App Theme</div>
 <div class="setting-description">Choose how Retro looks</div>
@@ -89,6 +99,7 @@
 </div>
 
 <div class="theme-options">
+
 <button class="theme-option" data-theme-choice="midnight">
 <span class="theme-preview midnight-preview"></span>
 <span>Midnight</span>
@@ -103,6 +114,7 @@
 <span class="theme-preview pink-preview"></span>
 <span>Pink</span>
 </button>
+
 </div>
 </div>
 
@@ -116,25 +128,33 @@
 </section>
 
 <section class="account-actions">
+
 <button id="logout-btn" class="logout-btn">Log Out</button>
 
 <div class="danger-zone">
 <button id="open-delete-modal-btn" class="delete-btn">Delete Account</button>
 </div>
+
 </section>
 
 </div>
 </main>
 
 <div id="delete-modal" class="modal-overlay">
+
 <div class="modal-box">
+
 <h3 class="delete-modal-title">Delete Account?</h3>
-<p class="delete-modal-text">This action cannot be undone. Your profile and stored messages will be permanently removed.</p>
+
+<p class="delete-modal-text">
+This action cannot be undone. Your profile and stored messages will be permanently removed.
+</p>
 
 <div class="modal-actions">
 <button id="cancel-delete-btn" class="cancel-btn">Cancel</button>
 <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
 </div>
+
 </div>
 </div>
 
@@ -187,20 +207,23 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
 
-const rawUser=localStorage.getItem('retro_session')||localStorage.getItem('username');
+const rawUser=
+localStorage.getItem('retro_session')||
+localStorage.getItem('username');
 
 if(!rawUser){
 window.location.href='auth.html';
 return;
 }
 
-const currentUser=rawUser.trim().replace('@','');
+const currentUser=rawUser.trim().replace(/^@/,'');
 
 const avatarImg=document.getElementById('avatar-img');
 const avatarLetter=document.getElementById('avatar-initial');
 const pfpUpload=document.getElementById('pfp-upload');
 
 const usernameDisplay=document.getElementById('display-username');
+
 const codeInput=document.getElementById('chat-code-input');
 const copyCodeBtn=document.getElementById('copy-code-btn');
 
@@ -224,6 +247,11 @@ const confirmDeleteBtn=document.getElementById('confirm-delete-btn');
 
 usernameDisplay.textContent=currentUser;
 
+
+/* =========================================================
+   PROFILE PICTURE
+========================================================= */
+
 async function loadSavedAvatar(){
 
 const key=`retro_pfp_${currentUser.toLowerCase()}`;
@@ -238,26 +266,35 @@ return;
 
 try{
 
-const res=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`);
+const response=await fetch(
+`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`
+);
 
-if(res.ok){
+if(response.ok){
 
-const data=await res.json();
+const data=await response.json();
 
-const pfp=data['profile picture']||data.profile_picture||data.pfp||data.avatar;
+const pfp=
+data.profile_picture||
+data['profile picture']||
+data.pfp||
+data.avatar;
 
 if(pfp){
+
 avatarImg.src=pfp;
 avatarImg.style.display='block';
 avatarLetter.style.display='none';
+
 localStorage.setItem(key,pfp);
+
 return;
 }
 
 }
 
-}catch(err){
-console.error(err);
+}catch(error){
+console.error('Load avatar:',error);
 }
 
 avatarImg.style.display='none';
@@ -268,11 +305,17 @@ avatarLetter.textContent=currentUser.charAt(0).toUpperCase();
 
 loadSavedAvatar();
 
-pfpUpload?.addEventListener('change',e=>{
 
-const file=e.target.files[0];
+pfpUpload?.addEventListener('change',event=>{
+
+const file=event.target.files[0];
 
 if(!file)return;
+
+if(!file.type.startsWith('image/')){
+alert('Please select an image.');
+return;
+}
 
 const reader=new FileReader();
 
@@ -280,23 +323,43 @@ reader.onload=async event=>{
 
 const base64Img=event.target.result;
 
-localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`,base64Img);
+const key=`retro_pfp_${currentUser.toLowerCase()}`;
 
-loadSavedAvatar();
+localStorage.setItem(key,base64Img);
+
+avatarImg.src=base64Img;
+avatarImg.style.display='block';
+avatarLetter.style.display='none';
 
 try{
 
-await fetch(`${API_BASE_URL}/api/users/profile`,{
+const response=await fetch(
+`${API_BASE_URL}/api/users/profile`,
+{
 method:'POST',
-headers:{'Content-Type':'application/json'},
+headers:{
+'Content-Type':'application/json'
+},
 body:JSON.stringify({
-username:currentUser,
+current_username:currentUser,
 profile_picture:base64Img
 })
-});
+}
+);
 
-}catch(err){
-console.error(err);
+if(!response.ok){
+
+console.error(
+'Profile picture save failed:',
+await response.text()
+);
+
+}
+
+}catch(error){
+
+console.error('Profile picture save:',error);
+
 }
 
 };
@@ -305,14 +368,24 @@ reader.readAsDataURL(file);
 
 });
 
+
+/* =========================================================
+   PRIVATE CHAT CODE
+========================================================= */
+
 function getChatCode(user){
 
 let hash=0;
-const str=user.toLowerCase()+'_retro_secret_salt';
+
+const str=
+user.toLowerCase()+
+'_retro_secret_salt';
 
 for(let i=0;i<str.length;i++){
+
 hash=(hash<<5)-hash+str.charCodeAt(i);
 hash|=0;
+
 }
 
 return`RETRO-${Math.abs(hash).toString(36).toUpperCase().substring(0,5)}`;
@@ -323,11 +396,51 @@ const userCode=getChatCode(currentUser);
 
 codeInput.value=userCode;
 
+
+copyCodeBtn?.addEventListener('click',async()=>{
+
+try{
+
+if(navigator.clipboard&&window.isSecureContext){
+
+await navigator.clipboard.writeText(userCode);
+
+}else{
+
+codeInput.select();
+document.execCommand('copy');
+
+}
+
+const oldText=copyCodeBtn.innerText;
+
+copyCodeBtn.innerText='Copied!';
+
+setTimeout(()=>{
+copyCodeBtn.innerText=oldText;
+},2000);
+
+}catch(error){
+
+console.error(error);
+alert('Could not copy code automatically.');
+
+}
+
+});
+
+
+/* =========================================================
+   PROFILE STATS
+========================================================= */
+
 async function loadUserStats(){
 
 try{
 
-const response=await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`);
+const response=await fetch(
+`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`
+);
 
 if(!response.ok)return;
 
@@ -336,93 +449,122 @@ const messages=await response.json();
 if(!Array.isArray(messages))return;
 
 const userLower=currentUser.toLowerCase();
+
 const contacts=new Set();
 
-messages.forEach(msg=>{
+messages.forEach(message=>{
 
-const sender=(msg.sender_username||msg.sender||'').trim().replace('@','').toLowerCase();
-const receiver=(msg.receiver_username||msg.receiver||'').trim().replace('@','').toLowerCase();
+const sender=
+(message.sender_username||
+message.sender||
+'')
+.trim()
+.replace(/^@/,'')
+.toLowerCase();
 
-if(sender&&sender!==userLower)contacts.add(sender);
-if(receiver&&receiver!==userLower)contacts.add(receiver);
+const receiver=
+(message.receiver_username||
+message.receiver||
+'')
+.trim()
+.replace(/^@/,'')
+.toLowerCase();
+
+if(sender&&sender!==userLower){
+contacts.add(sender);
+}
+
+if(receiver&&receiver!==userLower){
+contacts.add(receiver);
+}
 
 });
 
 statChats.textContent=contacts.size;
 statMessages.textContent=messages.length;
 
-}catch(err){
-console.error(err);
+}catch(error){
+
+console.error('Load stats:',error);
+
 }
 
 }
 
 loadUserStats();
 
-copyCodeBtn?.addEventListener('click',async()=>{
 
-try{
-
-if(navigator.clipboard&&window.isSecureContext){
-await navigator.clipboard.writeText(userCode);
-}else{
-codeInput.select();
-document.execCommand('copy');
-}
-
-const old=copyCodeBtn.innerText;
-
-copyCodeBtn.innerText='Copied!';
-
-setTimeout(()=>{
-copyCodeBtn.innerText=old;
-},2000);
-
-}catch(err){
-alert('Could not copy code automatically.');
-}
-
-});
+/* =========================================================
+   USERNAME CHANGE
+========================================================= */
 
 openUsernameBtn?.addEventListener('click',()=>{
 
 usernameEditor.classList.toggle('active');
 
 if(usernameEditor.classList.contains('active')){
+
+newUsernameInput.value='';
+usernameMessage.textContent='';
+usernameMessage.className='editor-message';
+
 newUsernameInput.focus();
+
 }
 
 });
 
+
 saveUsernameBtn?.addEventListener('click',async()=>{
 
-const newUsername=newUsernameInput.value.trim().replace('@','');
+const newUsername=
+newUsernameInput.value
+.trim()
+.replace(/^@/,'');
 
 usernameMessage.textContent='';
 usernameMessage.className='editor-message';
 
 if(!newUsername){
+
 usernameMessage.textContent='Enter a username first.';
 usernameMessage.classList.add('error');
+
 return;
+
 }
 
 if(newUsername.length<3){
-usernameMessage.textContent='Username must be at least 3 characters.';
+
+usernameMessage.textContent=
+'Username must be at least 3 characters.';
+
 usernameMessage.classList.add('error');
+
 return;
+
 }
 
 if(!/^[a-zA-Z0-9_.-]+$/.test(newUsername)){
-usernameMessage.textContent='Use only letters, numbers, dots, dashes or underscores.';
+
+usernameMessage.textContent=
+'Use only letters, numbers, dots, dashes or underscores.';
+
 usernameMessage.classList.add('error');
+
 return;
+
 }
 
 if(newUsername.toLowerCase()===currentUser.toLowerCase()){
-usernameMessage.textContent='That is already your username.';
+
+usernameMessage.textContent=
+'That is already your username.';
+
 usernameMessage.classList.add('error');
+
 return;
+
 }
 
 saveUsernameBtn.disabled=true;
@@ -430,47 +572,101 @@ saveUsernameBtn.textContent='Saving...';
 
 try{
 
-const response=await fetch(`${API_BASE_URL}/api/users/profile`,{
+/*
+   Explicitly tell the backend which username is
+   being changed and what the new username should be.
+*/
+
+const response=await fetch(
+`${API_BASE_URL}/api/users/profile`,
+{
 method:'POST',
-headers:{'Content-Type':'application/json'},
+headers:{
+'Content-Type':'application/json'
+},
 body:JSON.stringify({
-username:currentUser,
+current_username:currentUser,
 new_username:newUsername
 })
-});
-
-if(response.ok){
-
-localStorage.setItem('retro_session',newUsername);
-localStorage.setItem('username',newUsername);
-
-usernameDisplay.textContent=newUsername;
-
-usernameMessage.textContent='Username changed successfully.';
-usernameMessage.classList.add('success');
-
-setTimeout(()=>{
-window.location.reload();
-},700);
-
-}else{
+}
+);
 
 let data={};
 
 try{
 data=await response.json();
-}catch(e){}
+}catch(error){}
 
-usernameMessage.textContent=data.error||data.message||'Could not change username.';
+if(response.ok){
+
+/*
+   Preserve the same session/account.
+   Only the username value changes.
+*/
+
+localStorage.setItem(
+'retro_session',
+newUsername
+);
+
+localStorage.setItem(
+'username',
+newUsername
+);
+
+
+/*
+   Move the locally cached profile picture to
+   the new username key so it isn't lost.
+*/
+
+const oldPfpKey=
+`retro_pfp_${currentUser.toLowerCase()}`;
+
+const newPfpKey=
+`retro_pfp_${newUsername.toLowerCase()}`;
+
+const savedPfp=
+localStorage.getItem(oldPfpKey);
+
+if(savedPfp){
+
+localStorage.setItem(newPfpKey,savedPfp);
+localStorage.removeItem(oldPfpKey);
+
+}
+
+usernameMessage.textContent=
+'Username changed successfully.';
+
+usernameMessage.classList.add('success');
+
+usernameDisplay.textContent=newUsername;
+
+setTimeout(()=>{
+
+window.location.reload();
+
+},700);
+
+}else{
+
+usernameMessage.textContent=
+data.error||
+data.message||
+'Could not change username.';
+
 usernameMessage.classList.add('error');
 
 }
 
-}catch(err){
+}catch(error){
 
-console.error(err);
+console.error('Username change:',error);
 
-usernameMessage.textContent='Something went wrong. Try again.';
+usernameMessage.textContent=
+'Something went wrong. Try again.';
+
 usernameMessage.classList.add('error');
 
 }
@@ -480,36 +676,56 @@ saveUsernameBtn.textContent='Save';
 
 });
 
-newUsernameInput?.addEventListener('keydown',e=>{
-if(e.key==='Enter'){
+
+newUsernameInput?.addEventListener('keydown',event=>{
+
+if(event.key==='Enter'){
 saveUsernameBtn.click();
 }
+
 });
+
+
+/* =========================================================
+   THEMES
+========================================================= */
 
 function updateSelectedTheme(){
 
-const currentTheme=localStorage.getItem('retro_theme')||'midnight';
+const currentTheme=
+localStorage.getItem('retro_theme')||
+'midnight';
 
 themeOptions.forEach(option=>{
+
 option.classList.toggle(
 'selected',
 option.dataset.themeChoice===currentTheme
 );
+
 });
 
 }
 
 updateSelectedTheme();
+
 
 themeOptions.forEach(option=>{
 
 option.addEventListener('click',()=>{
 
-const selectedTheme=option.dataset.themeChoice;
+const selectedTheme=
+option.dataset.themeChoice;
 
-localStorage.setItem('retro_theme',selectedTheme);
+localStorage.setItem(
+'retro_theme',
+selectedTheme
+);
 
-document.documentElement.setAttribute('data-theme',selectedTheme);
+document.documentElement.setAttribute(
+'data-theme',
+selectedTheme
+);
 
 updateSelectedTheme();
 
@@ -517,28 +733,48 @@ updateSelectedTheme();
 
 });
 
+
+/* =========================================================
+   LOG OUT
+========================================================= */
+
 logoutBtn?.addEventListener('click',()=>{
 
 localStorage.clear();
+
 window.location.href='auth.html';
 
 });
 
+
+/* =========================================================
+   DELETE ACCOUNT
+========================================================= */
+
 openDeleteModalBtn?.addEventListener('click',()=>{
+
 deleteModal.classList.add('active');
+
 });
+
 
 cancelDeleteBtn?.addEventListener('click',()=>{
+
 deleteModal.classList.remove('active');
+
 });
 
-deleteModal?.addEventListener('click',e=>{
 
-if(e.target===deleteModal){
+deleteModal?.addEventListener('click',event=>{
+
+if(event.target===deleteModal){
+
 deleteModal.classList.remove('active');
+
 }
 
 });
+
 
 confirmDeleteBtn?.addEventListener('click',async()=>{
 
@@ -547,30 +783,37 @@ confirmDeleteBtn.textContent='Deleting...';
 
 try{
 
-const response=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`,{
+const response=await fetch(
+`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`,
+{
 method:'DELETE',
-headers:{'Content-Type':'application/json'}
-});
+headers:{
+'Content-Type':'application/json'
+}
+}
+);
 
 if(response.ok||response.status===404){
 
 localStorage.clear();
+
 window.location.href='auth.html';
 
-}else{
+return;
+
+}
 
 alert('Failed to delete account. Please try again.');
 
 confirmDeleteBtn.disabled=false;
 confirmDeleteBtn.textContent='Delete';
 
-}
+}catch(error){
 
-}catch(err){
-
-console.error(err);
+console.error('Delete account:',error);
 
 localStorage.clear();
+
 window.location.href='auth.html';
 
 }
