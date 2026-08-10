@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="theme-color" content="#08080a">
-  <script src="theme.js"></script>
+<script src="theme.js"></script>
 </head>
 
 <body class="games-page">
@@ -91,55 +91,29 @@
 
 </div>
 
-<div id="game-toast" style="
-position:fixed;
-left:50%;
-bottom:28px;
-transform:translate(-50%,20px);
-background:#111114;
-color:#fff;
-padding:12px 18px;
-border:1px solid rgba(255,255,255,.12);
-border-radius:10px;
-font-size:14px;
-opacity:0;
-pointer-events:none;
-transition:all .25s ease;
-z-index:9999;
-white-space:nowrap;
-"></div>
+<div id="game-toast" class="game-toast"></div>
 
 </main>
 </div>
+
 <nav class="bottom-nav">
 <a href="index.html" class="bottom-nav-item">
-<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8 8 0 0 1-3.5-.8L4 20l1.8-4A7.5 7.5 0 1 1 20 11.5z"/>
-</svg>
-<span>Chats</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Chats</span>
 </a>
 
 <a href="groups.html" class="bottom-nav-item">
-<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<circle cx="9" cy="8" r="3"/>
-<circle cx="17" cy="9" r="2.5"/>
-<path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
-<path d="M15 15c3.3 0 5.5 2 6 5"/>
-</svg>
-<span>Groups</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span><span>Groups</span>
 </a>
 
-<a href="calls.html" class="bottom-nav-item active">
-<svg class="bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M7 4h3l1.5 4-2 1.5a12 12 0 0 0 5 5L16 12.5 20 14v3c0 1.1-.9 2-2 2C10.3 19 5 13.7 5 7c0-1.7.9-3 2-3z"/>
-</svg>
-<span>Calls</span>
+<a href="calls.html" class="bottom-nav-item">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span><span>Calls</span>
 </a>
 
-<a href="games.html" class="bottom-nav-item">
+<a href="games.html" class="bottom-nav-item active">
 <span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/></svg></span><span>Games</span>
 </a>
 </nav>
+
 <script>
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
 
@@ -149,6 +123,7 @@ let redirectingToGame=false;
 
 window.addEventListener('DOMContentLoaded',async()=>{
 const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
+
 activeUser=rawActive.trim().replace(/^@/,'');
 
 if(!activeUser){
@@ -198,7 +173,7 @@ return;
 section.style.display='block';
 
 list.innerHTML=challenges.map(challenge=>`
-<div class="opponent-card">
+<div class="opponent-card challenge-card">
 <div class="opponent-avatar">
 <span>${escapeHtml((challenge.sender||'?').charAt(0).toUpperCase())}</span>
 </div>
@@ -210,7 +185,7 @@ ${challenge.game==='tictactoe'?'Tic Tac Toe':'Chess'} challenge
 </div>
 </div>
 
-<div style="display:flex;gap:8px;align-items:center">
+<div class="challenge-actions">
 <button class="challenge-btn accept-btn" onclick="respondChallenge('${encodeURIComponent(challenge.id)}','accept')">✓</button>
 <button class="challenge-btn decline-btn" onclick="respondChallenge('${encodeURIComponent(challenge.id)}','decline')">×</button>
 </div>
@@ -239,28 +214,18 @@ return;
 const data=await response.json();
 const challenges=data.challenges||[];
 
-console.log('SENT CHALLENGES:',challenges);
-
 const accepted=challenges.find(challenge=>
 String(challenge.status||'').toLowerCase()==='accepted'&&
 String(challenge.game||'').toLowerCase()==='tictactoe'&&
 (challenge.game_id||challenge.game?.game_id)
 );
 
-if(!accepted){
-console.log('No accepted Tic Tac Toe game found yet.');
-return;
-}
+if(!accepted)return;
 
 const gameId=accepted.game_id||accepted.game?.game_id;
 const opponent=accepted.receiver;
 
-console.log('ACCEPTED GAME FOUND:',gameId,'Opponent:',opponent);
-
-if(!gameId){
-console.log('Accepted challenge has no game_id.');
-return;
-}
+if(!gameId)return;
 
 redirectingToGame=true;
 
