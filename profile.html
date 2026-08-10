@@ -8,8 +8,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#000000">
-  <script src="theme.js"></script>
+<meta name="theme-color" content="#08080a">
+<script src="theme.js"></script>
 </head>
 <body class="inbox-body">
 
@@ -17,8 +17,10 @@
 <div class="chat-header-title">Profile</div>
 </header>
 
-<main class="main-container">
-<div class="auth-card glass-panel" style="max-width:100%;">
+<main class="profile-page">
+<div class="profile-card">
+
+<section class="profile-top">
 <div class="profile-avatar-wrapper">
 <div class="profile-avatar" id="avatar-container">
 <img id="avatar-img" src="" alt="Profile Picture" style="display:none;">
@@ -29,37 +31,106 @@
 </div>
 
 <h2 id="display-username" class="profile-name">username</h2>
-<p class="profile-status">Status: Active</p>
+<p class="profile-status"><span class="status-dot"></span>Active</p>
+</section>
 
-<div class="profile-stats-grid">
-<div class="stat-card"><div class="stat-value" id="stat-chats">0</div><div class="stat-label">Active Chats</div></div>
-<div class="stat-card"><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Total Messages</div></div>
+<section class="profile-stats-grid">
+<div class="stat-card">
+<div class="stat-value" id="stat-chats">0</div>
+<div class="stat-label">Active Chats</div>
 </div>
+<div class="stat-card">
+<div class="stat-value" id="stat-messages">0</div>
+<div class="stat-label">Total Messages</div>
+</div>
+</section>
 
-<div class="link-box">
+<section class="link-box">
 <label class="link-label">Your Private Chat Code</label>
 <div class="link-input-group">
-<input type="text" id="chat-code-input" readonly class="input-field link-field code-field" value="Generating...">
-<button id="copy-code-btn" class="copy-btn">Copy Code</button>
+<input type="text" id="chat-code-input" readonly class="input-field code-field" value="Generating...">
+<button id="copy-code-btn" class="copy-btn">Copy</button>
+</div>
+</section>
+
+<section class="settings-section">
+
+<div class="section-title">Account</div>
+
+<div class="setting-card">
+<div class="setting-info">
+<div class="setting-icon">✎</div>
+<div>
+<div class="setting-title">Username</div>
+<div class="setting-description">Change the name shown on your profile</div>
+</div>
+</div>
+<button id="open-username-btn" class="setting-action">Change</button>
+</div>
+
+<div class="username-editor" id="username-editor">
+<div class="editor-title">Change Username</div>
+<div class="editor-input-row">
+<input type="text" id="new-username-input" class="input-field" placeholder="New username" maxlength="20" autocomplete="off">
+<button id="save-username-btn" class="save-btn">Save</button>
+</div>
+<p id="username-message" class="editor-message"></p>
+</div>
+
+<div class="section-title theme-title">Appearance</div>
+
+<div class="theme-card">
+<div class="setting-info">
+<div class="setting-icon">◐</div>
+<div>
+<div class="setting-title">App Theme</div>
+<div class="setting-description">Choose how Retro looks</div>
 </div>
 </div>
 
-<div class="profile-meta-box">
-<div class="meta-item"><span class="meta-label">Password</span><span class="meta-value">••••••••</span></div>
+<div class="theme-options">
+<button class="theme-option" data-theme-choice="midnight">
+<span class="theme-preview midnight-preview"></span>
+<span>Midnight</span>
+</button>
+
+<button class="theme-option" data-theme-choice="white">
+<span class="theme-preview white-preview"></span>
+<span>White</span>
+</button>
+
+<button class="theme-option" data-theme-choice="pink">
+<span class="theme-preview pink-preview"></span>
+<span>Pink</span>
+</button>
+</div>
 </div>
 
+</section>
+
+<section class="profile-meta-box">
+<div class="meta-item">
+<span class="meta-label">Password</span>
+<span class="meta-value">••••••••</span>
+</div>
+</section>
+
+<section class="account-actions">
 <button id="logout-btn" class="logout-btn">Log Out</button>
 
 <div class="danger-zone">
 <button id="open-delete-modal-btn" class="delete-btn">Delete Account</button>
 </div>
+</section>
+
 </div>
 </main>
 
 <div id="delete-modal" class="modal-overlay">
 <div class="modal-box">
-<h3 style="color:#ef4444;margin-bottom:8px;">Delete Account?</h3>
-<p style="font-size:.85rem;color:rgba(255,255,255,.7);">This action cannot be undone. Your profile and stored messages will be permanently removed.</p>
+<h3 class="delete-modal-title">Delete Account?</h3>
+<p class="delete-modal-text">This action cannot be undone. Your profile and stored messages will be permanently removed.</p>
+
 <div class="modal-actions">
 <button id="cancel-delete-btn" class="cancel-btn">Cancel</button>
 <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
@@ -68,110 +139,446 @@
 </div>
 
 <nav class="bottom-nav">
+
 <a href="index.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Chats</span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<path d="M4 5h16v11H8l-4 4V5Z"/>
+<path d="M8 9h8M8 12h5"/>
+</svg>
+</span>
+<span>Chats</span>
 </a>
+
 <a href="groups.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span><span>Groups</span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<circle cx="9" cy="8" r="3"/>
+<circle cx="17" cy="9" r="2.5"/>
+<path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/>
+</svg>
+</span>
+<span>Groups</span>
 </a>
+
 <a href="calls.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span><span>Calls</span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/>
+</svg>
+</span>
+<span>Calls</span>
 </a>
+
 <a href="profile.html" class="bottom-nav-item active">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/></svg></span><span>Profile</span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<circle cx="12" cy="8" r="3.5"/>
+<path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/>
+</svg>
+</span>
+<span>Profile</span>
 </a>
+
 </nav>
 
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
+
 const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+
 const rawUser=localStorage.getItem('retro_session')||localStorage.getItem('username');
-if(!rawUser){window.location.href='auth.html';return}
+
+if(!rawUser){
+window.location.href='auth.html';
+return;
+}
+
 const currentUser=rawUser.trim().replace('@','');
 
-const avatarImg=document.getElementById('avatar-img'),avatarLetter=document.getElementById('avatar-initial'),pfpUpload=document.getElementById('pfp-upload');
-const usernameDisplay=document.getElementById('display-username'),codeInput=document.getElementById('chat-code-input'),copyCodeBtn=document.getElementById('copy-code-btn');
-const logoutBtn=document.getElementById('logout-btn'),statChats=document.getElementById('stat-chats'),statMessages=document.getElementById('stat-messages');
-const deleteModal=document.getElementById('delete-modal'),openDeleteModalBtn=document.getElementById('open-delete-modal-btn'),cancelDeleteBtn=document.getElementById('cancel-delete-btn'),confirmDeleteBtn=document.getElementById('confirm-delete-btn');
+const avatarImg=document.getElementById('avatar-img');
+const avatarLetter=document.getElementById('avatar-initial');
+const pfpUpload=document.getElementById('pfp-upload');
+
+const usernameDisplay=document.getElementById('display-username');
+const codeInput=document.getElementById('chat-code-input');
+const copyCodeBtn=document.getElementById('copy-code-btn');
+
+const logoutBtn=document.getElementById('logout-btn');
+
+const statChats=document.getElementById('stat-chats');
+const statMessages=document.getElementById('stat-messages');
+
+const openUsernameBtn=document.getElementById('open-username-btn');
+const usernameEditor=document.getElementById('username-editor');
+const newUsernameInput=document.getElementById('new-username-input');
+const saveUsernameBtn=document.getElementById('save-username-btn');
+const usernameMessage=document.getElementById('username-message');
+
+const themeOptions=document.querySelectorAll('.theme-option');
+
+const deleteModal=document.getElementById('delete-modal');
+const openDeleteModalBtn=document.getElementById('open-delete-modal-btn');
+const cancelDeleteBtn=document.getElementById('cancel-delete-btn');
+const confirmDeleteBtn=document.getElementById('confirm-delete-btn');
 
 usernameDisplay.textContent=currentUser;
 
 async function loadSavedAvatar(){
-const key=`retro_pfp_${currentUser.toLowerCase()}`,saved=localStorage.getItem(key);
-if(saved){avatarImg.src=saved;avatarImg.style.display='block';avatarLetter.style.display='none';return}
+
+const key=`retro_pfp_${currentUser.toLowerCase()}`;
+const saved=localStorage.getItem(key);
+
+if(saved){
+avatarImg.src=saved;
+avatarImg.style.display='block';
+avatarLetter.style.display='none';
+return;
+}
+
 try{
+
 const res=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`);
+
 if(res.ok){
-const data=await res.json(),pfp=data['profile picture']||data.profile_picture||data.pfp||data.avatar;
-if(pfp){avatarImg.src=pfp;avatarImg.style.display='block';avatarLetter.style.display='none';localStorage.setItem(key,pfp);return}
+
+const data=await res.json();
+
+const pfp=data['profile picture']||data.profile_picture||data.pfp||data.avatar;
+
+if(pfp){
+avatarImg.src=pfp;
+avatarImg.style.display='block';
+avatarLetter.style.display='none';
+localStorage.setItem(key,pfp);
+return;
 }
-}catch(err){console.error(err)}
-avatarImg.style.display='none';avatarLetter.style.display='block';avatarLetter.textContent=currentUser.charAt(0).toUpperCase();
+
 }
+
+}catch(err){
+console.error(err);
+}
+
+avatarImg.style.display='none';
+avatarLetter.style.display='block';
+avatarLetter.textContent=currentUser.charAt(0).toUpperCase();
+
+}
+
 loadSavedAvatar();
 
 pfpUpload?.addEventListener('change',e=>{
-const file=e.target.files[0];if(!file)return;
+
+const file=e.target.files[0];
+
+if(!file)return;
+
 const reader=new FileReader();
+
 reader.onload=async event=>{
+
 const base64Img=event.target.result;
+
 localStorage.setItem(`retro_pfp_${currentUser.toLowerCase()}`,base64Img);
+
 loadSavedAvatar();
-try{await fetch(`${API_BASE_URL}/api/users/profile`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,profile_picture:base64Img})})}catch(err){console.error(err)}
+
+try{
+
+await fetch(`${API_BASE_URL}/api/users/profile`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username:currentUser,
+profile_picture:base64Img
+})
+});
+
+}catch(err){
+console.error(err);
+}
+
 };
+
 reader.readAsDataURL(file);
+
 });
 
 function getChatCode(user){
-let hash=0,str=user.toLowerCase()+'_retro_secret_salt';
-for(let i=0;i<str.length;i++){hash=(hash<<5)-hash+str.charCodeAt(i);hash|=0}
-return`RETRO-${Math.abs(hash).toString(36).toUpperCase().substring(0,5)}`;
+
+let hash=0;
+const str=user.toLowerCase()+'_retro_secret_salt';
+
+for(let i=0;i<str.length;i++){
+hash=(hash<<5)-hash+str.charCodeAt(i);
+hash|=0;
 }
+
+return`RETRO-${Math.abs(hash).toString(36).toUpperCase().substring(0,5)}`;
+
+}
+
 const userCode=getChatCode(currentUser);
+
 codeInput.value=userCode;
 
 async function loadUserStats(){
+
 try{
+
 const response=await fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(currentUser)}`);
+
 if(!response.ok)return;
-const messages=await response.json();if(!Array.isArray(messages))return;
-const userLower=currentUser.toLowerCase(),contacts=new Set();
+
+const messages=await response.json();
+
+if(!Array.isArray(messages))return;
+
+const userLower=currentUser.toLowerCase();
+const contacts=new Set();
+
 messages.forEach(msg=>{
+
 const sender=(msg.sender_username||msg.sender||'').trim().replace('@','').toLowerCase();
 const receiver=(msg.receiver_username||msg.receiver||'').trim().replace('@','').toLowerCase();
+
 if(sender&&sender!==userLower)contacts.add(sender);
 if(receiver&&receiver!==userLower)contacts.add(receiver);
+
 });
-statChats.textContent=contacts.size;statMessages.textContent=messages.length;
-}catch(err){console.error(err)}
+
+statChats.textContent=contacts.size;
+statMessages.textContent=messages.length;
+
+}catch(err){
+console.error(err);
 }
+
+}
+
 loadUserStats();
 
 copyCodeBtn?.addEventListener('click',async()=>{
+
 try{
-if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(userCode);
-else{codeInput.select();document.execCommand('copy')}
-const old=copyCodeBtn.innerText;copyCodeBtn.innerText='Copied!';
-setTimeout(()=>copyCodeBtn.innerText=old,2000);
-}catch(err){alert('Could not copy code automatically.')}
+
+if(navigator.clipboard&&window.isSecureContext){
+await navigator.clipboard.writeText(userCode);
+}else{
+codeInput.select();
+document.execCommand('copy');
+}
+
+const old=copyCodeBtn.innerText;
+
+copyCodeBtn.innerText='Copied!';
+
+setTimeout(()=>{
+copyCodeBtn.innerText=old;
+},2000);
+
+}catch(err){
+alert('Could not copy code automatically.');
+}
+
+});
+
+openUsernameBtn?.addEventListener('click',()=>{
+
+usernameEditor.classList.toggle('active');
+
+if(usernameEditor.classList.contains('active')){
+newUsernameInput.focus();
+}
+
+});
+
+saveUsernameBtn?.addEventListener('click',async()=>{
+
+const newUsername=newUsernameInput.value.trim().replace('@','');
+
+usernameMessage.textContent='';
+usernameMessage.className='editor-message';
+
+if(!newUsername){
+usernameMessage.textContent='Enter a username first.';
+usernameMessage.classList.add('error');
+return;
+}
+
+if(newUsername.length<3){
+usernameMessage.textContent='Username must be at least 3 characters.';
+usernameMessage.classList.add('error');
+return;
+}
+
+if(!/^[a-zA-Z0-9_.-]+$/.test(newUsername)){
+usernameMessage.textContent='Use only letters, numbers, dots, dashes or underscores.';
+usernameMessage.classList.add('error');
+return;
+}
+
+if(newUsername.toLowerCase()===currentUser.toLowerCase()){
+usernameMessage.textContent='That is already your username.';
+usernameMessage.classList.add('error');
+return;
+}
+
+saveUsernameBtn.disabled=true;
+saveUsernameBtn.textContent='Saving...';
+
+try{
+
+const response=await fetch(`${API_BASE_URL}/api/users/profile`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username:currentUser,
+new_username:newUsername
+})
+});
+
+if(response.ok){
+
+localStorage.setItem('retro_session',newUsername);
+localStorage.setItem('username',newUsername);
+
+usernameDisplay.textContent=newUsername;
+
+usernameMessage.textContent='Username changed successfully.';
+usernameMessage.classList.add('success');
+
+setTimeout(()=>{
+window.location.reload();
+},700);
+
+}else{
+
+let data={};
+
+try{
+data=await response.json();
+}catch(e){}
+
+usernameMessage.textContent=data.error||data.message||'Could not change username.';
+usernameMessage.classList.add('error');
+
+}
+
+}catch(err){
+
+console.error(err);
+
+usernameMessage.textContent='Something went wrong. Try again.';
+usernameMessage.classList.add('error');
+
+}
+
+saveUsernameBtn.disabled=false;
+saveUsernameBtn.textContent='Save';
+
+});
+
+newUsernameInput?.addEventListener('keydown',e=>{
+if(e.key==='Enter'){
+saveUsernameBtn.click();
+}
+});
+
+function updateSelectedTheme(){
+
+const currentTheme=localStorage.getItem('retro_theme')||'midnight';
+
+themeOptions.forEach(option=>{
+option.classList.toggle(
+'selected',
+option.dataset.themeChoice===currentTheme
+);
+});
+
+}
+
+updateSelectedTheme();
+
+themeOptions.forEach(option=>{
+
+option.addEventListener('click',()=>{
+
+const selectedTheme=option.dataset.themeChoice;
+
+localStorage.setItem('retro_theme',selectedTheme);
+
+document.documentElement.setAttribute('data-theme',selectedTheme);
+
+updateSelectedTheme();
+
+});
+
 });
 
 logoutBtn?.addEventListener('click',()=>{
-localStorage.clear();window.location.href='auth.html';
+
+localStorage.clear();
+window.location.href='auth.html';
+
 });
 
-openDeleteModalBtn?.addEventListener('click',()=>deleteModal.classList.add('active'));
-cancelDeleteBtn?.addEventListener('click',()=>deleteModal.classList.remove('active'));
+openDeleteModalBtn?.addEventListener('click',()=>{
+deleteModal.classList.add('active');
+});
+
+cancelDeleteBtn?.addEventListener('click',()=>{
+deleteModal.classList.remove('active');
+});
+
+deleteModal?.addEventListener('click',e=>{
+
+if(e.target===deleteModal){
+deleteModal.classList.remove('active');
+}
+
+});
 
 confirmDeleteBtn?.addEventListener('click',async()=>{
-confirmDeleteBtn.disabled=true;confirmDeleteBtn.textContent='Deleting...';
+
+confirmDeleteBtn.disabled=true;
+confirmDeleteBtn.textContent='Deleting...';
+
 try{
-const response=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`,{method:'DELETE',headers:{'Content-Type':'application/json'}});
-if(response.ok||response.status===404){localStorage.clear();window.location.href='auth.html'}
-else{alert('Failed to delete account. Please try again.');confirmDeleteBtn.disabled=false;confirmDeleteBtn.textContent='Delete'}
-}catch(err){console.error(err);localStorage.clear();window.location.href='auth.html'}
+
+const response=await fetch(`${API_BASE_URL}/api/users/${encodeURIComponent(currentUser)}`,{
+method:'DELETE',
+headers:{'Content-Type':'application/json'}
 });
+
+if(response.ok||response.status===404){
+
+localStorage.clear();
+window.location.href='auth.html';
+
+}else{
+
+alert('Failed to delete account. Please try again.');
+
+confirmDeleteBtn.disabled=false;
+confirmDeleteBtn.textContent='Delete';
+
+}
+
+}catch(err){
+
+console.error(err);
+
+localStorage.clear();
+window.location.href='auth.html';
+
+}
+
+});
+
 });
 </script>
+
 </body>
 </html>
