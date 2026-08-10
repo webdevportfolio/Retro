@@ -2,360 +2,550 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Group Chat</title>
 <link rel="stylesheet" href="groupchat.css">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.png">
 <meta name="theme-color" content="#000">
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="theme.js"></script>
 </head>
 <body>
 
-<div class="gc-app">
+<div class="chat-app">
 
-<header class="gc-header">
-<a href="groups.html" class="back-btn">← Back</a>
+<header class="chat-header">
+<button id="back-btn" class="header-btn">‹</button>
 
-<div class="gc-title-box" onclick="openGroupInfo()">
-<div class="gc-avatar" id="group-avatar">G</div>
+<div class="header-group">
+<div id="header-avatar" class="header-avatar">G</div>
 <div>
-<div id="group-name">Loading...</div>
-<div id="group-members">Group</div>
+<div id="group-name" class="header-name">Group</div>
+<div id="group-members" class="header-sub">Loading...</div>
 </div>
 </div>
 
-<button class="dots-btn" onclick="openGroupInfo()">⋮</button>
+<button id="menu-btn" class="header-btn">⋮</button>
 </header>
 
-<main id="chat-container" class="gc-messages">
-<div id="messages-list"></div>
+<main id="messages" class="messages">
+<div class="loading">Loading messages...</div>
 </main>
 
-<div id="sticker-drawer" class="sticker-drawer">
-<div class="drawer-head">
-<span>Stickers</span>
-<button onclick="toggleStickerDrawer()">✕</button>
-</div>
-<div id="sticker-grid"></div>
+<div id="image-preview-bar" class="image-preview-bar">
+<img id="image-preview" src="" alt="">
+<button id="remove-image">×</button>
 </div>
 
-<footer class="gc-input-bar">
-
-<div id="reply-preview" class="reply-preview">
-<div><b id="reply-user"></b><span id="reply-text"></span></div>
-<button onclick="cancelReply()">✕</button>
-</div>
-
-<input type="file" id="image-input" accept="image/*" hidden onchange="handleImage(event)">
-<input type="file" id="sticker-input" accept="image/*" hidden onchange="handleSticker(event)">
-
-<form id="chat-form">
-<div class="input-pill">
-<button type="button" onclick="document.getElementById('image-input').click()">📎</button>
-<button type="button" onclick="toggleStickerDrawer()">😀</button>
-<input id="message-input" placeholder="Message..." autocomplete="off">
-<button type="button" id="voice-btn" onclick="toggleVoice()">🎙️</button>
-<button type="submit" class="send-btn">➤</button>
-</div>
+<form id="message-form" class="message-form">
+<label class="attach-btn">
++
+<input id="image-input" type="file" accept="image/*">
+</label>
+<input id="message-input" type="text" placeholder="Message..." autocomplete="off" maxlength="2000">
+<button id="send-btn" type="submit">➤</button>
 </form>
-</footer>
+
 </div>
 
-<!-- GROUP INFO -->
-<div id="group-info" class="overlay" onclick="closeGroupInfo(event)">
-<div class="info-card" onclick="event.stopPropagation()">
-
-<div class="info-head">
-<button onclick="closeGroupInfo()">←</button>
-<b>Group Info</b>
-<span></span>
+<div id="menu-modal" class="overlay">
+<div class="sheet">
+<div class="sheet-title">GROUP</div>
+<button id="members-btn" class="sheet-btn">Members</button>
+<button id="add-member-btn" class="sheet-btn admin-only">Add member</button>
+<button id="delete-group-btn" class="sheet-btn danger admin-only">Delete group</button>
+<button id="leave-group-btn" class="sheet-btn danger">Leave group</button>
+<button id="close-menu" class="sheet-btn cancel">Cancel</button>
+</div>
 </div>
 
-<div class="big-avatar" id="info-avatar">G</div>
-<h2 id="info-name">Group</h2>
-<p id="info-description"></p>
-
-<div class="member-title">
+<div id="members-modal" class="overlay">
+<div class="sheet">
+<div class="sheet-head">
 <span>Members</span>
-<button id="add-member-btn" onclick="openAddMembers()">+ Add</button>
+<button id="close-members">×</button>
 </div>
-
-<div id="member-list"></div>
-
+<div id="members-list" class="members-list"></div>
 </div>
 </div>
 
-<!-- ADD MEMBERS -->
-<div id="add-members" class="overlay" onclick="closeAddMembers(event)">
-<div class="info-card" onclick="event.stopPropagation()">
-
-<div class="info-head">
-<button onclick="closeAddMembers()">←</button>
-<b>Add Members</b>
-<span></span>
+<div id="add-modal" class="overlay">
+<div class="sheet">
+<div class="sheet-head">
+<span>Add member</span>
+<button id="close-add">×</button>
 </div>
-
-<p class="subtext">Choose people from your chats.</p>
-<div id="dm-list"></div>
-
-<button class="confirm-add" onclick="addSelectedMembers()">Add Selected</button>
-
+<div id="available-list" class="members-list"></div>
 </div>
 </div>
 
-<div id="toast" class="toast"></div>
+<div id="notice-modal" class="overlay">
+<div class="notice">
+<h3 id="notice-title">RETRO</h3>
+<p id="notice-message"></p>
+<button id="notice-ok">OK</button>
+</div>
+</div>
 
 <script>
+document.addEventListener('DOMContentLoaded',()=>{
+
 const API='https://retro-backend-hnsv.onrender.com';
-const socket=typeof io==='function'?io(API):null;
+const raw=localStorage.getItem('retro_session')||localStorage.getItem('username');
 
-const raw=localStorage.getItem('retro_session')||localStorage.getItem('username')||'';
-const me=raw.trim().replace(/^@/,'');
-const id=new URLSearchParams(location.search).get('group');
-if(!me||!id)location.href='groups.html';
-  
-const list=document.getElementById('messages-list');
-const container=document.getElementById('chat-container');
-let group=null,reply=null,selectedMembers=new Set(),loading=false;
+if(!raw){
+location.href='auth.html';
+return;
+}
 
-const esc=s=>String(s||'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+const username=raw.trim().replace(/^@/,'');
+const groupId=new URLSearchParams(location.search).get('group');
 
-function toast(x){
-const t=document.getElementById('toast');
-t.textContent=x;t.classList.add('show');
-clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove('show'),2200);
+if(!groupId){
+location.href='groups.html';
+return;
+}
+
+const messages=document.getElementById('messages');
+const input=document.getElementById('message-input');
+const imageInput=document.getElementById('image-input');
+const imagePreview=document.getElementById('image-preview');
+const imagePreviewBar=document.getElementById('image-preview-bar');
+
+let group=null;
+let members=[];
+let selectedImage=null;
+
+const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+}[c]));
+
+const same=(a,b)=>(a||'').toLowerCase()===(b||'').toLowerCase();
+
+function notice(message,title='RETRO'){
+document.getElementById('notice-title').textContent=title;
+document.getElementById('notice-message').textContent=message;
+document.getElementById('notice-modal').classList.add('active');
+}
+
+document.getElementById('notice-ok').onclick=()=>{
+document.getElementById('notice-modal').classList.remove('active');
+};
+
+document.getElementById('back-btn').onclick=()=>location.href='groups.html';
+
+function avatarHTML(name,picture=''){
+return picture
+?`<img src="${esc(picture)}" alt="">`
+:`<span>${esc((name||'G').charAt(0).toUpperCase())}</span>`;
 }
 
 async function loadGroup(){
+
 try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}?user=${encodeURIComponent(me)}`);
-if(!r.ok)throw Error();
-group=await r.json();
 
-document.getElementById('group-name').textContent=group.name;
-document.getElementById('group-members').textContent=`${(group.members||[]).length} members`;
-document.getElementById('group-avatar').textContent=(group.name||'G')[0].toUpperCase();
+const r=await fetch(`${API}/api/groups/info/${encodeURIComponent(groupId)}`);
+const d=await r.json();
 
-document.getElementById('info-name').textContent=group.name;
-document.getElementById('info-description').textContent=group.description||'';
-document.getElementById('info-avatar').textContent=(group.name||'G')[0].toUpperCase();
+if(!r.ok)throw Error(d.error||'Could not load group.');
 
-renderMembers();
+group=d.group;
+members=d.members||[];
+
+if(!members.some(m=>same(m.username,username))){
+location.href='groups.html';
+return;
+}
+
+document.title=group.name||'Group';
+document.getElementById('group-name').textContent=group.name||'Group';
+document.getElementById('group-members').textContent=`${members.length} ${members.length===1?'member':'members'}`;
+document.getElementById('header-avatar').innerHTML=avatarHTML(group.name,group.profile_picture);
+
+const admin=same(group.admin_username,username);
+
+document.querySelectorAll('.admin-only').forEach(el=>{
+el.style.display=admin?'flex':'none';
+});
+
+await loadMessages();
+
 }catch(e){
-toast('Failed to load group');
+
+console.error(e);
+notice(e.message||'Could not load group.');
+
 }
-}
-
-function renderMembers(){
-const box=document.getElementById('member-list');
-const admin=(group.admin_username||group.admin||'').toLowerCase()===me.toLowerCase();
-
-document.getElementById('add-member-btn').style.display=admin?'block':'none';
-
-box.innerHTML=(group.members||[]).map(u=>{
-const isAdmin=u.toLowerCase()===(group.admin_username||group.admin||'').toLowerCase();
-return `<div class="member">
-<div class="member-avatar">${esc(u[0]?.toUpperCase()||'?')}</div>
-<div class="member-name">${esc(u)}${isAdmin?' <small>ADMIN</small>':''}</div>
-${admin&&!isAdmin?`<button class="remove-btn" onclick="removeMember('${esc(u)}')">Remove</button>`:''}
-</div>`;
-}).join('');
 }
 
 async function loadMessages(){
-if(loading)return;
-loading=true;
+
 try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/messages`);
-if(!r.ok)return;
-const msgs=await r.json();
 
-list.innerHTML=msgs.map(m=>{
-const sender=m.sender_username||m.sender||'';
-const sent=sender.toLowerCase()===me.toLowerCase();
-let c=m.content||'';
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/messages?username=${encodeURIComponent(username)}`);
+const d=await r.json();
 
-if(c.startsWith('[img]')){
-c=`<img class="msg-image" src="${esc(c.slice(5))}" onclick="viewImage(this.src)">`;
-}else if(c.startsWith('[sticker]')){
-c=`<img class="msg-sticker" src="${esc(c.slice(9))}">`;
-}else c=esc(c);
+if(!r.ok)throw Error(d.error||'Could not load messages.');
 
-return `<div class="msg ${sent?'sent':'received'}">
-${!sent?`<div class="sender">${esc(sender)}</div>`:''}
-<div class="bubble">${c}<div class="time">${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>
+const data=d.messages||[];
+
+if(!data.length){
+messages.innerHTML='<div class="empty-chat">No messages yet.<br>Start the conversation.</div>';
+return;
+}
+
+messages.innerHTML=data.map(m=>{
+
+const mine=same(m.sender_username,username);
+const sender=m.sender_username||'User';
+
+return`
+<div class="message-row ${mine?'mine':''}">
+${!mine?`<div class="message-avatar">${esc(sender.charAt(0).toUpperCase())}</div>`:''}
+<div class="message-bubble">
+${!mine?`<div class="sender">${esc(sender)}</div>`:''}
+${m.image_url?`<img class="message-image" src="${esc(m.image_url)}" alt="Image">`:''}
+${m.content?`<div class="message-text">${esc(m.content)}</div>`:''}
+<div class="message-time">${formatTime(m.created_at)}</div>
+</div>
 </div>`;
 }).join('');
 
-container.scrollTop=container.scrollHeight;
-}catch(e){}
-finally{loading=false}
+messages.scrollTop=messages.scrollHeight;
+
+}catch(e){
+
+messages.innerHTML='<div class="empty-chat">Could not load messages.</div>';
+
+}
 }
 
-document.getElementById('chat-form').onsubmit=async e=>{
-e.preventDefault();
-const input=document.getElementById('message-input');
-let text=input.value.trim();
-if(!text)return;
+function formatTime(value){
 
-if(reply){
-text=`[reply:${reply.sender}|${reply.text.slice(0,50)}] ${text}`;
-}
+if(!value)return'';
 
-try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/messages`,{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({sender:me,content:text})
+const d=new Date(value);
+
+return d.toLocaleTimeString([],{
+hour:'numeric',
+minute:'2-digit'
 });
-if(!r.ok)throw Error();
-input.value='';
-cancelReply();
-await loadMessages();
-}catch{toast('Failed to send')}
+}
+
+imageInput.onchange=()=>{
+
+const file=imageInput.files[0];
+
+if(!file)return;
+
+if(file.size>8*1024*1024){
+imageInput.value='';
+notice('Image must be smaller than 8MB.');
+return;
+}
+
+const reader=new FileReader();
+
+reader.onload=()=>{
+selectedImage=reader.result;
+imagePreview.src=selectedImage;
+imagePreviewBar.classList.add('show');
 };
 
-function openGroupInfo(){
-document.getElementById('group-info').classList.add('active');
-}
+reader.readAsDataURL(file);
+};
 
-function closeGroupInfo(e){
-if(!e||e.target.id==='group-info')document.getElementById('group-info').classList.remove('active');
-}
+document.getElementById('remove-image').onclick=()=>{
+selectedImage=null;
+imageInput.value='';
+imagePreview.src='';
+imagePreviewBar.classList.remove('show');
+};
 
-function openAddMembers(){
-selectedMembers=new Set();
-document.getElementById('add-members').classList.add('active');
-loadDMUsers();
-}
+document.getElementById('message-form').onsubmit=async e=>{
 
-function closeAddMembers(e){
-if(!e||e.target.id==='add-members')document.getElementById('add-members').classList.remove('active');
-}
+e.preventDefault();
 
-async function loadDMUsers(){
-const box=document.getElementById('dm-list');
-box.innerHTML='<div class="subtext">Loading...</div>';
+const content=input.value.trim();
 
-try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/available-members?user=${encodeURIComponent(me)}`);
-const users=await r.json();
+if(!content&&!selectedImage)return;
 
-box.innerHTML=users.map(u=>`
-<label class="dm-user">
-<input type="checkbox" value="${esc(u)}" onchange="toggleMember(this)">
-<div class="member-avatar">${esc(u[0]?.toUpperCase()||'?')}</div>
-<span>${esc(u)}</span>
-</label>`).join('')||'<div class="subtext">No available contacts.</div>';
-}catch{
-box.innerHTML='<div class="subtext">Failed to load contacts.</div>';
-}
-}
+const btn=document.getElementById('send-btn');
 
-function toggleMember(x){
-x.checked?selectedMembers.add(x.value):selectedMembers.delete(x.value);
-}
-
-async function addSelectedMembers(){
-if(!selectedMembers.size)return toast('Select someone first');
+btn.disabled=true;
 
 try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/members`,{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/messages`,{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({admin:me,members:[...selectedMembers]})
+body:JSON.stringify({
+sender_username:username,
+content,
+image_url:selectedImage
+})
 });
-if(!r.ok)throw Error();
 
-document.getElementById('add-members').classList.remove('active');
-await loadGroup();
-toast('Members added');
-}catch{toast('Failed to add members')}
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not send message.');
+
+input.value='';
+selectedImage=null;
+imageInput.value='';
+imagePreview.src='';
+imagePreviewBar.classList.remove('show');
+
+await loadMessages();
+
+}catch(e){
+
+notice(e.message||'Could not send message.');
+
+}finally{
+
+btn.disabled=false;
+input.focus();
+
 }
+};
 
-async function removeMember(username){
-if(!confirm(`Remove ${username} from this group?`))return;
+document.getElementById('menu-btn').onclick=()=>{
+document.getElementById('menu-modal').classList.add('active');
+};
+
+document.getElementById('close-menu').onclick=()=>{
+document.getElementById('menu-modal').classList.remove('active');
+};
+
+document.getElementById('members-btn').onclick=async()=>{
+document.getElementById('menu-modal').classList.remove('active');
+await loadMembers();
+document.getElementById('members-modal').classList.add('active');
+};
+
+document.getElementById('close-members').onclick=()=>{
+document.getElementById('members-modal').classList.remove('active');
+};
+
+async function loadMembers(){
+
+const list=document.getElementById('members-list');
+
+list.innerHTML='<div class="loading">Loading members...</div>';
 
 try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/members`,{
+
+const r=await fetch(`${API}/api/groups/info/${encodeURIComponent(groupId)}`);
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not load members.');
+
+members=d.members||[];
+group=d.group;
+
+const admin=same(group.admin_username,username);
+
+list.innerHTML=members.map(m=>{
+
+const isAdmin=same(m.username,group.admin_username);
+const canRemove=admin&&!isAdmin&&!same(m.username,username);
+
+return`
+<div class="member-row">
+<div class="member-avatar">${esc(m.username.charAt(0).toUpperCase())}</div>
+<div class="member-details">
+<div>${esc(m.username)}</div>
+<div class="member-role">${isAdmin?'Admin':'Member'}</div>
+</div>
+${canRemove?`<button class="remove-member" data-user="${esc(m.username)}">Remove</button>`:''}
+</div>`;
+
+}).join('');
+
+list.querySelectorAll('.remove-member').forEach(btn=>{
+btn.onclick=()=>removeMember(btn.dataset.user);
+});
+
+document.getElementById('group-members').textContent=`${members.length} ${members.length===1?'member':'members'}`;
+
+}catch(e){
+
+list.innerHTML='<div class="loading">Could not load members.</div>';
+
+}
+}
+
+document.getElementById('add-member-btn').onclick=async()=>{
+document.getElementById('menu-modal').classList.remove('active');
+await loadAvailableMembers();
+document.getElementById('add-modal').classList.add('active');
+};
+
+document.getElementById('close-add').onclick=()=>{
+document.getElementById('add-modal').classList.remove('active');
+};
+
+async function loadAvailableMembers(){
+
+const list=document.getElementById('available-list');
+
+list.innerHTML='<div class="loading">Loading contacts...</div>';
+
+try{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/available-members/${encodeURIComponent(username)}`);
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not load contacts.');
+
+const users=d.users||[];
+
+if(!users.length){
+list.innerHTML='<div class="loading">No available DM contacts.</div>';
+return;
+}
+
+list.innerHTML=users.map(user=>`
+<button class="available-member" data-user="${esc(user)}">
+<div class="member-avatar">${esc(user.charAt(0).toUpperCase())}</div>
+<span>${esc(user)}</span>
+<span class="add-symbol">+</span>
+</button>
+`).join('');
+
+list.querySelectorAll('.available-member').forEach(btn=>{
+btn.onclick=()=>addMember(btn.dataset.user);
+});
+
+}catch(e){
+
+list.innerHTML='<div class="loading">Could not load contacts.</div>';
+
+}
+}
+
+async function addMember(member){
+
+try{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/members`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+admin_username:username,
+member_username:member
+})
+});
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not add member.');
+
+document.getElementById('add-modal').classList.remove('active');
+
+await loadGroup();
+
+notice(`${member} was added to the group.`);
+
+}catch(e){
+
+notice(e.message||'Could not add member.');
+
+}
+}
+
+async function removeMember(member){
+
+if(!confirm(`Remove ${member} from this group?`))return;
+
+try{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(member)}`,{
 method:'DELETE',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({admin:me,username})
+body:JSON.stringify({
+admin_username:username
+})
 });
-if(!r.ok)throw Error();
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not remove member.');
+
 await loadGroup();
-toast('Member removed');
-}catch{toast('Failed to remove member')}
+await loadMembers();
+
+}catch(e){
+
+notice(e.message||'Could not remove member.');
+
+}
 }
 
-function cancelReply(){
-reply=null;
-document.getElementById('reply-preview').classList.remove('active');
-}
+document.getElementById('delete-group-btn').onclick=async()=>{
 
-function toggleStickerDrawer(){
-document.getElementById('sticker-drawer').classList.toggle('active');
-renderStickers();
-}
+if(!confirm('Delete this group permanently?'))return;
 
-function renderStickers(){
-const s=JSON.parse(localStorage.getItem('retro_stickers')||'[]');
-document.getElementById('sticker-grid').innerHTML=s.map(x=>
-`<img src="${esc(x)}" onclick="sendSticker('${esc(x)}')">`
-).join('')+`<button onclick="document.getElementById('sticker-input').click()">+</button>`;
-}
-
-async function sendSticker(x){
-toggleStickerDrawer();
-await sendContent('[sticker]'+x);
-}
-
-async function sendContent(content){
 try{
-const r=await fetch(`${API}/api/groups/${encodeURIComponent(id)}/messages`,{
-method:'POST',headers:{'Content-Type':'application/json'},
-body:JSON.stringify({sender:me,content})
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}`,{
+method:'DELETE',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({username})
 });
-if(!r.ok)throw Error();
-await loadMessages();
-}catch{toast('Failed to send')}
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not delete group.');
+
+location.href='groups.html';
+
+}catch(e){
+
+notice(e.message||'Could not delete group.');
+
+}
+};
+
+document.getElementById('leave-group-btn').onclick=async()=>{
+
+if(same(group?.admin_username,username)){
+notice('The admin cannot leave the group. Delete the group instead.');
+return;
 }
 
-function handleImage(e){
-const f=e.target.files[0];
-if(!f)return;
-const r=new FileReader();
-r.onload=()=>sendContent('[img]'+r.result);
-r.readAsDataURL(f);
-e.target.value='';
-}
+if(!confirm('Leave this group?'))return;
 
-function handleSticker(e){
-const f=e.target.files[0];
-if(!f)return;
-const r=new FileReader();
-r.onload=ev=>sendContent('[sticker]'+ev.target.result);
-r.readAsDataURL(f);
-e.target.value='';
-}
+try{
 
-function viewImage(src){
-window.open(src,'_blank');
-}
-
-if(socket){
-socket.on('connect',()=>{
-socket.emit('register_user',me);
-socket.emit('join_group',{group_id:id,username:me});
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(groupId)}/leave`,{
+method:'DELETE',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({username})
 });
-socket.on('group_message',loadMessages);
+
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Could not leave group.');
+
+location.href='groups.html';
+
+}catch(e){
+
+notice(e.message||'Could not leave group.');
+
 }
+};
 
 loadGroup();
-loadMessages();
-setInterval(()=>document.visibilityState==='visible'&&loadMessages(),5000);
+
+setInterval(()=>{
+if(document.visibilityState==='visible')loadMessages();
+},3000);
+
+});
 </script>
+
 </body>
-  </html>
+</html>
