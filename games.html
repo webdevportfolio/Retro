@@ -3,423 +3,365 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Games</title>
-<link rel="stylesheet" href="games.css">
+<title>Groups</title>
+<link rel="stylesheet" href="groups.css">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon.png">
+<link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#08080a">
+<meta name="theme-color" content="#000">
 <script src="theme.js"></script>
 </head>
+<body class="groups-page">
 
-<body class="games-page">
+<div class="groups-app-wrapper">
 
-<div class="games-app">
-
-<header class="games-header">
-<a href="index.html" class="games-back">←</a>
-<div class="games-brand">RETRO</div>
-<div class="games-header-spacer"></div>
+<header class="groups-header">
+<div class="groups-title">GROUPS</div>
+<button id="header-create-btn" class="groups-add-btn">+</button>
 </header>
 
-<main class="games-main">
-
-<div id="game-selection">
-
-<section class="games-intro">
-<div class="games-label">RETRO GAMES</div>
-<h1>Play with your friends.</h1>
-</section>
-
-<section class="games-section" id="challenge-section" style="display:none">
-<div class="games-section-title">GAME CHALLENGES</div>
-<div id="challenge-list"></div>
-</section>
-
-<section class="games-section">
-<div class="games-section-title">CHOOSE A GAME</div>
-
-<div class="game-card" onclick="selectGame('tictactoe')">
-<div class="game-icon tic-icon">×<span>○</span></div>
-<div class="game-info">
-<h2>Tic Tac Toe</h2>
-<p>Quick. Simple. Competitive.</p>
-</div>
-<div class="game-arrow">→</div>
-</div>
-
-<div class="game-card" onclick="selectGame('chess')">
-<div class="game-icon chess-icon">♟</div>
-<div class="game-info">
-<h2>Chess</h2>
-<p>Think ahead. Make your move.</p>
-</div>
-<div class="game-arrow">→</div>
-</div>
-
-</section>
-
-<section class="games-footer-message">
-<div class="footer-line"></div>
-<span>YOU CAN ONLY PLAY WITH PEOPLE IN YOUR DMS</span>
-<div class="footer-line"></div>
-</section>
-
-</div>
-
-<div id="opponent-selection" style="display:none">
-
-<section class="games-intro">
-<div class="games-label" id="selected-game-label">TIC TAC TOE</div>
-<h1>Choose your opponent.</h1>
-</section>
-
-<section class="games-section">
-<div class="games-section-title">YOUR DMS</div>
-
-<div id="opponent-list">
-<div class="games-loading">Loading...</div>
-</div>
-
-</section>
-
-<section class="games-footer-message">
-<div class="footer-line"></div>
-<span>YOU CAN ONLY PLAY WITH PEOPLE IN YOUR DMS</span>
-<div class="footer-line"></div>
-</section>
-
-</div>
-
-<div id="game-toast" class="game-toast"></div>
-
+<main class="groups-content">
+<div class="groups-section-label">YOUR GROUPS</div>
+<div id="groups-list" class="groups-list"></div>
 </main>
+
+</div>
+
+<div id="create-group-modal" class="groups-modal-overlay">
+<div class="groups-modal create-modal">
+
+<h2>Create Group</h2>
+
+<label class="group-photo-picker">
+<img id="group-photo-preview" src="" alt="">
+<span id="group-photo-plus">+</span>
+<input id="group-photo-input" type="file" accept="image/*">
+</label>
+
+<div class="group-photo-label">Add group photo</div>
+
+<input id="group-name-input" class="group-input" type="text" placeholder="Group name..." maxlength="30" autocomplete="off">
+
+<textarea id="group-description-input" class="group-input group-textarea" placeholder="Group description (optional)..." maxlength="100"></textarea>
+
+<div class="members-heading">
+<span>MEMBERS</span>
+<span id="selected-count">0 selected</span>
+</div>
+
+<div id="create-members-list" class="create-members-list">
+<div class="members-loading">Loading contacts...</div>
+</div>
+
+<div class="groups-modal-actions">
+<button id="close-group-modal" class="groups-cancel-btn">Cancel</button>
+<button id="create-group-btn" class="groups-create-btn">Create Group</button>
+</div>
+
+</div>
+</div>
+
+<div id="notice-modal" class="groups-modal-overlay">
+<div class="groups-modal notice-modal">
+<h2 id="notice-title">RETRO</h2>
+<p id="notice-message"></p>
+<button id="notice-ok" class="groups-create-btn">OK</button>
+</div>
 </div>
 
 <nav class="bottom-nav">
+
 <a href="index.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Chats</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span>
+<span>Chats</span>
 </a>
 
-<a href="groups.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span><span>Groups</span>
+<a href="groups.html" class="bottom-nav-item active">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span>
+<span>Groups</span>
+<span id="groups-nav-badge" class="nav-badge"></span>
 </a>
 
 <a href="calls.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span><span>Calls</span>
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span>
+<span>Calls</span>
 </a>
 
-<a href="games.html" class="bottom-nav-item active">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/></svg></span><span>Games</span>
+<a href="games.html" class="bottom-nav-item">
+<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/></svg></span>
+<span>Games</span>
 </a>
+
 </nav>
 
 <script>
-const API_BASE_URL='https://retro-backend-hnsv.onrender.com';
+document.addEventListener('DOMContentLoaded',()=>{
 
-let activeUser='';
-let selectedGame='';
-let redirectingToGame=false;
+const API='https://retro-backend-hnsv.onrender.com';
+const raw=localStorage.getItem('retro_session')||localStorage.getItem('username');
 
-window.addEventListener('DOMContentLoaded',async()=>{
-const rawActive=localStorage.getItem('username')||localStorage.getItem('retro_session')||'';
-
-activeUser=rawActive.trim().replace(/^@/,'');
-
-if(!activeUser){
-window.location.href='auth.html';
+if(!raw){
+location.href='auth.html';
 return;
 }
 
-await loadChallenges();
-await checkAcceptedGames();
+const username=raw.trim().replace(/^@/,'');
+const list=document.getElementById('groups-list');
+const modal=document.getElementById('create-group-modal');
+const nameInput=document.getElementById('group-name-input');
+const descriptionInput=document.getElementById('group-description-input');
+const photoInput=document.getElementById('group-photo-input');
+const photoPreview=document.getElementById('group-photo-preview');
+const photoPlus=document.getElementById('group-photo-plus');
+const membersList=document.getElementById('create-members-list');
+const selectedCount=document.getElementById('selected-count');
+const notice=document.getElementById('notice-modal');
 
-setInterval(loadChallenges,5000);
-setInterval(checkAcceptedGames,1500);
-});
+let selectedMembers=new Set();
+let groupPhoto=null;
 
-function selectGame(game){
-selectedGame=game;
+const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+}[c]));
 
-document.getElementById('game-selection').style.display='none';
-document.getElementById('opponent-selection').style.display='block';
-
-document.getElementById('selected-game-label').textContent=
-game==='chess'?'CHESS':'TIC TAC TOE';
-
-loadOpponents();
+function showNotice(message,title='RETRO'){
+document.getElementById('notice-title').textContent=title;
+document.getElementById('notice-message').textContent=message;
+notice.classList.add('active');
 }
 
-async function loadChallenges(){
+document.getElementById('notice-ok').onclick=()=>notice.classList.remove('active');
+
+async function loadCreateMembers(){
+
+membersList.innerHTML='<div class="members-loading">Loading contacts...</div>';
+
 try{
-const response=await fetch(
-`${API_BASE_URL}/api/games/challenges/${encodeURIComponent(activeUser)}?t=${Date.now()}`
-);
 
-if(!response.ok)return;
+const r=await fetch(`${API}/api/groups/available-members/${encodeURIComponent(username)}`);
+const d=await r.json();
 
-const data=await response.json();
-const challenges=data.challenges||[];
+if(!r.ok)throw Error(d.error||'Failed to load contacts.');
 
-const section=document.getElementById('challenge-section');
-const list=document.getElementById('challenge-list');
+const users=Array.isArray(d.users)?d.users:[];
 
-if(!challenges.length){
-section.style.display='none';
-list.innerHTML='';
+if(!users.length){
+membersList.innerHTML='<div class="no-members">No DM contacts yet.</div>';
 return;
 }
 
-section.style.display='block';
-
-list.innerHTML=challenges.map(challenge=>`
-<div class="opponent-card challenge-card">
-<div class="opponent-avatar">
-<span>${escapeHtml((challenge.sender||'?').charAt(0).toUpperCase())}</span>
-</div>
-
-<div class="opponent-info">
-<div class="opponent-name">${escapeHtml(challenge.sender)}</div>
-<div class="opponent-preview">
-${challenge.game==='tictactoe'?'Tic Tac Toe':'Chess'} challenge
-</div>
-</div>
-
-<div class="challenge-actions">
-<button class="challenge-btn accept-btn" onclick="respondChallenge('${encodeURIComponent(challenge.id)}','accept')">✓</button>
-<button class="challenge-btn decline-btn" onclick="respondChallenge('${encodeURIComponent(challenge.id)}','decline')">×</button>
-</div>
-</div>
+membersList.innerHTML=users.map(user=>`
+<label class="member-option">
+<input type="checkbox" value="${esc(user)}">
+<span class="member-avatar">${esc(user.charAt(0).toUpperCase())}</span>
+<span class="member-name">${esc(user)}</span>
+<span class="member-check"></span>
+</label>
 `).join('');
 
-}catch(error){
-console.error('Challenge loading error:',error);
+membersList.querySelectorAll('input').forEach(input=>{
+input.onchange=()=>{
+if(input.checked)selectedMembers.add(input.value);
+else selectedMembers.delete(input.value);
+selectedCount.textContent=`${selectedMembers.size} selected`;
+};
+});
+
+}catch(e){
+
+membersList.innerHTML='<div class="no-members">Could not load your DM contacts.</div>';
 }
 }
 
-async function checkAcceptedGames(){
-if(!activeUser||redirectingToGame)return;
+function openModal(){
+modal.classList.add('active');
+selectedMembers=new Set();
+selectedCount.textContent='0 selected';
+groupPhoto=null;
+photoInput.value='';
+photoPreview.src='';
+photoPreview.style.display='none';
+photoPlus.style.display='flex';
+loadCreateMembers();
+setTimeout(()=>nameInput.focus(),100);
+}
 
-try{
-const response=await fetch(
-`${API_BASE_URL}/api/games/challenges/sent/${encodeURIComponent(activeUser)}?t=${Date.now()}`,
-{cache:'no-store'}
-);
+function closeModal(){
+modal.classList.remove('active');
+nameInput.value='';
+descriptionInput.value='';
+photoInput.value='';
+groupPhoto=null;
+selectedMembers=new Set();
+photoPreview.src='';
+photoPreview.style.display='none';
+photoPlus.style.display='flex';
+}
 
-if(!response.ok){
-console.log('Sent challenges request failed:',response.status);
+document.getElementById('header-create-btn').onclick=openModal;
+document.getElementById('close-group-modal').onclick=closeModal;
+
+modal.onclick=e=>{
+if(e.target===modal)closeModal();
+};
+
+photoInput.onchange=()=>{
+const file=photoInput.files[0];
+if(!file)return;
+
+if(file.size>5*1024*1024){
+photoInput.value='';
+showNotice('Group photo must be smaller than 5MB.');
 return;
 }
 
-const data=await response.json();
-const challenges=data.challenges||[];
+const reader=new FileReader();
 
-const accepted=challenges.find(challenge=>
-String(challenge.status||'').toLowerCase()==='accepted'&&
-String(challenge.game||'').toLowerCase()==='tictactoe'&&
-(challenge.game_id||challenge.game?.game_id)
-);
+reader.onload=()=>{
+groupPhoto=reader.result;
+photoPreview.src=groupPhoto;
+photoPreview.style.display='block';
+photoPlus.style.display='none';
+};
 
-if(!accepted)return;
+reader.readAsDataURL(file);
+};
 
-const gameId=accepted.game_id||accepted.game?.game_id;
-const opponent=accepted.receiver;
+window.openGroup=id=>{
+location.href=`groupchat.html?group=${encodeURIComponent(id)}`;
+};
 
-if(!gameId)return;
+async function loadGroups(){
 
-redirectingToGame=true;
+list.innerHTML='<div class="groups-loading">Loading groups...</div>';
 
-window.location.href=
-`tictactoe.html?game=${encodeURIComponent(gameId)}&opponent=${encodeURIComponent(opponent)}`;
-
-}catch(error){
-console.error('Accepted game check error:',error);
-}
-}
-
-async function respondChallenge(id,action){
 try{
-const response=await fetch(
-`${API_BASE_URL}/api/games/challenges/${id}/respond`,
-{
+
+const r=await fetch(`${API}/api/groups/${encodeURIComponent(username)}`);
+const d=await r.json();
+
+if(!r.ok)throw Error(d.error||'Failed to load groups.');
+
+const groups=Array.isArray(d)?d:(d.groups||[]);
+
+if(!groups.length){
+
+list.innerHTML=`
+<div class="groups-empty-state">
+<div class="groups-empty-icon">+</div>
+<h3>No groups yet</h3>
+<p>Create a group and start chatting with multiple people.</p>
+<button id="empty-create-btn" class="create-group-empty-btn">Create Group</button>
+</div>`;
+
+document.getElementById('empty-create-btn').onclick=openModal;
+updateBadge(0);
+return;
+}
+
+list.innerHTML=groups.map(g=>{
+
+const name=g.name||'Group';
+const members=Number(g.member_count||g.members_count||0);
+const last=g.last_message||g.last_message_content||'No messages yet';
+
+const avatar=g.profile_picture
+?`<img src="${esc(g.profile_picture)}" alt="">`
+:`<span>${esc(name.charAt(0).toUpperCase())}</span>`;
+
+return`
+<div class="group-card" onclick="openGroup('${esc(g.id)}')">
+<div class="group-avatar">${avatar}</div>
+<div class="group-info">
+<div class="group-name">${esc(name)}</div>
+<div class="group-last">${esc(last)}</div>
+</div>
+<div class="group-right">
+<div class="group-members">${members} ${members===1?'member':'members'}</div>
+</div>
+</div>`;
+}).join('');
+
+updateBadge(0);
+
+}catch(e){
+
+console.error(e);
+
+list.innerHTML=`
+<div class="groups-empty-state">
+<div class="groups-empty-icon">!</div>
+<h3>Couldn't load groups</h3>
+<p>Check your connection and try again.</p>
+<button id="retry-groups" class="create-group-empty-btn">Retry</button>
+</div>`;
+
+document.getElementById('retry-groups').onclick=loadGroups;
+}
+}
+
+function updateBadge(n){
+const b=document.getElementById('groups-nav-badge');
+b.textContent=n>99?'99+':n||'';
+b.classList.toggle('show',n>0);
+}
+
+document.getElementById('create-group-btn').onclick=async()=>{
+
+const name=nameInput.value.trim();
+const description=descriptionInput.value.trim();
+
+if(!name){
+showNotice('Enter a group name first.');
+return;
+}
+
+const btn=document.getElementById('create-group-btn');
+btn.disabled=true;
+btn.textContent='Creating...';
+
+try{
+
+const r=await fetch(`${API}/api/groups`,{
 method:'POST',
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
-username:activeUser,
-action
+name,
+description,
+admin_username:username,
+members:[...selectedMembers],
+profile_picture:groupPhoto
 })
 });
 
-const data=await response.json();
+const d=await r.json();
 
-if(!response.ok){
-showToast(data.error||'Failed to respond to challenge.');
-return;
+if(!r.ok)throw Error(d.error||'Could not create group.');
+
+if(!d.group?.id)throw Error('Group was created but no group ID was returned.');
+
+closeModal();
+location.href=`groupchat.html?group=${encodeURIComponent(d.group.id)}`;
+
+}catch(e){
+
+showNotice(e.message||'Could not create group.');
+
+}finally{
+
+btn.disabled=false;
+btn.textContent='Create Group';
+
 }
+};
 
-if(action==='accept'){
-const challenge=data.challenge;
-const game=data.game;
+loadGroups();
 
-if(challenge.game==='tictactoe'&&game){
-window.location.href=
-`tictactoe.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(challenge.sender)}`;
-return;
-}
+setInterval(()=>{
+if(document.visibilityState==='visible')loadGroups();
+},5000);
 
-if(challenge.game==='chess'){
-if(game){
-window.location.href=
-`chess.html?game=${encodeURIComponent(game.game_id)}&opponent=${encodeURIComponent(challenge.sender)}`;
-}else{
-showToast('Chess game support is not ready yet.');
-}
-return;
-}
-}
-
-await loadChallenges();
-
-}catch(error){
-console.error('Challenge response error:',error);
-showToast('Unable to respond to challenge.');
-}
-}
-
-async function loadOpponents(){
-const list=document.getElementById('opponent-list');
-
-list.innerHTML='<div class="games-loading">Loading...</div>';
-
-try{
-const response=await fetch(
-`${API_BASE_URL}/api/conversations?username=${encodeURIComponent(activeUser)}`
-);
-
-if(!response.ok)throw new Error('Failed to load conversations');
-
-const data=await response.json();
-const conversations=data.conversations||[];
-
-if(!conversations.length){
-list.innerHTML='<div class="games-empty">No friends in DM</div>';
-return;
-}
-
-const opponentData=await Promise.all(
-conversations.map(async conv=>{
-const username=conv.other_user;
-let pfp='';
-
-try{
-const userRes=await fetch(
-`${API_BASE_URL}/api/users/${encodeURIComponent(username)}?t=${Date.now()}`
-);
-
-if(userRes.ok){
-const userData=await userRes.json();
-
-pfp=
-userData.profile_picture||
-userData.pfpUrl||
-userData.photoURL||
-userData.pfp||
-'';
-}
-}catch(err){
-console.error('Avatar error:',err);
-}
-
-return{username,pfp};
-})
-);
-
-list.innerHTML=opponentData.map(user=>`
-<div class="opponent-card" onclick="startGame('${encodeURIComponent(user.username)}')">
-
-<div class="opponent-avatar">
-${
-user.pfp
-?`<img src="${escapeAttribute(user.pfp)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span style="display:none">${escapeHtml(user.username.charAt(0).toUpperCase())}</span>`
-:`<span>${escapeHtml(user.username.charAt(0).toUpperCase())}</span>`
-}
-</div>
-
-<div class="opponent-info">
-<div class="opponent-name">${escapeHtml(user.username)}</div>
-<div class="opponent-preview">Tap to challenge</div>
-</div>
-
-<div class="opponent-arrow">→</div>
-
-</div>
-`).join('');
-
-}catch(error){
-console.error('Opponent loading error:',error);
-list.innerHTML='<div class="games-empty">No friends in DM</div>';
-}
-}
-
-async function startGame(encodedUsername){
-const username=decodeURIComponent(encodedUsername);
-
-if(!selectedGame||!username)return;
-
-try{
-const response=await fetch(`${API_BASE_URL}/api/games/challenge`,{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-sender:activeUser,
-receiver:username,
-game:selectedGame
-})
 });
-
-const data=await response.json();
-
-if(!response.ok){
-showToast(data.error||'Failed to send challenge.');
-return;
-}
-
-showToast(`Challenge sent to ${username}`);
-
-}catch(error){
-console.error('Send challenge error:',error);
-showToast('Unable to send challenge.');
-}
-}
-
-function showToast(message){
-const toast=document.getElementById('game-toast');
-
-toast.textContent=message;
-toast.style.opacity='1';
-toast.style.transform='translate(-50%,0)';
-
-clearTimeout(window.gameToastTimer);
-
-window.gameToastTimer=setTimeout(()=>{
-toast.style.opacity='0';
-toast.style.transform='translate(-50%,20px)';
-},2500);
-}
-
-function escapeHtml(text){
-return String(text||'').replace(/[&<>"']/g,char=>({
-'&':'&amp;',
-'<':'&lt;',
-'>':'&gt;',
-'"':'&quot;',
-"'":'&#039;'
-}[char]));
-}
-
-function escapeAttribute(text){
-return String(text||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-}
 </script>
 
 </body>
