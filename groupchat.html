@@ -111,10 +111,11 @@
 const API='https://retro-backend-hnsv.onrender.com';
 const socket=typeof io==='function'?io(API):null;
 
-const me=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
+const raw=localStorage.getItem('retro_session')||localStorage.getItem('username')||'';
+const me=raw.trim().replace(/^@/,'');
 const id=new URLSearchParams(location.search).get('group');
 if(!me||!id)location.href='groups.html';
-
+  
 const list=document.getElementById('messages-list');
 const container=document.getElementById('chat-container');
 let group=null,reply=null,selectedMembers=new Set(),loading=false;
