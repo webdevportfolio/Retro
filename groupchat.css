@@ -134,7 +134,7 @@ button,input{font:inherit}button{cursor:pointer}
 .notice-box p{font-size:.78rem;color:var(--sub);line-height:1.5;margin-bottom:16px}
 .notice-box button{width:100%;border:0;background:var(--accent);color:#fff;border-radius:9px;padding:11px;font-weight:700}
 
-@media(max-width:420px){
+
 /* GROUP INFO — FULL PAGE */
 .settings-page{position:fixed;inset:0;z-index:3000;background:var(--bg);display:flex;align-items:stretch;justify-content:stretch;padding:0;opacity:0;pointer-events:none;transition:opacity .2s}
 
@@ -204,23 +204,4 @@ button,input{font:inherit}button{cursor:pointer}
 
 .modal-leave-btn{width:100%;margin:20px 0 5px;background:rgba(239,68,68,.08);color:#ef4444;border:1px solid rgba(239,68,68,.18);border-radius:13px;padding:14px;font-weight:700;font-size:.88rem}
 
-/* MOBILE */
-@media(max-width:600px){
-.profile-modal-head{height:60px;min-height:60px;padding:0 12px}
 
-.profile-modal-content{padding:0 14px 30px}
-
-.group-profile{padding:30px 0 25px}
-
-.profile-avatar-wrap,
-.settings-avatar{width:100px;height:100px}
-
-.settings-group-name{font-size:1.3rem}
-}
-
-/* DESKTOP */
-@media(min-width:700px){
-.profile-modal-content{padding-left:max(24px,calc((100% - 700px)/2));padding-right:max(24px,calc((100% - 700px)/2))}
-
-.profile-modal-head{padding-left:max(18px,calc((100% - 700px)/2));padding-right:max(18px,calc((100% - 700px)/2))}
-                  }
