@@ -17,7 +17,7 @@
 
 <header class="groups-header">
 <div class="groups-title">GROUPS</div>
-<button id="header-create-btn" class="groups-add-btn">+</button>
+<button id="header-create-btn" class="groups-add-btn" aria-label="Create group">+</button>
 </header>
 
 <main class="groups-content">
@@ -27,49 +27,99 @@
 
 </div>
 
-<div id="create-group-modal" class="groups-modal-overlay">
-<div class="groups-modal">
-<h2>Create Group</h2>
+<!-- CREATE GROUP PAGE -->
+<div id="create-group-page" class="create-group-page">
 
+<header class="create-group-header">
+<button id="close-group-modal" class="create-back-btn">‹</button>
+<div class="create-page-title">Create Group</div>
+<div class="create-header-spacer"></div>
+</header>
 
-<input id="group-name-input" class="group-input" type="text" placeholder="Group name..." maxlength="30" autocomplete="off">
-<textarea id="group-description-input" class="group-input group-textarea" placeholder="Group description (optional)..." maxlength="100"></textarea>
+<main class="create-group-content">
 
-<div class="groups-modal-actions">
-<button id="close-group-modal" class="groups-cancel-btn">Cancel</button>
+<div class="create-group-hero">
+<div class="create-group-icon">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+<circle cx="9" cy="8" r="3"/>
+<circle cx="17" cy="9" r="2.5"/>
+<path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6"/>
+<path d="M14 15c3-.5 5.5 1.2 6.5 5"/>
+</svg>
+</div>
+<h1>New group</h1>
+<p>Create a group and start chatting with multiple people.</p>
+</div>
+
+<div class="create-form">
+
+<label class="create-field">
+<span>Group name</span>
+<input id="group-name-input" class="group-input" type="text" placeholder="Enter group name..." maxlength="30" autocomplete="off">
+</label>
+
+<label class="create-field">
+<span>Description <small>Optional</small></span>
+<textarea id="group-description-input" class="group-input group-textarea" placeholder="What is this group about?" maxlength="100"></textarea>
+</label>
+
 <button id="create-group-btn" class="groups-create-btn">Create Group</button>
-</div>
-</div>
+
 </div>
 
-<div id="notice-modal" class="groups-modal-overlay">
-<div class="groups-modal notice-modal">
+</main>
+</div>
+
+<!-- NOTICE -->
+<div id="notice-modal" class="notice-overlay">
+<div class="notice-box">
+<div class="notice-icon">!</div>
 <h2 id="notice-title">RETRO</h2>
 <p id="notice-message"></p>
-<button id="notice-ok" class="groups-create-btn">OK</button>
+<button id="notice-ok" class="notice-ok">OK</button>
 </div>
 </div>
 
 <nav class="bottom-nav">
 
 <a href="index.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<path d="M4 5h16v11H8l-4 4V5Z"/>
+<path d="M8 9h8M8 12h5"/>
+</svg>
+</span>
 <span>Chats</span>
 </a>
 
 <a href="groups.html" class="bottom-nav-item active">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/></svg></span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<circle cx="9" cy="8" r="3"/>
+<circle cx="17" cy="9" r="2.5"/>
+<path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c3-.5 5.5 1.2 6.5 5"/>
+</svg>
+</span>
 <span>Groups</span>
 <span id="groups-nav-badge" class="nav-badge"></span>
 </a>
 
 <a href="calls.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/></svg></span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<path d="M7 4l3 3-2 2c1.2 2.5 3.5 4.8 6 6l2-2 3 3-1.5 2c-.5.7-1.4 1-2.2.8C9.5 17.5 6.5 14.5 5.2 8.7 5 7.9 5.3 7 6 6.5L7 4Z"/>
+</svg>
+</span>
 <span>Calls</span>
 </a>
 
 <a href="games.html" class="bottom-nav-item">
-<span class="bottom-nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/><path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/></svg></span>
+<span class="bottom-nav-icon">
+<svg viewBox="0 0 24 24">
+<path d="M6.5 8h11c2.2 0 3.7 1.6 4 3.7l.5 3.8c.3 2.1-1.3 3.5-3 2.5l-3.2-2H8.2l-3.2 2c-1.7 1-3.3-.4-3-2.5l.5-3.8C2.8 9.6 4.3 8 6.5 8Z"/>
+<path d="M7 11v4M5 13h4M16.5 12.5h.01M19 14.5h.01"/>
+</svg>
+</span>
 <span>Games</span>
 </a>
 
@@ -88,13 +138,17 @@ return;
 
 const username=raw.trim().replace(/^@/,'');
 const list=document.getElementById('groups-list');
-const modal=document.getElementById('create-group-modal');
+const createPage=document.getElementById('create-group-page');
 const nameInput=document.getElementById('group-name-input');
 const descriptionInput=document.getElementById('group-description-input');
 const notice=document.getElementById('notice-modal');
 
 const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({
-'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#039;'
 }[c]));
 
 function showNotice(message,title='RETRO'){
@@ -103,25 +157,29 @@ document.getElementById('notice-message').textContent=message;
 notice.classList.add('active');
 }
 
-document.getElementById('notice-ok').onclick=()=>notice.classList.remove('active');
+document.getElementById('notice-ok').onclick=()=>{
+notice.classList.remove('active');
+};
 
 function openModal(){
-modal.classList.add('active');
-setTimeout(()=>nameInput.focus(),100);
+createPage.classList.add('show');
+document.body.classList.add('create-open');
+
+setTimeout(()=>{
+nameInput.focus();
+},150);
 }
 
 function closeModal(){
-modal.classList.remove('active');
+createPage.classList.remove('show');
+document.body.classList.remove('create-open');
+
 nameInput.value='';
 descriptionInput.value='';
 }
 
 document.getElementById('header-create-btn').onclick=openModal;
 document.getElementById('close-group-modal').onclick=closeModal;
-
-modal.onclick=e=>{
-if(e.target===modal)closeModal();
-};
 
 window.openGroup=id=>{
 location.href=`groupchat.html?group=${encodeURIComponent(id)}`;
@@ -142,6 +200,7 @@ const groups=Array.isArray(d)?d:(d.groups||[]);
 let totalUnread=0;
 
 if(!groups.length){
+
 list.innerHTML=`
 <div class="groups-empty-state">
 <div class="groups-empty-icon">+</div>
@@ -149,6 +208,7 @@ list.innerHTML=`
 <p>Create a group and start chatting with multiple people.</p>
 <button id="empty-create-btn" class="create-group-empty-btn">Create Group</button>
 </div>`;
+
 document.getElementById('empty-create-btn').onclick=openModal;
 updateBadge(0);
 return;
@@ -165,14 +225,26 @@ const last=g.last_message||g.last_message_content||'No messages yet';
 
 return`
 <div class="group-card" onclick="openGroup('${esc(g.id)}')">
-<div class="group-avatar">${esc(name.charAt(0).toUpperCase())}</div>
+
+<div class="group-avatar">
+${esc(name.charAt(0).toUpperCase())}
+</div>
+
 <div class="group-info">
 <div class="group-name">${esc(name)}</div>
 <div class="group-last">${esc(last)}</div>
 </div>
+
 <div class="group-right">
-<div class="group-members">${members} ${members===1?'member':'members'}</div>
-${unread?`<div class="group-unread">${unread>99?'99+':unread}</div>`:''}
+<div class="group-members">
+${members} ${members===1?'member':'members'}
+</div>
+
+${unread?`
+<div class="group-unread">
+${unread>99?'99+':unread}
+</div>`:''}
+
 </div>
 </div>`;
 }).join('');
@@ -196,7 +268,9 @@ document.getElementById('retry-groups').onclick=loadGroups;
 }
 
 function updateBadge(n){
+
 const b=document.getElementById('groups-nav-badge');
+
 b.textContent=n>99?'99+':n||'';
 b.classList.toggle('show',n>0);
 }
@@ -208,10 +282,12 @@ const description=descriptionInput.value.trim();
 
 if(!name){
 showNotice('Enter a group name first.');
+nameInput.focus();
 return;
 }
 
 const btn=document.getElementById('create-group-btn');
+
 btn.disabled=true;
 btn.textContent='Creating...';
 
@@ -231,23 +307,44 @@ const d=await r.json();
 
 if(!r.ok)throw Error(d.error||'Could not create group.');
 
-if(!d.group?.id)throw Error('Group was created but no group ID was returned.');
+if(!d.group?.id){
+throw Error('Group was created but no group ID was returned.');
+}
 
 closeModal();
+
 location.href=`groupchat.html?group=${encodeURIComponent(d.group.id)}`;
 
 }catch(e){
+
 showNotice(e.message||'Could not create group.');
+
 }finally{
+
 btn.disabled=false;
 btn.textContent='Create Group';
+
 }
 };
+
+nameInput.addEventListener('keydown',e=>{
+if(e.key==='Enter'){
+e.preventDefault();
+descriptionInput.focus();
+}
+});
 
 loadGroups();
 
 setInterval(()=>{
-if(document.visibilityState==='visible')loadGroups();
+
+if(
+document.visibilityState==='visible' &&
+!createPage.classList.contains('show')
+){
+loadGroups();
+}
+
 },5000);
 
 });
