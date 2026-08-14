@@ -11,7 +11,7 @@
     },
     {
       "src": "icon512.png",
-      "sizes": "1080x2340",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
@@ -26,7 +26,7 @@
     },
     {
       "src": "screenshot2.jpg",
-      "sizes": "709x1536",
+      "sizes": "1080x2340",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Retro Chats"
