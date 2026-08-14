@@ -1,21 +1,24 @@
 {
   "short_name": "Retro",
   "name": "Retro Chat App",
+  "description":"Retro - Chat and connect with friends",
+  
   "icons": [
     {
-      "src": "icon.png",
+      "src": "Retro/icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/Retro/icon.png",
+      "src": "/Retro/icon512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "index.html",
+  "start_url": "/Retro/index.html",
   "scope": "/Retro/",
+  "id": "/Retro/",
   "categories": ["social", "communication"],
   "background_color": "#000",
   "theme_color": "#000",
