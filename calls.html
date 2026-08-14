@@ -194,6 +194,11 @@ function closeCallNotice(){
 const notice=document.getElementById('call-notice');
 if(notice)notice.classList.remove('active');
 }
+  
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
 </script>
 
 </body>
