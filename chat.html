@@ -655,6 +655,11 @@ if(document.visibilityState==='visible')loadChat()
 setInterval(()=>{
 if(document.visibilityState==='visible')loadTargetUserProfile()
 },10000);
+  
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
 </script>
 </body>
   </html>
