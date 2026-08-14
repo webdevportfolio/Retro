@@ -1,8 +1,7 @@
 {
   "short_name": "Retro",
   "name": "Retro Chat App",
-  "description":"Retro - Chat and connect with friends",
-  
+  "description": "Retro - Chat and connect with friends",
   "icons": [
     {
       "src": "icon.png",
@@ -16,28 +15,28 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": "Retro/index.html",
-  "scope": "/Retro/",
-  "id": "/Retro/",
+  "screenshots": [
+    {
+      "src": "screenshot1.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Retro Chat App"
+    },
+    {
+      "src": "screenshot2.jpg",
+      "sizes": "1920x1080",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Retro Chat App on desktop"
+    }
+  ],
+  "start_url": "index.html",
+  "scope": "./",
+  "id": "./",
   "categories": ["social", "communication"],
   "background_color": "#000",
   "theme_color": "#000",
   "display": "standalone",
   "orientation": "portrait"
 }
-"screenshots": [
-  {
-    "src": "screenshot1.jpg",
-    "sizes": "1080x1920",
-    "type": "image/png",
-    "form_factor": "narrow",
-    "label": "Retro Chat App"
-  },
-  {
-    "src": "screenshot2.jpg",
-    "sizes": "1920x1080",
-    "type": "image/png",
-    "form_factor": "wide",
-    "label": "Retro Chat App on desktop"
-  }
-],
