@@ -275,6 +275,9 @@ console.error('Rematch error:',err);
 restartBtn.disabled=false;
 restartBtn.textContent='New Game';
 });
+  if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+  }
   </script>
 
 </body>
