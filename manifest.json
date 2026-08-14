@@ -1,23 +1,24 @@
 {
   "short_name": "Retro",
-  "name": "Retro",
+  "name": "Retro Chat App",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "/Retro/icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon.png",
+      "src": "/Retro/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "./index.html",
-  "scope": "./",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "start_url": "/Retro/index.html",
+  "scope": "/Retro/",
+  "categories": ["social", "communication"],
+  "background_color": "#000",
+  "theme_color": "#000",
   "display": "standalone",
   "orientation": "portrait"
 }
