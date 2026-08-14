@@ -25,3 +25,19 @@
   "display": "standalone",
   "orientation": "portrait"
 }
+"screenshots": [
+  {
+    "src": "screenshot1.jpg",
+    "sizes": "1080x1920",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "Retro Chat App"
+  },
+  {
+    "src": "screenshot2.jpg",
+    "sizes": "1920x1080",
+    "type": "image/png",
+    "form_factor": "wide",
+    "label": "Retro Chat App on desktop"
+  }
+],
