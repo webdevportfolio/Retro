@@ -16,7 +16,7 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": "index.html",
+  "start_url": "Retro/index.html",
   "scope": "/Retro/",
   "id": "/Retro/",
   "categories": ["social", "communication"],
