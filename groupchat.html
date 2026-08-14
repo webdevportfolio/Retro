@@ -526,6 +526,9 @@ if(document.visibilityState==='visible'&&!$('settings-page').classList.contains(
 },3000);
 
 });
+  if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+  }
 </script>
 </body>
 </html>
