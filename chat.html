@@ -4,162 +4,61 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Chat</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#000">
-<link rel="stylesheet" href="chat.css">
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="theme.js"></script>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.png"><link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#000"><link rel="stylesheet" href="chat.css">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script><script src="theme.js"></script>
 </head>
 <body>
-
 <div class="chat-app-container">
-
 <header class="nav-bar">
-<a href="index.html" class="nav-btn">← Back</a>
-
+<a href="index.html" class="nav-btn back-btn">‹</a>
 <div class="chat-header-user" onclick="openAvatarView()">
-<div class="chat-header-avatar-wrapper">
-<div class="chat-header-avatar" id="header-avatar-container">
-<img id="header-avatar-img" src="" style="display:none">
-<span id="header-avatar-initial">?</span>
+<div class="chat-header-avatar-wrapper"><div class="chat-header-avatar" id="header-avatar-container"><img id="header-avatar-img" src="" style="display:none"><span id="header-avatar-initial">?</span></div><div class="online-dot" id="online-dot" style="display:none"></div></div>
+<div><div id="chat-with-user" class="chat-header-title">Loading...</div><div id="typing-indicator" class="typing-indicator"></div></div>
 </div>
-<div class="online-dot" id="online-dot" style="display:none"></div>
-</div>
-<div>
-<div id="chat-with-user" class="chat-header-title">Loading...</div>
-<div id="typing-indicator" class="typing-indicator"></div>
-</div>
-</div>
-
 <div class="header-actions">
-<button class="call-btn" onclick="showCallUnavailable()" aria-label="Call">
-<svg viewBox="0 0 24 24">
-<path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.56.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.56 1 1 0 0 1-.24 1.02z"/>
-</svg>
-</button>
+<button class="call-btn" onclick="showCallUnavailable()" aria-label="Call"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.56.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.56 1 1 0 0 1-.24 1.02z"/></svg></button>
 <button class="three-dots-btn" onclick="openAvatarView()">⋮</button>
 </div>
 </header>
 
-<main class="chat-container" id="chat-container">
-<div id="messages-list" class="messages-list"></div>
-</main>
+<main class="chat-container" id="chat-container"><div id="messages-list" class="messages-list"></div></main>
 
 <div id="sticker-drawer" class="sticker-drawer">
-<div class="sticker-drawer-header">
-<span>Your Stickers (<span id="sticker-count">0</span>/10)</span>
-<button class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button>
-</div>
+<div class="sticker-drawer-header"><span>Your Stickers (<span id="sticker-count">0</span>/10)</span><button class="close-reply-btn" onclick="toggleStickerDrawer()">✕</button></div>
 <div class="sticker-grid" id="sticker-grid"></div>
 </div>
 
 <footer class="chat-input-bar">
-<div id="reply-preview-bar" class="reply-preview-bar" style="display:none">
-<div>
-<div id="reply-user-label" class="reply-preview-user">Replying to</div>
-<div id="reply-text-label" class="reply-preview-content"></div>
-</div>
-<button class="close-reply-btn" onclick="cancelReply()">✕</button>
-</div>
-
+<div id="reply-preview-bar" class="reply-preview-bar" style="display:none"><div><div id="reply-user-label" class="reply-preview-user">Replying to</div><div id="reply-text-label" class="reply-preview-content"></div></div><button class="close-reply-btn" onclick="cancelReply()">✕</button></div>
 <input type="file" id="image-file-input" accept="image/*" style="display:none" onchange="handleImageSelected(event)">
 <input type="file" id="sticker-file-input" accept="image/*" style="display:none" onchange="handleStickerSelected(event)">
-
-<form id="chat-form">
-<div class="pill-input-container">
+<form id="chat-form"><div class="pill-input-container">
 <button type="button" class="pill-btn" onclick="document.getElementById('image-file-input').click()">📎</button>
 <button type="button" class="pill-btn" onclick="toggleStickerDrawer()">😀</button>
-
 <input type="text" id="message-input" class="pill-input" placeholder="Message..." autocomplete="off">
-
-<div id="recording-bar" class="recording-bar" style="display:none">
-<button type="button" class="cancel-rec-btn" onclick="cancelVoiceRecording(event)">✕</button>
-<span class="recording-dot"></span>
-<span class="recording-label">Recording...</span>
-<span id="recording-timer" class="recording-timer">0:00</span>
-</div>
-
+<div id="recording-bar" class="recording-bar" style="display:none"><button type="button" class="cancel-rec-btn" onclick="cancelVoiceRecording(event)">✕</button><span class="recording-dot"></span><span class="recording-label">Recording...</span><span id="recording-timer" class="recording-timer">0:00</span></div>
 <button type="button" id="vn-btn" class="pill-btn vn-btn" onclick="toggleVoiceRecording()">🎙️</button>
-
-<button type="submit" id="send-btn" class="circular-send-btn">
-<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-</button>
-</div>
-</form>
+<button type="submit" id="send-btn" class="circular-send-btn"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+</div></form>
 </footer>
 </div>
 
-<!-- CALL UNAVAILABLE MODAL -->
-<div id="call-modal" class="call-modal-overlay">
-<div class="call-modal-card">
-<div class="call-modal-icon">
-<svg viewBox="0 0 24 24">
-<path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.56.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.56 1 1 0 0 1-.24 1.02z"/>
-</svg>
-</div>
-<div class="call-modal-title">Calls aren't available yet</div>
-<div class="call-modal-desc">We're still working on calls. Try again later.</div>
-<button onclick="closeCallModal()">Okay</button>
-</div>
-</div>
+<div id="call-modal" class="call-modal-overlay"><div class="call-modal-card"><div class="call-modal-icon"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.56.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.56 1 1 0 0 1-.24 1.02z"/></svg></div><div class="call-modal-title">Calls aren't available yet</div><div class="call-modal-desc">We're still working on calls. Try again later.</div><button onclick="closeCallModal()">Okay</button></div></div>
 
-<!-- IMAGE PREVIEW -->
-<div id="image-preview-modal" class="image-preview-modal" style="display:none">
-<div class="image-preview-card" id="image-preview-card">
-<div class="image-view-header">
-<button id="image-view-back" class="nav-btn" onclick="closeImagePreview()" style="display:none">← Back</button>
-</div>
-<div class="image-preview-container" id="image-preview-container">
-<img id="image-preview-elem" src="">
-</div>
-<div id="preview-modal-actions" class="image-preview-actions">
-<button class="nav-btn" onclick="closeImagePreview()">Cancel</button>
-<button id="image-send-btn" class="send-btn" onclick="sendSelectedImage()">Send Image</button>
-</div>
-</div>
-</div>
+<div id="image-preview-modal" class="image-preview-modal" style="display:none"><div class="image-preview-card" id="image-preview-card"><div class="image-view-header"><button id="image-view-back" class="nav-btn" onclick="closeImagePreview()" style="display:none">‹</button></div><div class="image-preview-container" id="image-preview-container"><img id="image-preview-elem" src=""></div><div id="preview-modal-actions" class="image-preview-actions"><button class="nav-btn" onclick="closeImagePreview()">Cancel</button><button id="image-send-btn" class="send-btn" onclick="sendSelectedImage()">Send Image</button></div></div></div>
 
-<!-- PROFILE -->
 <div id="partner-profile-sheet" class="partner-profile-sheet">
 <div id="partner-profile-card" class="partner-profile-card">
-<div class="sheet-header">
-<button class="nav-btn" onclick="closeAvatarView()">← Back</button>
-<div class="sheet-title">Profile</div>
-<div style="width:32px"></div>
-</div>
-<div class="sheet-avatar-wrapper">
-<div class="sheet-avatar">
-<img id="sheet-avatar-img" src="" style="display:none">
-<span id="sheet-avatar-initial">?</span>
-</div>
-</div>
+<div class="sheet-header"><button class="nav-btn" onclick="closeAvatarView()">‹ Back</button><div class="sheet-title">Profile</div><div class="profile-head-dot" id="sheet-online-dot"></div></div>
+<div class="sheet-avatar-wrapper"><div class="sheet-avatar"><img id="sheet-avatar-img" src="" style="display:none"><span id="sheet-avatar-initial">?</span></div></div>
 <div id="sheet-username" class="sheet-username">User</div>
-<div class="sheet-code-container">
-<div class="sheet-code-label">PRIVATE CHAT CODE</div>
-<div class="sheet-code-box">
-<input id="sheet-chat-code" readonly value="Generating...">
-<button id="sheet-copy-btn" onclick="copyPartnerCode()">Copy Code</button>
-</div>
-</div>
+<div id="sheet-status" class="sheet-status">Offline</div>
+<div class="profile-info-card"><div class="sheet-code-label">PRIVATE CHAT CODE</div><div class="sheet-code-box"><input id="sheet-chat-code" readonly value="Generating..."><button id="sheet-copy-btn" onclick="copyPartnerCode()">Copy</button></div></div>
 <button class="sheet-clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
-</div>
-</div>
+</div></div>
 
-<!-- CLEAR CHAT MODAL -->
-<div id="clear-chat-modal" class="confirm-modal-overlay">
-<div class="confirm-modal-card">
-<div class="confirm-modal-icon">⚠️</div>
-<div class="confirm-modal-title">Clear Chat?</div>
-<div class="confirm-modal-desc" id="confirm-modal-desc">This will permanently delete all messages for both sides.</div>
-<div class="confirm-modal-actions">
-<button type="button" class="confirm-modal-btn cancel" onclick="closeClearModal()">Cancel</button>
-<button type="button" class="confirm-modal-btn delete" onclick="executeClearCurrentChat()">Delete</button>
-</div>
-</div>
-</div>
-
+<div id="clear-chat-modal" class="confirm-modal-overlay"><div class="confirm-modal-card"><div class="confirm-modal-icon">⚠️</div><div class="confirm-modal-title">Clear Chat?</div><div class="confirm-modal-desc" id="confirm-modal-desc">This will permanently delete all messages for both sides.</div><div class="confirm-modal-actions"><button type="button" class="confirm-modal-btn cancel" onclick="closeClearModal()">Cancel</button><button type="button" class="confirm-modal-btn delete" onclick="executeClearCurrentChat()">Delete</button></div></div></div>
 <div id="demure-toast" class="demure-toast"></div>
 
 <script>
@@ -168,15 +67,10 @@ const esc=s=>s?String(s).replace(/[&<>'"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt
 let reply=null,scrolling=false,lastCount=0,pfp=null,loading=false,selectedImage=null;
 const me=(localStorage.getItem('username')||localStorage.getItem('retro_session')||'').trim().replace('@','');
 const params=new URLSearchParams(location.search),target=(params.get('user')||params.get('username')||params.get('u')||'').trim().replace('@','');
-
 if(!me)location.href='auth.html';
 if(!target||target.toLowerCase()===me.toLowerCase())location.href='index.html';
-
 const title=document.getElementById('chat-with-user'),avatar=document.getElementById('header-avatar-img'),initial=document.getElementById('header-avatar-initial'),container=document.getElementById('chat-container'),list=document.getElementById('messages-list'),form=document.getElementById('chat-form');
-
-title.textContent=target;
-initial.textContent=target[0]?.toUpperCase()||'?';
-
+title.textContent=target;initial.textContent=target[0]?.toUpperCase()||'?';
 const cached=localStorage.getItem(`retro_pfp_${target.toLowerCase()}`);
 if(cached){avatar.src=cached;avatar.style.display='block';initial.style.display='none';pfp=cached}
 loadTargetUserProfile();
@@ -184,482 +78,58 @@ loadTargetUserProfile();
 function showCallUnavailable(){document.getElementById('call-modal').classList.add('active')}
 function closeCallModal(){document.getElementById('call-modal').classList.remove('active')}
 document.getElementById('call-modal').onclick=e=>{if(e.target.id==='call-modal')closeCallModal()};
-
-function applyAvatar(img,ini,url,name){
-if(!img||!ini)return;
-if(url){
-img.onerror=()=>{img.style.display='none';ini.style.display='block';ini.textContent=name?.[0]?.toUpperCase()||'?';};
-img.src=url;img.style.display='block';ini.style.display='none';
-}else{img.style.display='none';ini.style.display='block';ini.textContent=name?.[0]?.toUpperCase()||'?'}
-}
-
-async function loadTargetUserProfile(){
-try{
-const r=await fetch(`${API}/api/users/${encodeURIComponent(target)}?t=${Date.now()}`);
-if(!r.ok)return;
-const d=await r.json(),url=d.pfpUrl||d.profile_picture||d.photoURL||d.pfp||d.avatar||d.image;
-if(url&&url!==pfp){
-pfp=url;
-applyAvatar(avatar,initial,url,target);
-applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),url,target);
-localStorage.setItem(`retro_pfp_${target.toLowerCase()}`,url)
-}
-}catch{}
-}
-
-if(socket){
-socket.on('connect',()=>{socket.emit('register_user',me);socket.emit('join_room',{sender:me,receiver:target});socket.emit('check_online',target)});
-socket.on('receive_message',loadChat);
-socket.on('user_typing',d=>{if(d.sender?.toLowerCase()===target.toLowerCase())document.getElementById('typing-indicator').textContent=d.isTyping?`${target} is typing...`:''});
-socket.on('online_status',d=>{if(d.username?.toLowerCase()===target.toLowerCase())updateOnline(d.online)});
-socket.on('user_presence',d=>{if(d.username?.toLowerCase()===target.toLowerCase())updateOnline(d.online)});
-}
-
-function updateOnline(x){document.getElementById('online-dot').style.display=x?'block':'none'}
+function applyAvatar(img,ini,url,name){if(!img||!ini)return;if(url){img.onerror=()=>{img.style.display='none';ini.style.display='block';ini.textContent=name?.[0]?.toUpperCase()||'?'};img.src=url;img.style.display='block';ini.style.display='none'}else{img.style.display='none';ini.style.display='block';ini.textContent=name?.[0]?.toUpperCase()||'?'}}
+async function loadTargetUserProfile(){try{const r=await fetch(`${API}/api/users/${encodeURIComponent(target)}?t=${Date.now()}`);if(!r.ok)return;const d=await r.json(),url=d.pfpUrl||d.profile_picture||d.photoURL||d.pfp||d.avatar||d.image;if(url&&url!==pfp){pfp=url;applyAvatar(avatar,initial,url,target);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),url,target);localStorage.setItem(`retro_pfp_${target.toLowerCase()}`,url)}}catch{}}
+if(socket){socket.on('connect',()=>{socket.emit('register_user',me);socket.emit('join_room',{sender:me,receiver:target});socket.emit('check_online',target)});socket.on('receive_message',loadChat);socket.on('user_typing',d=>{if(d.sender?.toLowerCase()===target.toLowerCase())document.getElementById('typing-indicator').textContent=d.isTyping?`${target} is typing...`:''});socket.on('online_status',d=>{if(d.username?.toLowerCase()===target.toLowerCase())updateOnline(d.online)});socket.on('user_presence',d=>{if(d.username?.toLowerCase()===target.toLowerCase())updateOnline(d.online)})}
+function updateOnline(x){document.getElementById('online-dot').style.display=x?'block':'none';document.getElementById('sheet-online-dot').classList.toggle('online',!!x);document.getElementById('sheet-status').textContent=x?'Online':'Offline'}
 function toast(x){const t=document.getElementById('demure-toast');t.textContent=x;t.classList.add('show');clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove('show'),2400)}
 function formatSnippet(c){if(!c)return'';if(c.startsWith('[audio]'))return'🎤 Voice note';if(c.startsWith('[sticker]')||c.startsWith('data:image/'))return'🎨 Sticker';if(c.startsWith('[img]'))return'🖼 Image';return c}
 function audioTime(s){s=Math.floor(s)||0;return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`}
-
-function parseReply(c){
-if(!c?.startsWith('[reply:'))return null;
-const m=c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);
-if(!m)return null;
-let r=m[2];
-if(r.startsWith('[audio]')||r.includes('data:audio/'))r='🎤 Voice note';
-else if(r.startsWith('[sticker]')||r.includes('data:image/'))r='🎨 Sticker';
-else if(r.startsWith('[img]'))r='🖼 Image';
-return{replyUser:m[1],replySnippet:r,messageText:m[3]}
-}
-
-function buildPayloadWithReply(content){
-if(!reply)return content;
-let snippet=reply.text;
-if(snippet==='🎨 Sticker'||snippet.startsWith('[sticker]'))snippet='🎨 Sticker';
-else if(snippet==='🖼 Image'||snippet.startsWith('[img]'))snippet='🖼 Image';
-else if(snippet==='🎤 Voice note'||snippet.startsWith('[audio]'))snippet='🎤 Voice note';
-else snippet=snippet.slice(0,40).replace(/[|\]]/g,' ');
-return`[reply:${reply.sender}|${snippet}] ${content}`;
-}
-
-async function loadChat(){
-const isAudioPlaying=Array.from(document.querySelectorAll('audio')).some(a=>!a.paused);
-if(loading||isAudioPlaying)return;
-loading=true;
-try{
-const r=await fetch(`${API}/api/messages/${encodeURIComponent(me)}`);
-if(!r.ok)return;
-const all=await r.json(),a=me.toLowerCase(),t=target.toLowerCase(),now=Date.now();
-const msgs=all.filter(m=>{
-const s=(m.sender_username||m.sender||'').toLowerCase(),q=(m.receiver_username||m.receiver||'').toLowerCase();
-return((s===a&&q===t)||(s===t&&q===a))&&(!m.expires_at||new Date(m.expires_at)>now)
-}).sort((x,y)=>new Date(x.created_at)-new Date(y.created_at));
-
-lastCount=msgs.length;
-
-if(!msgs.length){
-list.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">No messages yet. Say hi!</div>';
-return
-}
-
-const readAt=new Date(localStorage.getItem(`read_${t}`)||0);
-
-list.innerHTML=msgs.map(m=>{
-const s=(m.sender_username||m.sender||'').trim(),sent=s.toLowerCase()===a,time=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read=m.is_read||new Date(m.created_at)<=readAt;
-let c=m.content||'',q='',p=parseReply(c);
-
-if(p){
-q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${esc(p.replyUser)}</div><div>${esc(p.replySnippet)}</div></div>`;
-c=p.messageText
-}
-
-let out='';
-
-if(c.startsWith('[sticker]')||c.startsWith('data:image/')){
-const d=c.startsWith('[sticker]')?c.slice(9):c,id='stk_'+Math.random().toString(36).slice(2,8);
-out=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${esc(d)}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${esc(d)}')">Add to stickerpack</div></div>`
-}
-else if(c.startsWith('[img]')){
-const d=esc(c.slice(5));
-out=`<img src="${d}" class="msg-image" onclick="openChatImageViewer('${d}')" loading="lazy">`
-}
-else if(c.startsWith('[audio]')){
-const id=`vn_${m.id||Math.random().toString(36).slice(2,8)}`;
-out=`<div class="custom-audio-player" id="player_${id}"><button class="play-btn" onclick="toggleCustomAudio('${id}')">▶</button><div class="audio-track"><div id="progress_${id}" class="audio-progress"></div></div><span id="time_${id}" class="audio-time">0:00</span><audio id="${id}" src="${esc(c.slice(7))}" onloadedmetadata="initAudioDuration('${id}')" ontimeupdate="updateAudioProgress('${id}')" onended="resetAudioPlayer('${id}')"></audio></div>`
-}
-else out=esc(c);
-
-return`<div class="message-wrapper ${sent?'sent':'received'}" data-sender="${esc(s)}" data-content="${esc(m.content||'')}"><div class="message-bubble">${q}<div class="message-text">${out}</div><div class="message-meta"><span>${time}</span>${sent?`<span class="read-status ${read?'read':''}">${read?'✓✓':'✓'}</span>`:''}</div></div></div>`
-}).join('');
-
-attachSwipe();
-
-const last=[...msgs].reverse().find(m=>(m.sender_username||m.sender||'').toLowerCase()===t);
-
-if(last){
-localStorage.setItem(`read_${t}`,last.created_at);
-fetch(`${API}/api/messages/${encodeURIComponent(me)}/mark-read`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({other_user:target})}).catch(()=>{})
-}
-
-if(!scrolling)setTimeout(()=>container.scrollTop=container.scrollHeight,30)
-}catch(e){console.error(e)}
-finally{loading=false}
-}
-
-function attachSwipe(){
-document.querySelectorAll('.message-wrapper').forEach(w=>{
-let sx=0,cx=0;
-w.ontouchstart=e=>{sx=e.touches[0].clientX;w.style.transition='none'};
-w.ontouchmove=e=>{cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};
-w.ontouchend=()=>{
-w.style.transition='.2s';
-if(cx>50){
-let c=w.dataset.content,s=w.dataset.sender,p=parseReply(c);
-if(p)c=p.messageText;
-triggerReply(s,c)
-}
-w.style.transform='translateX(0)';
-cx=0
-}
-})
-}
-
-function triggerReply(sender,text){
-let d=formatSnippet(text||'');
-reply={sender,text:d};
-document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;
-document.getElementById('reply-text-label').textContent=d;
-document.getElementById('reply-preview-bar').style.display='flex';
-document.getElementById('message-input').focus()
-}
-
-function cancelReply(){
-reply=null;
-document.getElementById('reply-preview-bar').style.display='none'
-}
-
-form.onsubmit=async e=>{
-e.preventDefault();
-const i=document.getElementById('message-input'),b=document.getElementById('send-btn');
-let c=i.value.trim();
-if(!c)return;
-c=buildPayloadWithReply(c);
-b.disabled=true;
-try{await post(c);i.value='';cancelReply()}catch{toast('Failed to send message')}
-b.disabled=false
-};
-
-let typingTimer;
-
-document.getElementById('message-input').oninput=()=>{
-if(socket)socket.emit('typing',{sender:me,receiver:target,isTyping:true});
-clearTimeout(typingTimer);
-typingTimer=setTimeout(()=>socket?.emit('typing',{sender:me,receiver:target,isTyping:false}),2000)
-};
-
+function parseReply(c){if(!c?.startsWith('[reply:'))return null;const m=c.match(/^\[reply:([^|\]]+)\|([\s\S]*?)\]\s?([\s\S]*)$/);if(!m)return null;let r=m[2];if(r.startsWith('[audio]')||r.includes('data:audio/'))r='🎤 Voice note';else if(r.startsWith('[sticker]')||r.includes('data:image/'))r='🎨 Sticker';else if(r.startsWith('[img]'))r='🖼 Image';return{replyUser:m[1],replySnippet:r,messageText:m[3]}}
+function buildPayloadWithReply(content){if(!reply)return content;let snippet=reply.text;if(snippet==='🎨 Sticker'||snippet.startsWith('[sticker]'))snippet='🎨 Sticker';else if(snippet==='🖼 Image'||snippet.startsWith('[img]'))snippet='🖼 Image';else if(snippet==='🎤 Voice note'||snippet.startsWith('[audio]'))snippet='🎤 Voice note';else snippet=snippet.slice(0,40).replace(/[|\]]/g,' ');return`[reply:${reply.sender}|${snippet}] ${content}`}
+async function loadChat(){const isAudioPlaying=Array.from(document.querySelectorAll('audio')).some(a=>!a.paused);if(loading||isAudioPlaying)return;loading=true;try{const r=await fetch(`${API}/api/messages/${encodeURIComponent(me)}`);if(!r.ok)return;const all=await r.json(),a=me.toLowerCase(),t=target.toLowerCase(),now=Date.now();const msgs=all.filter(m=>{const s=(m.sender_username||m.sender||'').toLowerCase(),q=(m.receiver_username||m.receiver||'').toLowerCase();return((s===a&&q===t)||(s===t&&q===a))&&(!m.expires_at||new Date(m.expires_at)>now)}).sort((x,y)=>new Date(x.created_at)-new Date(y.created_at));lastCount=msgs.length;if(!msgs.length){list.innerHTML='<div class="empty-chat">No messages yet. Say hi!</div>';return}const readAt=new Date(localStorage.getItem(`read_${t}`)||0);list.innerHTML=msgs.map(m=>{const s=(m.sender_username||m.sender||'').trim(),sent=s.toLowerCase()===a,time=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read=m.is_read||new Date(m.created_at)<=readAt;let c=m.content||'',q='',p=parseReply(c);if(p){q=`<div class="quoted-reply-box"><div class="quoted-reply-user">${esc(p.replyUser)}</div><div>${esc(p.replySnippet)}</div></div>`;c=p.messageText}let out='';if(c.startsWith('[sticker]')||c.startsWith('data:image/')){const d=c.startsWith('[sticker]')?c.slice(9):c,id='stk_'+Math.random().toString(36).slice(2,8);out=`<div class="sticker-wrapper-container" onclick="toggleStickerSaveTooltip(event,'${id}')"><img src="${esc(d)}" class="msg-sticker"><div id="${id}" class="add-to-pack-tooltip" onclick="saveStickerToDrawer(event,'${esc(d)}')">Add to stickerpack</div></div>`}else if(c.startsWith('[img]')){const d=esc(c.slice(5));out=`<img src="${d}" class="msg-image" onclick="openChatImageViewer('${d}')" loading="lazy">`}else if(c.startsWith('[audio]')){const id=`vn_${m.id||Math.random().toString(36).slice(2,8)}`;out=`<div class="custom-audio-player" id="player_${id}"><button class="play-btn" onclick="toggleCustomAudio('${id}')">▶</button><div class="audio-track"><div id="progress_${id}" class="audio-progress"></div></div><span id="time_${id}" class="audio-time">0:00</span><audio id="${id}" src="${esc(c.slice(7))}" onloadedmetadata="initAudioDuration('${id}')" ontimeupdate="updateAudioProgress('${id}')" onended="resetAudioPlayer('${id}')"></audio></div>`}else out=esc(c);return`<div class="message-wrapper ${sent?'sent':'received'}" data-sender="${esc(s)}" data-content="${esc(m.content||'')}"><div class="message-bubble">${q}<div class="message-text">${out}</div><div class="message-meta"><span>${time}</span>${sent?`<span class="read-status ${read?'read':''}">${read?'✓✓':'✓'}</span>`:''}</div></div></div>`}).join('');attachSwipe();const last=[...msgs].reverse().find(m=>(m.sender_username||m.sender||'').toLowerCase()===t);if(last){localStorage.setItem(`read_${t}`,last.created_at);fetch(`${API}/api/messages/${encodeURIComponent(me)}/mark-read`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({other_user:target})}).catch(()=>{})}if(!scrolling)setTimeout(()=>container.scrollTop=container.scrollHeight,30)}catch(e){console.error(e)}finally{loading=false}}
+function attachSwipe(){document.querySelectorAll('.message-wrapper').forEach(w=>{let sx=0,cx=0;w.ontouchstart=e=>{sx=e.touches[0].clientX;w.style.transition='none'};w.ontouchmove=e=>{cx=e.touches[0].clientX-sx;if(cx>0&&cx<90)w.style.transform=`translateX(${cx}px)`};w.ontouchend=()=>{w.style.transition='.2s';if(cx>50){let c=w.dataset.content,s=w.dataset.sender,p=parseReply(c);if(p)c=p.messageText;triggerReply(s,c)}w.style.transform='translateX(0)';cx=0}})}
+function triggerReply(sender,text){let d=formatSnippet(text||'');reply={sender,text:d};document.getElementById('reply-user-label').textContent=`Replying to ${sender}`;document.getElementById('reply-text-label').textContent=d;document.getElementById('reply-preview-bar').style.display='flex';document.getElementById('message-input').focus()}
+function cancelReply(){reply=null;document.getElementById('reply-preview-bar').style.display='none'}
+form.onsubmit=async e=>{e.preventDefault();const i=document.getElementById('message-input'),b=document.getElementById('send-btn');let c=i.value.trim();if(!c)return;c=buildPayloadWithReply(c);b.disabled=true;try{await post(c);i.value='';cancelReply()}catch{toast('Failed to send message')}b.disabled=false};
+let typingTimer;document.getElementById('message-input').oninput=()=>{if(socket)socket.emit('typing',{sender:me,receiver:target,isTyping:true});clearTimeout(typingTimer);typingTimer=setTimeout(()=>socket?.emit('typing',{sender:me,receiver:target,isTyping:false}),2000)};
 container.onscroll=()=>scrolling=container.scrollHeight-container.scrollTop-container.clientHeight>=50;
-
-async function post(content){
-const r=await fetch(`${API}/api/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sender:me,receiver:target,sender_username:me,receiver_username:target,content})});
-if(!r.ok)throw Error();
-scrolling=false;
-await loadChat();
-setTimeout(()=>container.scrollTop=container.scrollHeight,30)
-}
-
-/* IMAGE */
-function handleImageSelected(e){
-const f=e.target.files[0];if(!f)return;
-const r=new FileReader();
-r.onload=ev=>{
-const img=new Image();
-img.onload=()=>{
-let w=img.width,h=img.height,max=1200;
-if(w>max){h*=max/w;w=max}
-if(h>max){w*=max/h;h=max}
-const c=document.createElement('canvas');
-c.width=w;c.height=h;
-c.getContext('2d').drawImage(img,0,0,w,h);
-selectedImage=c.toDataURL('image/jpeg',.85);
-document.getElementById('image-preview-elem').src=selectedImage;
-document.getElementById('image-view-back').style.display='none';
-document.getElementById('preview-modal-actions').style.display='flex';
-document.getElementById('image-preview-modal').style.display='flex'
-};
-img.src=ev.target.result
-};
-r.readAsDataURL(f)
-}
-
-function openChatImageViewer(src){
-document.getElementById('image-preview-elem').src=src;
-document.getElementById('image-view-back').style.display='block';
-document.getElementById('preview-modal-actions').style.display='none';
-document.getElementById('image-preview-modal').style.display='flex'
-}
-
-function closeImagePreview(){
-document.getElementById('image-preview-modal').style.display='none';
-document.getElementById('image-file-input').value='';
-document.getElementById('image-view-back').style.display='none';
-selectedImage=null
-}
-
-document.getElementById('image-preview-modal').onclick=e=>{
-if(e.target.id==='image-preview-modal')closeImagePreview()
-};
-
-async function sendSelectedImage(){
-if(!selectedImage)return;
-const b=document.getElementById('image-send-btn');
-b.disabled=true;b.textContent='Sending...';
-try{
-await post(buildPayloadWithReply(`[img]${selectedImage}`));
-cancelReply();
-closeImagePreview()
-}catch{toast('Failed to send image')}
-b.disabled=false;b.textContent='Send Image'
-}
-
-/* STICKERS */
+async function post(content){const r=await fetch(`${API}/api/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sender:me,receiver:target,sender_username:me,receiver_username:target,content})});if(!r.ok)throw Error();scrolling=false;await loadChat();setTimeout(()=>container.scrollTop=container.scrollHeight,30)}
+function handleImageSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height,max=1200;if(w>max){h*=max/w;w=max}if(h>max){w*=max/h;h=max}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);selectedImage=c.toDataURL('image/jpeg',.85);document.getElementById('image-preview-elem').src=selectedImage;document.getElementById('image-view-back').style.display='none';document.getElementById('preview-modal-actions').style.display='flex';document.getElementById('image-preview-modal').style.display='flex'};img.src=ev.target.result};r.readAsDataURL(f)}
+function openChatImageViewer(src){document.getElementById('image-preview-elem').src=src;document.getElementById('image-view-back').style.display='block';document.getElementById('preview-modal-actions').style.display='none';document.getElementById('image-preview-modal').style.display='flex'}
+function closeImagePreview(){document.getElementById('image-preview-modal').style.display='none';document.getElementById('image-file-input').value='';document.getElementById('image-view-back').style.display='none';selectedImage=null}
+document.getElementById('image-preview-modal').onclick=e=>{if(e.target.id==='image-preview-modal')closeImagePreview()};
+async function sendSelectedImage(){if(!selectedImage)return;const b=document.getElementById('image-send-btn');b.disabled=true;b.textContent='Sending...';try{await post(buildPayloadWithReply(`[img]${selectedImage}`));cancelReply();closeImagePreview()}catch{toast('Failed to send image')}b.disabled=false;b.textContent='Send Image'}
 const getStickers=()=>{try{return JSON.parse(localStorage.getItem('retro_stickers')||'[]')}catch{return[]}};
-
-function toggleStickerDrawer(){
-const d=document.getElementById('sticker-drawer');
-d.classList.toggle('active');
-if(d.classList.contains('active'))renderStickers()
-}
-
-function renderStickers(){
-const g=document.getElementById('sticker-grid'),s=getStickers();
-document.getElementById('sticker-count').textContent=s.length;
-g.innerHTML=s.map((d,i)=>`<div class="sticker-item-wrapper"><img src="${esc(d)}" onclick="sendSticker('${esc(d)}')"><button class="remove-sticker-btn" onclick="removeSticker(event,${i})">✕</button></div>`).join('');
-if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`
-}
-
-function removeSticker(e,i){
-e.stopPropagation();
-const s=getStickers();
-s.splice(i,1);
-localStorage.setItem('retro_stickers',JSON.stringify(s));
-renderStickers();
-toast('Removed')
-}
-
-function handleStickerSelected(e){
-const f=e.target.files[0];if(!f)return;
-const r=new FileReader();
-r.onload=ev=>{
-const img=new Image();
-img.onload=()=>{
-const maxDim=150;let w=img.width,h=img.height;
-if(w>h){if(w>maxDim){h=Math.round(h*(maxDim/w));w=maxDim}}
-else{if(h>maxDim){w=Math.round(w*(maxDim/h));h=maxDim}}
-const c=document.createElement('canvas');
-c.width=w;c.height=h;
-c.getContext('2d').drawImage(img,0,0,w,h);
-const s=getStickers();
-if(s.length>=10)return toast('Full');
-s.push(c.toDataURL('image/webp',.8));
-localStorage.setItem('retro_stickers',JSON.stringify(s));
-renderStickers();
-toast('Added');
-e.target.value=''
-};
-img.src=ev.target.result
-};
-r.readAsDataURL(f)
-}
-
-function toggleStickerSaveTooltip(e,id){
-e.stopPropagation();
-document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.id!==id&&x.classList.remove('active'));
-document.getElementById(id)?.classList.toggle('active')
-}
-
-function saveStickerToDrawer(e,d){
-e.stopPropagation();
-const s=getStickers();
-if(s.includes(d))return toast('Already added');
-if(s.length>=10)return toast('Full');
-s.push(d);
-localStorage.setItem('retro_stickers',JSON.stringify(s));
-toast('Added ✨');
-e.target.classList.remove('active')
-}
-
-async function sendSticker(d){
-toggleStickerDrawer();
-await post(buildPayloadWithReply(`[sticker]${d}`));
-cancelReply()
-}
-
+function toggleStickerDrawer(){const d=document.getElementById('sticker-drawer');d.classList.toggle('active');if(d.classList.contains('active'))renderStickers()}
+function renderStickers(){const g=document.getElementById('sticker-grid'),s=getStickers();document.getElementById('sticker-count').textContent=s.length;g.innerHTML=s.map((d,i)=>`<div class="sticker-item-wrapper"><img src="${esc(d)}" onclick="sendSticker('${esc(d)}')"><button class="remove-sticker-btn" onclick="removeSticker(event,${i})">✕</button></div>`).join('');if(s.length<10)g.innerHTML+=`<div class="add-sticker-btn" onclick="document.getElementById('sticker-file-input').click()">+</div>`}
+function removeSticker(e,i){e.stopPropagation();const s=getStickers();s.splice(i,1);localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickers();toast('Removed')}
+function handleStickerSelected(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{const maxDim=150;let w=img.width,h=img.height;if(w>h){if(w>maxDim){h=Math.round(h*(maxDim/w));w=maxDim}}else if(h>maxDim){w=Math.round(w*(maxDim/h));h=maxDim}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const s=getStickers();if(s.length>=10)return toast('Full');s.push(c.toDataURL('image/webp',.8));localStorage.setItem('retro_stickers',JSON.stringify(s));renderStickers();toast('Added');e.target.value=''};img.src=ev.target.result};r.readAsDataURL(f)}
+function toggleStickerSaveTooltip(e,id){e.stopPropagation();document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.id!==id&&x.classList.remove('active'));document.getElementById(id)?.classList.toggle('active')}
+function saveStickerToDrawer(e,d){e.stopPropagation();const s=getStickers();if(s.includes(d))return toast('Already added');if(s.length>=10)return toast('Full');s.push(d);localStorage.setItem('retro_stickers',JSON.stringify(s));toast('Added ✨');e.target.classList.remove('active')}
+async function sendSticker(d){toggleStickerDrawer();await post(buildPayloadWithReply(`[sticker]${d}`));cancelReply()}
 document.addEventListener('click',()=>document.querySelectorAll('.add-to-pack-tooltip').forEach(x=>x.classList.remove('active')));
-
-/* AUDIO */
-function toggleCustomAudio(id){
-const a=document.getElementById(id),p=document.getElementById(`player_${id}`),b=p.querySelector('.play-btn');
-document.querySelectorAll('audio').forEach(x=>{
-if(x.id!==id&&!x.paused){
-x.pause();
-document.querySelector(`#player_${x.id} .play-btn`)?.replaceChildren(document.createTextNode('▶'))
-}
-});
-if(a.paused){a.play();b.textContent='❚'}else{a.pause();b.textContent='▶'}
-}
-
-function initAudioDuration(id){
-const a=document.getElementById(id),t=document.getElementById(`time_${id}`);
-if(a&&t)t.textContent=audioTime(a.duration)
-}
-
-function updateAudioProgress(id){
-const a=document.getElementById(id),p=document.getElementById(`progress_${id}`),t=document.getElementById(`time_${id}`);
-if(!a||!p||!t)return;
-p.style.width=`${a.duration?a.currentTime/a.duration*100:0}%`;
-t.textContent=audioTime(a.currentTime)
-}
-
-function resetAudioPlayer(id){
-document.querySelector(`#player_${id} .play-btn`)?.replaceChildren(document.createTextNode('▶'));
-document.getElementById(`progress_${id}`)?.style.setProperty('width','0%')
-}
-
-/* VOICE */
+function toggleCustomAudio(id){const a=document.getElementById(id),p=document.getElementById(`player_${id}`),b=p.querySelector('.play-btn');document.querySelectorAll('audio').forEach(x=>{if(x.id!==id&&!x.paused){x.pause();document.querySelector(`#player_${x.id} .play-btn`)?.replaceChildren(document.createTextNode('▶'))}});if(a.paused){a.play();b.textContent='❚'}else{a.pause();b.textContent='▶'}}
+function initAudioDuration(id){const a=document.getElementById(id),t=document.getElementById(`time_${id}`);if(a&&t)t.textContent=audioTime(a.duration)}
+function updateAudioProgress(id){const a=document.getElementById(id),p=document.getElementById(`progress_${id}`),t=document.getElementById(`time_${id}`);if(!a||!p||!t)return;p.style.width=`${a.duration?a.currentTime/a.duration*100:0}%`;t.textContent=audioTime(a.currentTime)}
+function resetAudioPlayer(id){document.querySelector(`#player_${id} .play-btn`)?.replaceChildren(document.createTextNode('▶'));document.getElementById(`progress_${id}`)?.style.setProperty('width','0%')}
 let recorder,chunks=[],recording=false,recTimerInterval=null,recSeconds=0,cancelVn=false;
-
-function cancelVoiceRecording(e){
-e.preventDefault();
-e.stopPropagation();
-cancelVn=true;
-if(recorder&&recording)recorder.stop()
-}
-
-async function toggleVoiceRecording(){
-const b=document.getElementById('vn-btn'),inputElem=document.getElementById('message-input'),barElem=document.getElementById('recording-bar'),timerElem=document.getElementById('recording-timer');
-
-if(!recording){
-try{
-const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-recorder=new MediaRecorder(stream);
-chunks=[];cancelVn=false;
-recorder.ondataavailable=e=>chunks.push(e.data);
-recorder.onstop=()=>{
-clearInterval(recTimerInterval);
-if(cancelVn){
-recording=false;
-b.classList.remove('recording');
-barElem.style.display='none';
-inputElem.style.display='block';
-stream.getTracks().forEach(t=>t.stop());
-return
-}
-const r=new FileReader();
-r.onload=()=>{
-post(buildPayloadWithReply(`[audio]${r.result}`)).then(()=>cancelReply()).catch(()=>toast('Failed to send voice note'))
-};
-r.readAsDataURL(new Blob(chunks,{type:'audio/webm'}));
-stream.getTracks().forEach(t=>t.stop())
-};
-recorder.start();
-recording=true;
-b.classList.add('recording');
-inputElem.style.display='none';
-barElem.style.display='flex';
-recSeconds=0;
-timerElem.textContent='0:00';
-recTimerInterval=setInterval(()=>{
-recSeconds++;
-timerElem.textContent=audioTime(recSeconds)
-},1000)
-}catch{toast('Microphone permission denied')}
-}else{
-recorder.stop();
-recording=false;
-b.classList.remove('recording');
-barElem.style.display='none';
-inputElem.style.display='block';
-clearInterval(recTimerInterval)
-}
-}
-
-/* PROFILE */
-function getChatCode(u){
-let h=0,s=u.toLowerCase()+'_retro_secret_salt';
-for(let i=0;i<s.length;i++)h=(h<<5)-h+s.charCodeAt(i),h|=0;
-return`RETRO-${Math.abs(h).toString(36).toUpperCase().slice(0,5)}`
-}
-
-function openAvatarView(){
-const s=document.getElementById('partner-profile-sheet');
-document.getElementById('sheet-username').textContent=target;
-document.getElementById('sheet-chat-code').value=getChatCode(target);
-applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),pfp,target);
-s.classList.add('active')
-}
-
+function cancelVoiceRecording(e){e.preventDefault();e.stopPropagation();cancelVn=true;if(recorder&&recording)recorder.stop()}
+async function toggleVoiceRecording(){const b=document.getElementById('vn-btn'),inputElem=document.getElementById('message-input'),barElem=document.getElementById('recording-bar'),timerElem=document.getElementById('recording-timer');if(!recording){try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});recorder=new MediaRecorder(stream);chunks=[];cancelVn=false;recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=()=>{clearInterval(recTimerInterval);if(cancelVn){recording=false;b.classList.remove('recording');barElem.style.display='none';inputElem.style.display='block';stream.getTracks().forEach(t=>t.stop());return}const r=new FileReader();r.onload=()=>{post(buildPayloadWithReply(`[audio]${r.result}`)).then(()=>cancelReply()).catch(()=>toast('Failed to send voice note'))};r.readAsDataURL(new Blob(chunks,{type:'audio/webm'}));stream.getTracks().forEach(t=>t.stop())};recorder.start();recording=true;b.classList.add('recording');inputElem.style.display='none';barElem.style.display='flex';recSeconds=0;timerElem.textContent='0:00';recTimerInterval=setInterval(()=>{recSeconds++;timerElem.textContent=audioTime(recSeconds)},1000)}catch{toast('Microphone permission denied')}}else{recorder.stop();recording=false;b.classList.remove('recording');barElem.style.display='none';inputElem.style.display='block';clearInterval(recTimerInterval)}}
+function getChatCode(u){let h=0,s=u.toLowerCase()+'_retro_secret_salt';for(let i=0;i<s.length;i++)h=(h<<5)-h+s.charCodeAt(i),h|=0;return`RETRO-${Math.abs(h).toString(36).toUpperCase().slice(0,5)}`}
+function openAvatarView(){const s=document.getElementById('partner-profile-sheet');document.getElementById('sheet-username').textContent=target;document.getElementById('sheet-chat-code').value=getChatCode(target);applyAvatar(document.getElementById('sheet-avatar-img'),document.getElementById('sheet-avatar-initial'),pfp,target);s.classList.add('active')}
 function closeAvatarView(){document.getElementById('partner-profile-sheet').classList.remove('active')}
-
-document.getElementById('partner-profile-sheet').onclick=e=>{
-if(e.target.id==='partner-profile-sheet')closeAvatarView()
-};
-
+document.getElementById('partner-profile-sheet').onclick=e=>{if(e.target.id==='partner-profile-sheet')closeAvatarView()};
 document.getElementById('partner-profile-card').onclick=e=>e.stopPropagation();
-
-async function copyPartnerCode(){
-const i=document.getElementById('sheet-chat-code'),b=document.getElementById('sheet-copy-btn');
-try{await navigator.clipboard.writeText(i.value)}
-catch{i.select();document.execCommand('copy')}
-b.textContent='Copied!';
-setTimeout(()=>b.textContent='Copy Code',2000)
-}
-
-/* CLEAR CHAT */
-function clearCurrentChat(){
-document.getElementById('confirm-modal-desc').textContent=`This will permanently delete all messages with ${target} for both sides.`;
-document.getElementById('clear-chat-modal').classList.add('active')
-}
-
+async function copyPartnerCode(){const i=document.getElementById('sheet-chat-code'),b=document.getElementById('sheet-copy-btn');try{await navigator.clipboard.writeText(i.value)}catch{i.select();document.execCommand('copy')}b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',2000)}
+function clearCurrentChat(){document.getElementById('confirm-modal-desc').textContent=`This will permanently delete all messages with ${target} for both sides.`;document.getElementById('clear-chat-modal').classList.add('active')}
 function closeClearModal(){document.getElementById('clear-chat-modal').classList.remove('active')}
-
-async function executeClearCurrentChat(){
-closeClearModal();
-try{
-const r=await fetch(`${API}/api/messages/conversation`,{
-method:'DELETE',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({user1:me,user2:target})
-});
-if(!r.ok)throw Error();
-list.innerHTML='<div style="text-align:center;color:#666;margin-top:20px">Chat cleared.</div>';
-localStorage.removeItem(`read_${target.toLowerCase()}`);
-closeAvatarView();
-toast('Chat permanently deleted')
-}catch{toast('Failed to clear chat')}
-}
-
-/* PAGE VISIBILITY */
-document.addEventListener('visibilitychange',()=>{
-if(document.visibilityState==='visible'){
-scrolling=false;
-loading=false;
-loadChat().then(()=>requestAnimationFrame(()=>container.scrollTop=container.scrollHeight))
-}
-});
-
+async function executeClearCurrentChat(){closeClearModal();try{const r=await fetch(`${API}/api/messages/conversation`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user1:me,user2:target})});if(!r.ok)throw Error();list.innerHTML='<div class="empty-chat">Chat cleared.</div>';localStorage.removeItem(`read_${target.toLowerCase()}`);closeAvatarView();toast('Chat permanently deleted')}catch{toast('Failed to clear chat')}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){scrolling=false;loading=false;loadChat().then(()=>requestAnimationFrame(()=>container.scrollTop=container.scrollHeight))}});
 loadChat();
-
-setInterval(()=>{
-if(document.visibilityState==='visible')loadChat()
-},5000);
-
-setInterval(()=>{
-if(document.visibilityState==='visible')loadTargetUserProfile()
-},10000);
-  
-if('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-
+setInterval(()=>{if(document.visibilityState==='visible')loadChat()},5000);
+setInterval(()=>{if(document.visibilityState==='visible')loadTargetUserProfile()},10000);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script>
 </body>
   </html>
